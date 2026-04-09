@@ -21,7 +21,9 @@ public partial class UpscalerControl : UserControl
 
     private void UpscalerControl_Loaded(object sender, RoutedEventArgs e)
     {
-        var devices = GpuDetector.GetAvailableDevices();
+        try 
+        {
+            var devices = GpuDetector.GetAvailableDevices();
         cmbDevice.ItemsSource = devices;
         
         int gpuCount = devices.Count - 1; // Loại trừ tùy chọn CPU Only
@@ -41,6 +43,11 @@ public partial class UpscalerControl : UserControl
             cmbDevice.SelectedIndex = 1; 
         else 
             cmbDevice.SelectedIndex = 0; 
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"[OnLoaded Error] {ex.Message}\n{ex.StackTrace}", "Internal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Border_Drop(object sender, DragEventArgs e)
@@ -88,46 +95,48 @@ public partial class UpscalerControl : UserControl
 
     private async void BtnProcess_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(_currentImagePath))
+        try
         {
-            MessageBox.Show("Please drop an image first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        int targetDeviceId = -1;
-        if (cmbDevice.SelectedItem is GpuInfo selectedGpu)
-        {
-            targetDeviceId = selectedGpu.DeviceId;
-        }
-
-        PerformanceMode perfMode = PerformanceMode.Safe;
-        if (cmbPerformance.SelectedItem is ComboBoxItem perfItem && perfItem.Tag?.ToString() == "Unleashed")
-        {
-            perfMode = PerformanceMode.Unleashed;
-        }
-
-        int targetScale = 4;
-        if (cmbScale.SelectedItem is ComboBoxItem scaleItem && int.TryParse(scaleItem.Tag?.ToString(), out int parsedScale))
-        {
-            targetScale = parsedScale;
-        }
-
-        btnProcess.Content = "Processing...";
-        btnProcess.IsEnabled = false;
-        pbProgress.Visibility = Visibility.Visible;
-        txtStatus.Visibility = Visibility.Visible;
-        pbProgress.Value = 0;
-
-        try 
-        {
-            var progress = new Progress<int>(percent =>
+            if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath))
             {
-                pbProgress.Value = percent;
-                txtStatus.Text = $"Đang xử lý phân mảnh AI... {percent}%";
-            });
+                MessageBox.Show("Vui lòng chọn một ảnh để Upscale!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            int targetDeviceId = -1;
+            if (cmbDevice.SelectedItem is GpuInfo selectedGpu)
+            {
+                targetDeviceId = selectedGpu.DeviceId;
+            }
+
+            PerformanceMode perfMode = PerformanceMode.Safe;
+            if (cmbPerformance.SelectedItem is ComboBoxItem perfItem && perfItem.Tag?.ToString() == "Unleashed")
+            {
+                perfMode = PerformanceMode.Unleashed;
+            }
+
+            int targetScale = 4;
+            if (cmbScale.SelectedItem is ComboBoxItem scaleItem && int.TryParse(scaleItem.Tag?.ToString(), out int parsedScale))
+            {
+                targetScale = parsedScale;
+            }
+
+            btnProcess.Content = "Processing...";
+            btnProcess.IsEnabled = false;
+            pbProgress.Visibility = Visibility.Visible;
+            txtStatus.Visibility = Visibility.Visible;
+            pbProgress.Value = 0;
 
             var resultData = await System.Threading.Tasks.Task.Run(() => 
             {
+                var progress = new Progress<int>(percent =>
+                {
+                    Dispatcher.Invoke(() => {
+                        pbProgress.Value = percent;
+                        txtStatus.Text = $"Đang xử lý phân mảnh AI... {percent}%";
+                    });
+                });
+
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(n => n.Contains("UltraSharpV2"));
                 if (string.IsNullOrEmpty(resourceName)) throw new Exception("Không tìm thấy Model nhúng trong dll!");
@@ -139,7 +148,6 @@ public partial class UpscalerControl : UserControl
                 stream.CopyTo(ms);
                 byte[] modelBytes = ms.ToArray();
                 
-                // Chuẩn bị đường dẫn Output chung
                 var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
                 if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
                 
@@ -149,7 +157,6 @@ public partial class UpscalerControl : UserControl
 
                 if (!_shouldUseMultiProcess)
                 {
-                    // 2A. CHẠY MULTI-THREAD TRONG CÙNG PROCESS (RẤT NHANH KHI CÓ 1 GPU HOẶC CHỈ CPU)
                     using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(_currentImagePath);
                     var upscaler = new OnnxUpscaler(modelBytes, targetDeviceId, perfMode);
                     var resultSharp = upscaler.Process(image, progress, targetScale);
@@ -157,81 +164,70 @@ public partial class UpscalerControl : UserControl
                 }
                 else
                 {
-                    // 2B. CHẠY BẰNG WORKER TIẾN TRÌNH PHỤ (BẢO VỆ RAM CHỐNG CRASH KHI CÓ ĐA GPU)
                     string tempDir = Path.Combine(Path.GetTempPath(), "ImageTool_Upscaler");
                     Directory.CreateDirectory(tempDir);
                     string modelPath = Path.Combine(tempDir, "model.onnx");
                     if (!File.Exists(modelPath)) File.WriteAllBytes(modelPath, modelBytes);
 
                     string workerExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ImageTool.Worker.Upscaler.exe");
-                if (!File.Exists(workerExe)) 
-                {
-                    // Nếu ở mode Debug và chạy từ Visual Studio, worker có thể nằm ở thư mục riêng
-                    workerExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "ImageTool.Worker.Upscaler", "bin", "Debug", "net8.0-windows", "ImageTool.Worker.Upscaler.exe");
-                    if (!File.Exists(workerExe)) throw new Exception($"Không tìm thấy file worker tại {workerExe}\nChắc chắn bạn đã biên dịch project Worker!");
-                    workerExe = Path.GetFullPath(workerExe);
-                }
-
-                string modeStr = perfMode == PerformanceMode.Unleashed ? "Unleashed" : "Safe";
-
-                var processInfo = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = workerExe,
-                    Arguments = $"--input \"{_currentImagePath}\" --out \"{savePath}\" --scale {targetScale} --device {targetDeviceId} --mode {modeStr} --model \"{modelPath}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-
-                using var process = System.Diagnostics.Process.Start(processInfo);
-                if (process == null) throw new Exception("Không thể khởi động tiến trình phụ!");
-
-                while (!process.StandardOutput.EndOfStream)
-                {
-                    string? line = process.StandardOutput.ReadLine();
-                    if (!string.IsNullOrEmpty(line) && line.StartsWith("[PROGRESS]"))
+                    if (!File.Exists(workerExe)) 
                     {
-                        var parts = line.Split(' ');
-                        if (parts.Length > 1 && int.TryParse(parts[1], out int p))
+                        workerExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "ImageTool.Worker.Upscaler", "bin", "Debug", "net8.0-windows", "ImageTool.Worker.Upscaler.exe");
+                        if (!File.Exists(workerExe)) throw new Exception($"Không tìm thấy file worker tại {workerExe}");
+                        workerExe = Path.GetFullPath(workerExe);
+                    }
+
+                    string modeStr = perfMode == PerformanceMode.Unleashed ? "Unleashed" : "Safe";
+                    var processInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = workerExe,
+                        Arguments = $"--input \"{_currentImagePath}\" --out \"{savePath}\" --scale {targetScale} --device {targetDeviceId} --mode {modeStr} --model \"{modelPath}\"",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    };
+
+                    using var process = System.Diagnostics.Process.Start(processInfo);
+                    if (process == null) throw new Exception("Không thể khởi động tiến trình phụ!");
+
+                    while (!process.StandardOutput.EndOfStream)
+                    {
+                        string? line = process.StandardOutput.ReadLine();
+                        if (!string.IsNullOrEmpty(line) && line.StartsWith("[PROGRESS]"))
                         {
-                            ((IProgress<int>)progress).Report(p);
+                            var parts = line.Split(' ');
+                            if (parts.Length > 1 && int.TryParse(parts[1], out int p))
+                            {
+                                ((IProgress<int>)progress).Report(p);
+                            }
                         }
                     }
+                    process.WaitForExit();
+                    if (process.ExitCode != 0) throw new Exception($"Tiến trình phụ thất bại (Mã lỗi {process.ExitCode})");
                 }
 
-                process.WaitForExit();
-                if (process.ExitCode != 0)
-                {
-                    string err = process.StandardError.ReadToEnd();
-                    throw new Exception($"Tiến trình phụ thất bại (Mã lỗi {process.ExitCode}): {err}");
-                }
-
-                }
-
-                // 4. Trả về bytes để Render UI
                 byte[] outBytes = File.ReadAllBytes(savePath);
                 return (ImageBytes: outBytes, SavedPath: savePath);
             });
 
-            // 6. Cập nhật giao diện bên Thread chính (UI Thread)
             var bmp = new BitmapImage();
             bmp.BeginInit();
             bmp.StreamSource = new MemoryStream(resultData.ImageBytes);
             bmp.CacheOption = BitmapCacheOption.OnLoad;
             bmp.EndInit();
 
-            imgPreview.Source = bmp; // Pushed kết quả cuối lên UI
-            txtStatus.Text = $"Hoàn tất! Đã xuất file ra thư mục Output.";
-
-            MessageBox.Show($"Upscale tiến trình mảng Tiled thành công!\nĐã lưu tại:\n{resultData.SavedPath}", "Quá mỹ mãn", MessageBoxButton.OK, MessageBoxImage.Information);
+            imgPreview.Source = bmp;
+            pbProgress.Visibility = Visibility.Hidden;
+            txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath}";
+            MessageBox.Show("Xử lý Upscale hoàn tất!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            // Bắt lỗi, ghi log file txt cẩn thận vì thư viện AI/Tensors hay văng StackTrace phức tạp, tránh mất
+            pbProgress.Visibility = Visibility.Hidden;
+            txtStatus.Text = "Xảy ra lỗi!";
             string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "upscaler_error.log");
             File.AppendAllText(logPath, $"[{DateTime.Now}] Lỗi Upscale:\r\n{ex}\r\n\r\n");
-
             MessageBox.Show(ex.Message, "Lỗi UI/Upscale", MessageBoxButton.OK, MessageBoxImage.Error);
             txtStatus.Text = "Lỗi xử lý! Đã ghi log.";
         }

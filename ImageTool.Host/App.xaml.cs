@@ -11,6 +11,15 @@ public partial class App : Application
 
     public App()
     {
+        this.DispatcherUnhandledException += (s, e) => {
+            System.IO.File.AppendAllText("crash.log", $"[UI Crash] {e.Exception}\n");
+            MessageBox.Show($"Lỗi giao diện nghiêm trọng:\n{e.Exception.Message}", "Crash Insulator", MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, e) => {
+            System.IO.File.AppendAllText("crash.log", $"[AppDomain Crash] {e.ExceptionObject}\n");
+        };
+
         var services = new ServiceCollection();
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
