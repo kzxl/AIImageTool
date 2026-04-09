@@ -17,26 +17,13 @@ public partial class UpscalerControl : UserControl
         this.Loaded += UpscalerControl_Loaded;
     }
 
-    private bool _shouldUseMultiProcess;
-
     private void UpscalerControl_Loaded(object sender, RoutedEventArgs e)
     {
         try 
         {
             var devices = GpuDetector.GetAvailableDevices();
-        cmbDevice.ItemsSource = devices;
-        
-        int gpuCount = devices.Count - 1; // Loại trừ tùy chọn CPU Only
-        if (gpuCount > 1) 
-        {
-            _shouldUseMultiProcess = true;
-            txtExecMode.Text = "Kiến trúc tự động: Multi-Process (Cho Nhiều GPU)";
-        }
-        else 
-        {
-            _shouldUseMultiProcess = false;
-            txtExecMode.Text = "Kiến trúc tự động: Multi-Thread (Đơn GPU/Nhanh)";
-        }
+            cmbDevice.ItemsSource = devices;
+            txtExecMode.Text = "Kiến trúc xử lý: Multi-Thread (In-Process Parallel)";
 
         // Mặc định chọn GPU đầu tiên nếu có (thường là Index 1 do Index 0 là CPU Only)
         if (devices.Count > 1) 
@@ -155,57 +142,10 @@ public partial class UpscalerControl : UserControl
                 string originalName = Path.GetFileNameWithoutExtension(_currentImagePath);
                 string savePath = Path.Combine(outputDir, $"{originalName}_x4_{randId}.png");
 
-                if (!_shouldUseMultiProcess)
-                {
-                    using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(_currentImagePath);
-                    var upscaler = new OnnxUpscaler(modelBytes, targetDeviceId, perfMode);
-                    var resultSharp = upscaler.Process(image, progress, targetScale);
-                    resultSharp.SaveAsPng(savePath);
-                }
-                else
-                {
-                    string tempDir = Path.Combine(Path.GetTempPath(), "ImageTool_Upscaler");
-                    Directory.CreateDirectory(tempDir);
-                    string modelPath = Path.Combine(tempDir, "model.onnx");
-                    if (!File.Exists(modelPath)) File.WriteAllBytes(modelPath, modelBytes);
-
-                    string workerExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ImageTool.Worker.Upscaler.exe");
-                    if (!File.Exists(workerExe)) 
-                    {
-                        workerExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "ImageTool.Worker.Upscaler", "bin", "Debug", "net8.0-windows", "ImageTool.Worker.Upscaler.exe");
-                        if (!File.Exists(workerExe)) throw new Exception($"Không tìm thấy file worker tại {workerExe}");
-                        workerExe = Path.GetFullPath(workerExe);
-                    }
-
-                    string modeStr = perfMode == PerformanceMode.Unleashed ? "Unleashed" : "Safe";
-                    var processInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = workerExe,
-                        Arguments = $"--input \"{_currentImagePath}\" --out \"{savePath}\" --scale {targetScale} --device {targetDeviceId} --mode {modeStr} --model \"{modelPath}\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                    };
-
-                    using var process = System.Diagnostics.Process.Start(processInfo);
-                    if (process == null) throw new Exception("Không thể khởi động tiến trình phụ!");
-
-                    while (!process.StandardOutput.EndOfStream)
-                    {
-                        string? line = process.StandardOutput.ReadLine();
-                        if (!string.IsNullOrEmpty(line) && line.StartsWith("[PROGRESS]"))
-                        {
-                            var parts = line.Split(' ');
-                            if (parts.Length > 1 && int.TryParse(parts[1], out int p))
-                            {
-                                ((IProgress<int>)progress).Report(p);
-                            }
-                        }
-                    }
-                    process.WaitForExit();
-                    if (process.ExitCode != 0) throw new Exception($"Tiến trình phụ thất bại (Mã lỗi {process.ExitCode})");
-                }
+                using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(_currentImagePath);
+                var upscaler = new OnnxUpscaler(modelBytes, targetDeviceId, perfMode);
+                var resultSharp = upscaler.Process(image, progress, targetScale);
+                resultSharp.SaveAsPng(savePath);
 
                 byte[] outBytes = File.ReadAllBytes(savePath);
                 return (ImageBytes: outBytes, SavedPath: savePath);
