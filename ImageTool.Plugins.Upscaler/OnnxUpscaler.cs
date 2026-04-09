@@ -20,12 +20,37 @@ public class OnnxUpscaler
     private readonly byte[] _modelBytes;
     private readonly int _targetDeviceId;
     private readonly PerformanceMode _performanceMode;
+    private static bool _nativePreloaded = false;
 
     public OnnxUpscaler(byte[] modelBytes, int targetDeviceId = -1, PerformanceMode performanceMode = PerformanceMode.Safe)
     {
+        PreloadNativeLibraries();
         _modelBytes = modelBytes;
         _targetDeviceId = targetDeviceId;
         _performanceMode = performanceMode;
+    }
+
+    private static void PreloadNativeLibraries()
+    {
+        if (_nativePreloaded) return;
+        try 
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string directMlPath = System.IO.Path.Combine(baseDir, "DirectML.dll");
+            if (System.IO.File.Exists(directMlPath))
+                System.Runtime.InteropServices.NativeLibrary.TryLoad(directMlPath, out _);
+
+            string onnxSharedPath = System.IO.Path.Combine(baseDir, "onnxruntime_providers_shared.dll");
+            if (System.IO.File.Exists(onnxSharedPath))
+                System.Runtime.InteropServices.NativeLibrary.TryLoad(onnxSharedPath, out _);
+
+            string onnxPath = System.IO.Path.Combine(baseDir, "onnxruntime.dll");
+            if (System.IO.File.Exists(onnxPath))
+                System.Runtime.InteropServices.NativeLibrary.TryLoad(onnxPath, out _);
+
+            _nativePreloaded = true;
+        }
+        catch { }
     }
 
     /// <summary>
