@@ -23,15 +23,39 @@ public partial class UpscalerControl : UserControl
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
             if (files != null && files.Length > 0)
             {
-                var file = files[0];
-                var ext = Path.GetExtension(file).ToLower();
-                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
-                {
-                    _currentImagePath = file;
-                    imgPreview.Source = new BitmapImage(new Uri(file));
-                    txtPrompt.Visibility = Visibility.Collapsed;
-                }
+                LoadImageFile(files[0]);
             }
+        }
+    }
+
+    private void Border_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        var openFileDialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh cần phóng to",
+            Filter = "Image files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All files (*.*)|*.*",
+            Multiselect = false
+        };
+
+        if (openFileDialog.ShowDialog() == true)
+        {
+            LoadImageFile(openFileDialog.FileName);
+        }
+    }
+
+    private void LoadImageFile(string file)
+    {
+        var ext = Path.GetExtension(file).ToLower();
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
+        {
+            _currentImagePath = file;
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.UriSource = new Uri(file);
+            bmp.CacheOption = BitmapCacheOption.OnLoad; // Tránh block file ảnh để có thể xoá sau khi scale
+            bmp.EndInit();
+            imgPreview.Source = bmp;
+            txtPrompt.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -41,6 +65,13 @@ public partial class UpscalerControl : UserControl
         {
             MessageBox.Show("Please drop an image first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
+        }
+
+        bool useGpu = chkUseGpu.IsChecked == true;
+        int targetScale = 4;
+        if (cmbScale.SelectedItem is ComboBoxItem scaleItem && int.TryParse(scaleItem.Tag?.ToString(), out int parsedScale))
+        {
+            targetScale = parsedScale;
         }
 
         btnProcess.Content = "Processing...";
@@ -76,8 +107,8 @@ public partial class UpscalerControl : UserControl
                 using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(_currentImagePath);
 
                 // 3. Xử lý Upscale qua luồng Tensor (hỗ trợ băm nhỏ)
-                var upscaler = new OnnxUpscaler(modelBytes);
-                var resultSharp = upscaler.Process(image, progress);
+                var upscaler = new OnnxUpscaler(modelBytes, useGpu);
+                var resultSharp = upscaler.Process(image, progress, targetScale);
 
                 // 4. Save ra Temp stream để đẩy lên giao diện WPF
                 using var outStream = new MemoryStream();
@@ -110,8 +141,12 @@ public partial class UpscalerControl : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-            txtStatus.Text = "Lỗi xử lý!";
+            // Bắt lỗi, ghi log file txt cẩn thận vì thư viện AI/Tensors hay văng StackTrace phức tạp, tránh mất
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "upscaler_error.log");
+            File.AppendAllText(logPath, $"[{DateTime.Now}] Lỗi Upscale:\r\n{ex}\r\n\r\n");
+
+            MessageBox.Show(ex.Message, "Lỗi UI/Upscale", MessageBoxButton.OK, MessageBoxImage.Error);
+            txtStatus.Text = "Lỗi xử lý! Đã ghi log.";
         }
         finally
         {

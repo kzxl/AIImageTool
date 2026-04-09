@@ -13,9 +13,9 @@
 
         <!-- Drag Drop Area / Image Preview -->
         <Border Grid.Row="1" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
-                Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" Margin="0,0,0,20">
+                Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" Margin="0,0,0,20">
             <Grid>
-                <TextBlock x:Name="txtPrompt" Text="Drag &amp; Drop Image Here" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18"/>
+                <TextBlock x:Name="txtPrompt" Text="Nhấp chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18"/>
                 <Image x:Name="imgPreview" Stretch="Uniform" Margin="10"/>
             </Grid>
         </Border>
@@ -33,8 +33,14 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <ComboBox x:Name="cmbModel" Width="150" Margin="0,0,10,0" SelectedIndex="0">
-                    <ComboBoxItem Content="ESRGAN (4x)"/>
+                <CheckBox x:Name="chkUseGpu" Content="Sử dụng GPU" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="White" />
+                <ComboBox x:Name="cmbModel" Width="130" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center">
+                    <ComboBoxItem Content="UltraSharp V2"/>
+                </ComboBox>
+                <ComboBox x:Name="cmbScale" Width="55" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ phóng to (x2 mặc định thu nhỏ nét hơn, x8 dùng nội suy)">
+                    <ComboBoxItem Content="x2" Tag="2"/>
+                    <ComboBoxItem Content="x4" Tag="4"/>
+                    <ComboBoxItem Content="x8" Tag="8"/>
                 </ComboBox>
                 <Button x:Name="btnProcess" Content="Upscale" Width="100" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnProcess_Click"/>
             </StackPanel>

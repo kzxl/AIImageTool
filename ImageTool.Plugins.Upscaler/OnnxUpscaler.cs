@@ -12,20 +12,22 @@ namespace ImageTool.Plugins.Upscaler;
 public class OnnxUpscaler
 {
     private readonly byte[] _modelBytes;
+    private readonly bool _useGpu;
 
-    public OnnxUpscaler(byte[] modelBytes)
+    public OnnxUpscaler(byte[] modelBytes, bool useGpu = true)
     {
         _modelBytes = modelBytes;
+        _useGpu = useGpu;
     }
 
     /// <summary>
-    /// Xử lý phân tích ảnh qua ONNX Runtime 
+    /// Xử lý phân tích ảnh qua ONNX Runtime với mức zoom tự chọn (TargetScale)
     /// </summary>
-    public Image<Rgba32> Process(Image<Rgba32> image, IProgress<int>? progress = null)
+    public Image<Rgba32> Process(Image<Rgba32> image, IProgress<int>? progress = null, int targetScale = 4)
     {
         try 
         {
-            return ProcessReal(image, progress);
+            return ProcessReal(image, progress, targetScale);
         } 
         catch (OnnxRuntimeException)
         {
@@ -33,17 +35,20 @@ public class OnnxUpscaler
         }
     }
 
-    private Image<Rgba32> ProcessReal(Image<Rgba32> image, IProgress<int>? progress)
+    private Image<Rgba32> ProcessReal(Image<Rgba32> image, IProgress<int>? progress, int targetScale)
     {
         int width = image.Width;
         int height = image.Height;
         
-        // GIẢM MẠNH: Từ 256 xuống 64 hoặc 128 giúp RAM và CPU nhẹ đi gấp 16 lần mỗi chu kỳ!
-        int tileSize = 64; 
-        int scale = 4; // UltraSharp thường upscale x4
+        // TỐI ƯU CẤP ĐỘ 1: TileSize 128 (vừa vặn cho VRAM hiện đại) để giảm số lượt cấp phát overhead từ vòng lặp
+        int tileSize = 128; 
         
-        // Tạo ảnh nền kết quả to gấp 4 lần
-        var resultImage = new Image<Rgba32>(width * scale, height * scale);
+        // BẢN CHẤT MÔ HÌNH: 4x-UltraSharp luôn xuất ra lớp chập Tensor PixelShuffle cố định ở x4. 
+        // Phải tuân thủ luật x4 cho tiến trình tạo nền và lưới Tile cơ bản sau đó Resize lại nếu User muốn x2 hoặc x8
+        int modelScale = 4; 
+        
+        // Tạo ảnh nền kết quả to chuẩn tỷ lệ của AI
+        var resultImage = new Image<Rgba32>(width * modelScale, height * modelScale);
         
         // Phân mảnh ảnh (Chunking)
         var xs = new List<int>();
@@ -57,33 +62,50 @@ public class OnnxUpscaler
         SessionOptions? options = null;
         InferenceSession? session = null;
         int dmlDeviceId = -1;
+        List<string> gpuInitErrors = new List<string>();
 
-        // BẬT TÍNH NĂNG TĂNG TỐC PHẦN CỨNG BẰNG GPU THAY VÌ CPU
-        // Thử tìm GPU từ Device 0 đến 2 (0 thường là Card chính/Rời, 1 thường là Onboard Intel)
-        // Nếu hệ thống chỉ có 1 GPU (Intel) thì nó sẽ ở Device 0.
-        // Có trường hợp người dùng muốn ưu tiên thử từ 0 đến 2.
-        for (int deviceId = 0; deviceId < 3; deviceId++)
+        if (_useGpu)
         {
-            try 
+            // BẬT TÍNH NĂNG TĂNG TỐC PHẦN CỨNG BẰNG GPU THAY VÌ CPU
+            // Thử tìm GPU từ Device 0 đến 2
+            for (int deviceId = 0; deviceId < 3; deviceId++)
             {
-                var tempOptions = new SessionOptions();
-                tempOptions.AppendExecutionProvider_DML(deviceId); 
-                // Cần khởi tạo thử session để xem thiết bị có thực sự hoạt động với DirectML không
-                session = new InferenceSession(_modelBytes, tempOptions);
-                options = tempOptions;
-                dmlDeviceId = deviceId;
-                break; // Thành công
-            }
-            catch 
-            {
-                // Thất bại hoặc không có thiết bị ở ID này, thử tiếp
+                try 
+                {
+                    var tempOptions = new SessionOptions();
+                    
+                    // TỐI ƯU CẤP ĐỘ 2.1: Fuse Graph nội bộ mức độ cao nhất giúp đẩy nhịp C++ nhanh hơn
+                    tempOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                    tempOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                    
+                    tempOptions.AppendExecutionProvider_DML(deviceId); 
+                    // Cần khởi tạo thử session để xem thiết bị có thực sự hoạt động với DirectML không
+                    session = new InferenceSession(_modelBytes, tempOptions);
+                    options = tempOptions;
+                    dmlDeviceId = deviceId;
+                    break; // Thành công
+                }
+                catch (Exception ex)
+                {
+                    gpuInitErrors.Add($"GPU {deviceId}: {ex.Message}");
+                    // Thất bại hoặc không có thiết bị ở ID này, thử tiếp
+                }
             }
         }
 
         if (session == null)
         {
-            System.Windows.MessageBox.Show("Không tìm thấy hoặc không khởi tạo được GPU (kể cả Onboard Intel) qua DirectML. Sẽ rớt về chạy CPU.", "GPU Fallback", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            if (_useGpu && gpuInitErrors.Any())
+            {
+                System.Diagnostics.Debug.WriteLine("GPU Fallback: " + string.Join(" | ", gpuInitErrors));
+            }
             options = new SessionOptions();
+            
+            // TỐI ƯU CẤP ĐỘ 2.2: Tối ưu Graph và Ép CPU dùng tối đa lượng lõi Thread vật lý
+            options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+            options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+            options.IntraOpNumThreads = Environment.ProcessorCount;
+            
             session = new InferenceSession(_modelBytes, options); 
         }
 
@@ -99,39 +121,96 @@ public class OnnxUpscaler
 
         object imageLock = new object();
 
-        // TĂNG TỐC KÉP: Chạy song song 3 luồng cùng lúc (Multithreading/Multiprocessing nội bộ C#)
-        // Số 3 là hoàn hảo để vừa nhồi GPU, vừa ko bị nghẽn RAM máy
-        Parallel.ForEach(tileCoords, new ParallelOptions { MaxDegreeOfParallelism = 3 }, coord =>
+        // TỐI ƯU CẤP ĐỘ 5: Phân tích RAM Tự động (Dynamic Parallel Threading)
+        // Nhận diện RAM khả dụng. Nếu RAM trống (<80% đã dùng), tự động tăng số luồng.
+        int maxParallel = 3; 
+        var initialMem = GC.GetGCMemoryInfo();
+        double initialLoadPercent = (double)initialMem.MemoryLoadBytes / initialMem.TotalAvailableMemoryBytes * 100.0;
+        
+        if (initialLoadPercent < 80.0) 
         {
+             long freeMb = (initialMem.TotalAvailableMemoryBytes - initialMem.MemoryLoadBytes) / (1024 * 1024);
+             // Phân bổ: Cứ 1GB RAM rỗng thì tự động nhồi thêm 1 luồng xử lý Tensor, trần nhôm mức Process vật lý
+             int extraThreads = (int)(freeMb / 1000L);  
+             maxParallel = Math.Min(Environment.ProcessorCount, 3 + extraThreads);
+        }
+
+        // TĂNG TỐC KÉP: Chạy song song dựa vào cấu hình RAM động đo được
+        Parallel.ForEach(tileCoords, new ParallelOptions { MaxDegreeOfParallelism = maxParallel }, coord =>
+        {
+            // Flood-Control: Phanh thời gian thực (Realtime throttling) nếu nhịp độ bơm mảng làm RAM bứt tốc > 85%
+            var rMem = GC.GetGCMemoryInfo();
+            if ((double)rMem.MemoryLoadBytes / rMem.TotalAvailableMemoryBytes * 100.0 > 85.0)
+            {
+                System.Threading.Thread.Sleep(300); // Lực ép dừng (Treo Thread) tạm thời chờ GC luồng khác dọn xong!
+            }
+
             int startX = coord.X;
             int startY = coord.Y;
             int currentW = Math.Min(tileSize, width - startX);
             int currentH = Math.Min(tileSize, height - startY);
-            
-            // 1. Trích xuất Ô ảnh (Cần lock để chống đụng độ bộ nhớ khi đọc)
+
+            // TỐI ƯU CẤP ĐỘ 6: Chống Gãy Ảnh (Anti-Seam / Tile Overlapping)
+            // Lấy thêm 16 pixel mép chờm xung quanh để AI có dữ liệu lân cận nội suy, tránh bị khấc viền (Grid Artifacts) ở các điểm nối
+            int overlap = 16;
+            int padLeft = Math.Min(overlap, startX);
+            int padTop = Math.Min(overlap, startY);
+            int padRight = Math.Min(overlap, width - (startX + currentW));
+            int padBottom = Math.Min(overlap, height - (startY + currentH));
+
+            int cropX = startX - padLeft;
+            int cropY = startY - padTop;
+            int cropW = currentW + padLeft + padRight;
+            int cropH = currentH + padTop + padBottom;
+
+            // 1. Trích xuất Ô ảnh (Có chứa viền chờm bao bọc lân cận)
             Image<Rgba32> tile;
             lock(imageLock)
             {
-                tile = image.Clone(ctx => ctx.Crop(new Rectangle(startX, startY, currentW, currentH)));
+                tile = image.Clone(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
             }
             
-            // 2. Chạy Ô ảnh qua ONNX (Hệ thống InferenceSession hỗ trợ đa luồng tự nhiên)
-            using var upscaledTile = ProcessTile(session, tile, currentW, currentH);
+            // 2. Chạy Ô ảnh qua ONNX 
+            using var upscaledTile = ProcessTile(session, tile, cropW, cropH);
             tile.Dispose();
             
-            // 3. Dán Ô Cực Nét lên Ảnh Gốc (Bắt buộc Lock do Image không hỗ trợ vạch kẻ ghi đè song song)
+            // 2.5 Cắt gọt phần LÕI NGUYÊN CHẤT (Bỏ đi phầm viền mồi đã bị Upscale x4)
+            int cropOutputX = padLeft * modelScale;
+            int cropOutputY = padTop * modelScale;
+            int cropOutputW = currentW * modelScale;
+            int cropOutputH = currentH * modelScale;
+
+            using var coreTile = upscaledTile.Clone(ctx => ctx.Crop(new Rectangle(cropOutputX, cropOutputY, cropOutputW, cropOutputH)));
+
+            // 3. Dán Ô Cực Nét lên Ảnh Gốc (Đảm bảo mép sẽ tiệp màu tuyệt đối)
             lock(imageLock)
             {
-                resultImage.Mutate(ctx => ctx.DrawImage(upscaledTile, new Point(startX * scale, startY * scale), 1f));
+                resultImage.Mutate(ctx => ctx.DrawImage(coreTile, new Point(startX * modelScale, startY * modelScale), 1f));
             }
             
             int count = System.Threading.Interlocked.Increment(ref currentTile);
             progress?.Report((int)((float)count / totalTiles * 100));
+
+            // TỐI ƯU CẤP ĐỘ 3: Vì Tensort lưu vào Ram rác array float[] rất lớn,
+            // Ép dọn RAM rác siêu tốc giữa chừng để C# ko bị froze khi RAM quá đầy!
+            if (count % 3 == 0) 
+            {
+                GC.Collect(0, GCCollectionMode.Optimized, false);
+            }
         });
         
-        // Đảm bảo giải phóng tài nguyên sau khi xong
+        // Đảm bảo giải phóng tài nguyên CPU/GPU sau khi Inference hoàn tất!
         options?.Dispose();
         session.Dispose();
+
+        // LINH ĐỘNG TUỲ CHỈNH KÍCH THƯỚC: Nếu Model tạo ra x4 mà User chọn x2 hoặc x8
+        if (targetScale != modelScale)
+        {
+            progress?.Report(99); // Báo là đang resize bước cuối
+            // Nếu Target < Model (VD X2 so với X4) => Nén lấy nét cực cao (Supersampling AntiAliasing)
+            // Nếu Target > Model (VD X8 so với X4) => Bơm thêm nội suy Lanczos cấp độ 3 
+            resultImage.Mutate(ctx => ctx.Resize(width * targetScale, height * targetScale, KnownResamplers.Lanczos3));
+        }
 
         return resultImage;
     }
