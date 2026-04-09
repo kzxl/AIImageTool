@@ -10,14 +10,14 @@ if (Test-Path "Publish_Release") {
 Write-Host "Publishing FULL (Self-Contained)..."
 $solDir = (Get-Item .).FullName + "\"
 
-dotnet publish ImageTool.Host\ImageTool.Host.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Full"
-dotnet publish ImageTool.Worker.Upscaler\ImageTool.Worker.Upscaler.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Full"
+dotnet publish ImageTool.Host\ImageTool.Host.csproj -c Release -r win-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Full"
+dotnet publish ImageTool.Worker.Upscaler\ImageTool.Worker.Upscaler.csproj -c Release -r win-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Full"
 dotnet publish ImageTool.Plugins.FaceRestorer\ImageTool.Plugins.FaceRestorer.csproj -c Release -p:SolutionDir=$solDir -o "Publish_Release\Full\Plugins\ImageTool.Plugins.FaceRestorer"
 dotnet publish ImageTool.Plugins.Upscaler\ImageTool.Plugins.Upscaler.csproj -c Release -p:SolutionDir=$solDir -o "Publish_Release\Full\Plugins\ImageTool.Plugins.Upscaler"
 
 Write-Host "Publishing LITE (Framework-Dependent)..."
-dotnet publish ImageTool.Host\ImageTool.Host.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Lite"
-dotnet publish ImageTool.Worker.Upscaler\ImageTool.Worker.Upscaler.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Lite"
+dotnet publish ImageTool.Host\ImageTool.Host.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Lite"
+dotnet publish ImageTool.Worker.Upscaler\ImageTool.Worker.Upscaler.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:SolutionDir=$solDir -o "Publish_Release\Lite"
 dotnet publish ImageTool.Plugins.FaceRestorer\ImageTool.Plugins.FaceRestorer.csproj -c Release -p:SolutionDir=$solDir -o "Publish_Release\Lite\Plugins\ImageTool.Plugins.FaceRestorer"
 dotnet publish ImageTool.Plugins.Upscaler\ImageTool.Plugins.Upscaler.csproj -c Release -p:SolutionDir=$solDir -o "Publish_Release\Lite\Plugins\ImageTool.Plugins.Upscaler"
 
