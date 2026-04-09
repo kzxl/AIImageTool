@@ -20,11 +20,13 @@ AIImageTool là một ứng dụng Desktop (WPF, .NET 8) mã nguồn mở phục
 ### 3. Core & Host Architecture
 - Giao diện người dùng Windows Presentation Foundation (WPF) hiện đại, phản hồi kết quả AI theo tiến trình thời gian thực.
 - Khả năng **Hot-load Plugins:** Module lõi tự động dò tìm và nạp thư viện `IImagePlugin` từ các tệp `.dll` đặt trong thư mục `Plugins`.
+- **Kiến trúc Multi-Thread (In-Process Parallel):** Đảm bảo xử lý AI và render hoàn toàn In-Process bằng OnnxRuntime tối ưu, giải quyết triệt để lỗi thắt cổ chai, chia sẻ Native DLLs ngay lập tức và tránh các lỗi LoadLibrary từ hệ điều hành.
 
 ## Yêu cầu hệ thống
 
 - Hệ điều hành: Windows 10/11 (64-bit).
-- Nếu sử dụng bản *Lite*: Microsoft .NET 8 Desktop Runtime.
+- Nếu sử dụng bản *Lite*: Cần cài đặt Microsoft .NET 8 Desktop Runtime.
+- **Bắt buộc:** [Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) để thư viện AI Native khởi tạo thành công.
 - Khuyên dùng Card đồ hoạ bất kỳ tương thích thư viện DirectML (NVIDIA seri 10 trở lên, Intel UHD Graphics, hoặc AMD Radeon).
 
 ## Cài đặt từ Release
