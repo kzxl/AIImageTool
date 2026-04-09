@@ -28,12 +28,19 @@
             </Grid.ColumnDefinitions>
             
             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
-                <TextBlock x:Name="txtStatus" Text="Sẵn sàng" Foreground="#AAA" Margin="0,0,0,5" FontWeight="Medium"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock x:Name="txtStatus" Text="Sẵn sàng" Foreground="#AAA" FontWeight="Medium"/>
+                    <TextBlock x:Name="txtExecMode" Text="[Nhận diện cấu trúc...]" Foreground="#55C1E7" FontStyle="Italic" Margin="10,0,0,0"/>
+                </StackPanel>
                 <ProgressBar x:Name="pbProgress" Height="8" Minimum="0" Maximum="100" Value="0" Visibility="Hidden" Foreground="#007ACC" Background="#444" BorderThickness="0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <CheckBox x:Name="chkUseGpu" Content="Sử dụng GPU" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="White" />
+                <ComboBox x:Name="cmbDevice" Width="160" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Thiết bị thực thi (GPU/CPU)" DisplayMemberPath="Name" />
+                <ComboBox x:Name="cmbPerformance" Width="100" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Mức độ hiệu năng hệ thống">
+                    <ComboBoxItem Content="An toàn" Tag="Safe" />
+                    <ComboBoxItem Content="Bung lụa" Tag="Unleashed" />
+                </ComboBox>
                 <ComboBox x:Name="cmbModel" Width="130" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center">
                     <ComboBoxItem Content="UltraSharp V2"/>
                 </ComboBox>

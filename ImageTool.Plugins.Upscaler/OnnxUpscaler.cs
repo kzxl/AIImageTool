@@ -9,15 +9,23 @@ using SixLabors.ImageSharp.Processing;
 
 namespace ImageTool.Plugins.Upscaler;
 
+public enum PerformanceMode
+{
+    Safe,       // 1. an toàn giữ cpu không và ram không quá cao
+    Unleashed   // 2. chạy bung lụa, cpu và ram không quá 80% 
+}
+
 public class OnnxUpscaler
 {
     private readonly byte[] _modelBytes;
-    private readonly bool _useGpu;
+    private readonly int _targetDeviceId;
+    private readonly PerformanceMode _performanceMode;
 
-    public OnnxUpscaler(byte[] modelBytes, bool useGpu = true)
+    public OnnxUpscaler(byte[] modelBytes, int targetDeviceId = -1, PerformanceMode performanceMode = PerformanceMode.Safe)
     {
         _modelBytes = modelBytes;
-        _useGpu = useGpu;
+        _targetDeviceId = targetDeviceId;
+        _performanceMode = performanceMode;
     }
 
     /// <summary>
@@ -61,50 +69,51 @@ public class OnnxUpscaler
 
         SessionOptions? options = null;
         InferenceSession? session = null;
-        int dmlDeviceId = -1;
         List<string> gpuInitErrors = new List<string>();
 
-        if (_useGpu)
+        if (_targetDeviceId >= 0)
         {
-            // BẬT TÍNH NĂNG TĂNG TỐC PHẦN CỨNG BẰNG GPU THAY VÌ CPU
-            // Thử tìm GPU từ Device 0 đến 2
-            for (int deviceId = 0; deviceId < 3; deviceId++)
+            // BẬT TÍNH NĂNG TĂNG TỐC BẰNG THIẾT BỊ ĐÃ CHỌN
+            try 
             {
-                try 
-                {
-                    var tempOptions = new SessionOptions();
-                    
-                    // TỐI ƯU CẤP ĐỘ 2.1: Fuse Graph nội bộ mức độ cao nhất giúp đẩy nhịp C++ nhanh hơn
-                    tempOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-                    tempOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-                    
-                    tempOptions.AppendExecutionProvider_DML(deviceId); 
-                    // Cần khởi tạo thử session để xem thiết bị có thực sự hoạt động với DirectML không
-                    session = new InferenceSession(_modelBytes, tempOptions);
-                    options = tempOptions;
-                    dmlDeviceId = deviceId;
-                    break; // Thành công
-                }
-                catch (Exception ex)
-                {
-                    gpuInitErrors.Add($"GPU {deviceId}: {ex.Message}");
-                    // Thất bại hoặc không có thiết bị ở ID này, thử tiếp
-                }
+                var tempOptions = new SessionOptions();
+                
+                // TỐI ƯU CẤP ĐỘ 2.1: Fuse Graph nội bộ mức độ cao nhất giúp đẩy nhịp C++ nhanh hơn
+                tempOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                tempOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                
+                tempOptions.AppendExecutionProvider_DML(_targetDeviceId); 
+                // Cần khởi tạo thử session để xem thiết bị có thực sự hoạt động với DirectML không
+                session = new InferenceSession(_modelBytes, tempOptions);
+                options = tempOptions;
+            }
+            catch (Exception ex)
+            {
+                gpuInitErrors.Add($"GPU {_targetDeviceId}: {ex.Message}");
             }
         }
 
         if (session == null)
         {
-            if (_useGpu && gpuInitErrors.Any())
+            if (_targetDeviceId >= 0 && gpuInitErrors.Any())
             {
                 System.Diagnostics.Debug.WriteLine("GPU Fallback: " + string.Join(" | ", gpuInitErrors));
             }
             options = new SessionOptions();
             
-            // TỐI ƯU CẤP ĐỘ 2.2: Tối ưu Graph và Ép CPU dùng tối đa lượng lõi Thread vật lý
+            // TỐI ƯU CẤP ĐỘ 2.2: Tối ưu Graph
             options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
             options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-            options.IntraOpNumThreads = Environment.ProcessorCount;
+            
+            // CẦU HÌNH THREADS CPU
+            if (_performanceMode == PerformanceMode.Unleashed)
+            {
+                options.IntraOpNumThreads = Math.Max(1, (int)(Environment.ProcessorCount * 0.8)); // Tối đa 80% lõi
+            }
+            else
+            {
+                options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount / 2); // Chỉ 50% lõi cho an toàn
+            }
             
             session = new InferenceSession(_modelBytes, options); 
         }
@@ -121,28 +130,33 @@ public class OnnxUpscaler
 
         object imageLock = new object();
 
-        // TỐI ƯU CẤP ĐỘ 5: Phân tích RAM Tự động (Dynamic Parallel Threading)
-        // Nhận diện RAM khả dụng. Nếu RAM trống (<80% đã dùng), tự động tăng số luồng.
-        int maxParallel = 3; 
-        var initialMem = GC.GetGCMemoryInfo();
-        double initialLoadPercent = (double)initialMem.MemoryLoadBytes / initialMem.TotalAvailableMemoryBytes * 100.0;
-        
-        if (initialLoadPercent < 80.0) 
+        // THIẾT LẬP MAX PARALLEL VÀ RAM LIMIT THEO CHẾ ĐỘ
+        int maxParallel = 1;
+        double ramThreshold = 60.0; // An Toàn: 60%
+        int ramCheckFreq = 1;
+
+        if (_performanceMode == PerformanceMode.Unleashed)
         {
-             long freeMb = (initialMem.TotalAvailableMemoryBytes - initialMem.MemoryLoadBytes) / (1024 * 1024);
-             // Phân bổ: Cứ 1GB RAM rỗng thì tự động nhồi thêm 1 luồng xử lý Tensor, trần nhôm mức Process vật lý
-             int extraThreads = (int)(freeMb / 1000L);  
-             maxParallel = Math.Min(Environment.ProcessorCount, 3 + extraThreads);
+             maxParallel = Math.Max(1, (int)(Environment.ProcessorCount * 0.8));
+             ramThreshold = 80.0;
+             ramCheckFreq = 3;
+        }
+        else
+        {
+             maxParallel = Math.Max(1, Environment.ProcessorCount / 4);
+             ramThreshold = 60.0;
+             ramCheckFreq = 1;
         }
 
-        // TĂNG TỐC KÉP: Chạy song song dựa vào cấu hình RAM động đo được
+        // TĂNG TỐC KÉP: Chạy song song dựa vào cấu hình Mode quy định
         Parallel.ForEach(tileCoords, new ParallelOptions { MaxDegreeOfParallelism = maxParallel }, coord =>
         {
-            // Flood-Control: Phanh thời gian thực (Realtime throttling) nếu nhịp độ bơm mảng làm RAM bứt tốc > 85%
+            // Flood-Control: Phanh thời gian thực (Realtime throttling)
             var rMem = GC.GetGCMemoryInfo();
-            if ((double)rMem.MemoryLoadBytes / rMem.TotalAvailableMemoryBytes * 100.0 > 85.0)
+            double memUsage = (double)rMem.MemoryLoadBytes / rMem.TotalAvailableMemoryBytes * 100.0;
+            if (memUsage > ramThreshold)
             {
-                System.Threading.Thread.Sleep(300); // Lực ép dừng (Treo Thread) tạm thời chờ GC luồng khác dọn xong!
+                System.Threading.Thread.Sleep(300 + (int)(memUsage - ramThreshold) * 50); // Mức mượn quá cao -> Nghỉ lâu hơn
             }
 
             int startX = coord.X;
@@ -191,9 +205,8 @@ public class OnnxUpscaler
             int count = System.Threading.Interlocked.Increment(ref currentTile);
             progress?.Report((int)((float)count / totalTiles * 100));
 
-            // TỐI ƯU CẤP ĐỘ 3: Vì Tensort lưu vào Ram rác array float[] rất lớn,
-            // Ép dọn RAM rác siêu tốc giữa chừng để C# ko bị froze khi RAM quá đầy!
-            if (count % 3 == 0) 
+            // CHU KỲ DỌN RAM TÙY BIẾN THEO CHẾ ĐỘ
+            if (count % ramCheckFreq == 0) 
             {
                 GC.Collect(0, GCCollectionMode.Optimized, false);
             }

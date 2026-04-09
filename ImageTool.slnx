@@ -4,4 +4,5 @@
   <Project Path="ImageTool.Plugins.FaceRestorer/ImageTool.Plugins.FaceRestorer.csproj" />
   <Project Path="ImageTool.Plugins.Upscaler/ImageTool.Plugins.Upscaler.csproj" />
   <Project Path="ImageTool.Shared/ImageTool.Shared.csproj" />
+  <Project Path="ImageTool.Worker.Upscaler/ImageTool.Worker.Upscaler.csproj" />
 </Solution>
