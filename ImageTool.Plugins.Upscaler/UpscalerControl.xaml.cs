@@ -4,6 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using SixLabors.ImageSharp;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace ImageTool.Plugins.Upscaler;
 
@@ -108,13 +111,15 @@ public partial class UpscalerControl : UserControl
                 targetScale = parsedScale;
             }
 
+            int selectedModelIndex = cmbModel.SelectedIndex;
+
             btnProcess.Content = "Processing...";
             btnProcess.IsEnabled = false;
             pbProgress.Visibility = Visibility.Visible;
             txtStatus.Visibility = Visibility.Visible;
             pbProgress.Value = 0;
 
-            var resultData = await System.Threading.Tasks.Task.Run(() => 
+            var resultData = await System.Threading.Tasks.Task.Run(async () => 
             {
                 var progress = new Progress<int>(percent =>
                 {
@@ -124,6 +129,83 @@ public partial class UpscalerControl : UserControl
                     });
                 });
 
+                // Luồng 2: AuraSR (Generative)
+                if (selectedModelIndex == 1)
+                {
+                    Dispatcher.Invoke(() => {
+                        pbProgress.IsIndeterminate = true;
+                        txtStatus.Text = "Đang xin Thẻ Chờ (Job ID) từ Backend...";
+                    });
+
+                    using var client = new HttpClient();
+                    client.Timeout = TimeSpan.FromSeconds(30); // Chỉ cần xin Job_ID nên 30s là quá đủ
+                    using var form = new MultipartFormDataContent();
+                    
+                    var fileBytes = File.ReadAllBytes(_currentImagePath);
+                    var imageContent = new ByteArrayContent(fileBytes);
+                    imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
+                    form.Add(imageContent, "file", Path.GetFileName(_currentImagePath));
+                    
+                    // 1. Post File lên Server để xin Job ID
+                    var response = await client.PostAsync("http://127.0.0.1:8000/upscale", form);
+                    string initRes = await response.Content.ReadAsStringAsync();
+                    if (!response.IsSuccessStatusCode)
+                        throw new Exception($"Lỗi gọi Python ({response.StatusCode}): {initRes}");
+                    
+                    using var doc = JsonDocument.Parse(initRes);
+                    string jobId = doc.RootElement.GetProperty("job_id").GetString();
+                    if (string.IsNullOrEmpty(jobId)) throw new Exception("Không bóc tách được Thẻ Chờ từ Python!");
+
+                    // 2. Vòng lặp Polling 3 giây/lần
+                    int pingCount = 1;
+                    byte[] targetBytes = null;
+                    while (true)
+                    {
+                        Dispatcher.Invoke(() => txtStatus.Text = $"Đang tính toán mạng Gen AI (Ping hỏi thăm lần {pingCount})...");
+                        await System.Threading.Tasks.Task.Delay(3000); 
+                        
+                        var statResp = await client.GetAsync($"http://127.0.0.1:8000/status/{jobId}");
+                        if (statResp.IsSuccessStatusCode)
+                        {
+                            // Nếu Header rả về là hình ảnh tức là Xong
+                            if (statResp.Content.Headers.ContentType?.MediaType == "image/png")
+                            {
+                                targetBytes = await statResp.Content.ReadAsByteArrayAsync();
+                                break;
+                            }
+                            else
+                            {
+                                pingCount++;
+                            }
+                        }
+                        else
+                        {
+                            string errStr = await statResp.Content.ReadAsStringAsync();
+                            throw new Exception($"Lỗi hệ thống Python Worker: {errStr}");
+                        }
+                    }
+                    
+                    Dispatcher.Invoke(() => {
+                        pbProgress.IsIndeterminate = false;
+                        txtStatus.Text = "Đã tính xong! Đang nạp phân mảnh về giao diện...";
+                        pbProgress.Value = 85;
+                    });
+                    
+                    var dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                    
+                    string rId = Guid.NewGuid().ToString("N").Substring(0, 6);
+                    string oName = Path.GetFileNameWithoutExtension(_currentImagePath);
+                    string dPath = Path.Combine(dir, $"{oName}_AuraSR_{rId}.png");
+                    
+                    File.WriteAllBytes(dPath, targetBytes);
+                    
+                    Dispatcher.Invoke(() => pbProgress.Value = 100);
+                    
+                    return (ImageBytes: targetBytes, SavedPath: dPath);
+                }
+
+                // Luồng 1: ONNX (ESRGAN UltraSharp)
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(n => n.Contains("UltraSharpV2"));
                 if (string.IsNullOrEmpty(resourceName)) throw new Exception("Không tìm thấy Model nhúng trong dll!");
@@ -173,6 +255,7 @@ public partial class UpscalerControl : UserControl
         }
         finally
         {
+            pbProgress.IsIndeterminate = false;
             btnProcess.Content = "Upscale";
             btnProcess.IsEnabled = true;
             pbProgress.Visibility = Visibility.Hidden;

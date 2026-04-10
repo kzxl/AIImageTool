@@ -31,3 +31,10 @@ Publish_Release/
 packages/
 project.lock.json
 project.assets.json
+
+# Custom ignores
+.vs/
+Publish/
+model_offline/
+*.safetensors
+*.log

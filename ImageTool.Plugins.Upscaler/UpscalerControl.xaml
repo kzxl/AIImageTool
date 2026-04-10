@@ -41,8 +41,9 @@
                     <ComboBoxItem Content="An toàn" Tag="Safe" />
                     <ComboBoxItem Content="Bung lụa" Tag="Unleashed" />
                 </ComboBox>
-                <ComboBox x:Name="cmbModel" Width="130" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center">
-                    <ComboBoxItem Content="UltraSharp V2"/>
+                <ComboBox x:Name="cmbModel" Width="160" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center">
+                    <ComboBoxItem Content="UltraSharp V2 (Cục bộ)"/>
+                    <ComboBoxItem Content="AuraSR (Generative API)"/>
                 </ComboBox>
                 <ComboBox x:Name="cmbScale" Width="55" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ phóng to (x2 mặc định thu nhỏ nét hơn, x8 dùng nội suy)">
                     <ComboBoxItem Content="x2" Tag="2"/>

@@ -11,14 +11,22 @@ public partial class MainWindow : Window
 {
     private readonly PluginLoader _pluginLoader;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AiWorkerManager _aiManager;
     private IEnumerable<IImagePlugin> _plugins;
 
-    public MainWindow(PluginLoader pluginLoader, IServiceProvider serviceProvider)
+    public MainWindow(PluginLoader pluginLoader, IServiceProvider serviceProvider, AiWorkerManager aiManager)
     {
         InitializeComponent();
         _pluginLoader = pluginLoader;
         _serviceProvider = serviceProvider;
+        _aiManager = aiManager;
         
+        // Khởi động API Server ngầm không màn hình
+        _aiManager.StartWorker();
+        
+        // Giết Python khi C# bị tắt
+        this.Closed += (s, e) => _aiManager.Dispose();
+
         LoadPlugins();
     }
 

@@ -33,6 +33,7 @@ public partial class App : Application
         // Core/Shared Services
         services.AddSingleton<IEventBus, EventBus>();
         services.AddSingleton<PluginLoader>();
+        services.AddSingleton<AiWorkerManager>();
     }
 
     private void OnStartup(object sender, StartupEventArgs e)
