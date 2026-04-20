@@ -171,6 +171,8 @@ public partial class UpscalerControl : UserControl
                 txtStatus.Text = $"Đang xử lý phân mảnh AI... {percent}%";
             });
 
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             (byte[] ImageBytes, string SavedPath) resultData = (null, null);
             
             if (selectedModelIndex == 1)
@@ -195,8 +197,9 @@ public partial class UpscalerControl : UserControl
                 borderSplitLine.Visibility = Visibility.Visible;
                 UpdateSplitClip();
 
-                txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath}";
-                MessageBox.Show("Xử lý Upscale hoàn tất!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                sw.Stop();
+                txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath} ({sw.Elapsed.TotalSeconds:F2} giây)";
+                MessageBox.Show($"Xử lý Upscale hoàn tất trong {sw.Elapsed.TotalSeconds:F2} giây!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         catch (OperationCanceledException)
