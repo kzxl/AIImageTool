@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Management;
+using System.Threading.Tasks;
 
 namespace ImageTool.Plugins.Upscaler;
 
@@ -19,16 +20,15 @@ public static class GpuDetector
 {
     public static List<GpuInfo> GetAvailableDevices()
     {
-        var devices = new List<GpuInfo>();
-        
-        // Luôn luôn có option chạy bằng CPU
-        devices.Add(new GpuInfo { DeviceId = -1, Name = "CPU Only" });
+        var devices = new List<GpuInfo>
+        {
+            new GpuInfo { DeviceId = -1, Name = "CPU Only" }
+        };
 
         if (OperatingSystem.IsWindows())
         {
             try
             {
-                // Sử dụng WMI để lấy danh sách máy quét render thật
                 using var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController");
                 int id = 0;
                 foreach (var obj in searcher.Get())
@@ -45,5 +45,10 @@ public static class GpuDetector
         }
 
         return devices;
+    }
+
+    public static Task<List<GpuInfo>> GetAvailableDevicesAsync()
+    {
+        return Task.Run(() => GetAvailableDevices());
     }
 }
