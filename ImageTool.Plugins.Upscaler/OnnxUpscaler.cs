@@ -173,15 +173,39 @@ public class OnnxUpscaler
              ramCheckFreq = 1;
         }
 
-        // TỐI ƯU CẤP ĐỘ 3: Không dùng DrawImage đè chéo luồng trong Parallel. Gộp mảng rời rạc ra ngoài để ghép 1 lần.
-        Image<Rgba32>[] outTiles = new Image<Rgba32>[totalTiles];
-        
+        // TỐI ƯU SIÊU CẤP 3: Sử dụng System.Threading.Channels để lập Pipeline Producer-Consumer vắt kiệt RAM
         var parallelOptions = new ParallelOptions 
         { 
             MaxDegreeOfParallelism = maxParallel,
             CancellationToken = ct 
         };
 
+        // Dải ống (Channel) nối từ Threads Sản xuất (Crop/Inference) sang Thread Tiêu thụ (Merge)
+        // BoundedChannel giới hạn số lượng Tensor chờ ghép tránh nổ RAM
+        var mergeChannel = System.Threading.Channels.Channel.CreateBounded<(int Index, int X, int Y, Image<Rgba32> CoreTile)>(
+            new System.Threading.Channels.BoundedChannelOptions(Math.Max(10, maxParallel * 2)) 
+            { FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait }
+        );
+
+        // --- CONSUMER THREAD: Công nhân Nhặt và Ghép ảnh ---
+        var mergerTask = Task.Run(async () =>
+        {
+            await foreach (var pt in mergeChannel.Reader.ReadAllAsync(ct))
+            {
+                resultImage.Mutate(ctx => ctx.DrawImage(pt.CoreTile, new Point(pt.X, pt.Y), 1f));
+                pt.CoreTile.Dispose(); // Gỡ cấu trúc đồ thị Pixel khỏi RAM NGAY LẬP TỨC
+
+                int count = System.Threading.Interlocked.Increment(ref currentTile);
+                progress?.Report((int)((float)count / totalTiles * 99)); // Chạm mốc 99%
+                
+                if (count % ramCheckFreq == 0) 
+                {
+                    GC.Collect(0, GCCollectionMode.Optimized, false);
+                }
+            }
+        }, ct);
+
+        // --- PRODUCER THREADS: Băng chuyền Gọt khối & Ép Tensor ---
         Parallel.ForEach(tileCoords, parallelOptions, coord =>
         {
             ct.ThrowIfCancellationRequested();
@@ -223,40 +247,22 @@ public class OnnxUpscaler
             int cropOutputW = currentW * modelScale;
             int cropOutputH = currentH * modelScale;
 
-            // Giữ lại bản Clone của mảng Lõi Cực Nét
+            // Xén khối lõi
             var coreTile = upscaledTile.Clone(ctx => ctx.Crop(new Rectangle(cropOutputX, cropOutputY, cropOutputW, cropOutputH)));
 
-            // Gán thẳng theo Index không cần khóa luồng
-            outTiles[coord.Index] = coreTile;
-            
-            int count = System.Threading.Interlocked.Increment(ref currentTile);
-            progress?.Report((int)((float)count / totalTiles * 90)); // Chừa 10% cuối cho công tác ghép lưới 
-
-            if (count % ramCheckFreq == 0) 
-            {
-                GC.Collect(0, GCCollectionMode.Optimized, false);
-            }
+            // Bắn vào băng chuyền Merger
+            mergeChannel.Writer.WriteAsync((coord.Index, coord.X * modelScale, coord.Y * modelScale, coreTile), ct).AsTask().Wait();
         });
-        
+
+        // Đóng nắp băng chuyền
+        mergeChannel.Writer.Complete();
+        // Chờ công nhân ghép xong
+        mergerTask.Wait(ct);
+
         options?.Dispose();
         session.Dispose();
 
         ct.ThrowIfCancellationRequested();
-        progress?.Report(92);
-
-        // GHÉP LƯỚI ẢNH: Thực thi vòng lặp đơn trên luồng chính của phương thức => Tốc độ Mutate hoàn hảo không bị lock context.
-        resultImage.Mutate(ctx => 
-        {
-            foreach (var coord in tileCoords)
-            {
-                var coreTile = outTiles[coord.Index];
-                if (coreTile != null)
-                {
-                    ctx.DrawImage(coreTile, new Point(coord.X * modelScale, coord.Y * modelScale), 1f);
-                    coreTile.Dispose(); // Xoá sạch RAM ngay sau khi ghép
-                }
-            }
-        });
 
         if (targetScale != modelScale)
         {
