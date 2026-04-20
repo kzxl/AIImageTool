@@ -81,8 +81,19 @@ public class OnnxUpscaler
         int width = image.Width;
         int height = image.Height;
         
-        // TỐI ƯU CẤP ĐỘ 1: TileSize linh hoạt hoặc giữ 128 (vừa vặn cho VRAM hiện đại) để giảm số lượt cấp phát overhead từ vòng lặp
-        int tileSize = 128; 
+        // TỐI ƯU SIÊU CẤP: Tính toán động cỡ mảnh theo năng lực phần cứng
+        int tileSize = 128;
+        if (_targetDeviceId >= 0)
+        {
+            // GPU Mode: Tống cục to để khai thác hết Stream Processors
+             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 1024 : 512;
+        }
+        else 
+        {
+            // CPU Mode: Gồng nhẹ nhàng nương theo cache line 
+             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 256 : 128;
+        }
+        
         int modelScale = 4; 
         
         var resultImage = new Image<Rgba32>(width * modelScale, height * modelScale);
