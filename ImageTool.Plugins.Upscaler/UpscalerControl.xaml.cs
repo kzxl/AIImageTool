@@ -48,13 +48,62 @@ public partial class UpscalerControl : UserControl
         }
     }
 
+    private bool _isDraggingSplitter = false;
+    private double _splitPercent = 0.5;
+
     private void GridImageContainer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateSplitClip();
     }
 
-    private void SliderSplit_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void GridImageContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (imgPreview.Source != null && borderSplitLine.Visibility == Visibility.Visible)
+        {
+            _isDraggingSplitter = true;
+            gridImageContainer.CaptureMouse();
+            UpdateSplitPosition(e.GetPosition(gridImageContainer));
+            e.Handled = true; // Ngăn chặn sự kiện nổi bọt lên viền để không mở Dialog chọn ảnh
+        }
+    }
+
+    private void GridImageContainer_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            UpdateSplitPosition(e.GetPosition(gridImageContainer));
+        }
+    }
+
+    private void GridImageContainer_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            _isDraggingSplitter = false;
+            gridImageContainer.ReleaseMouseCapture();
+        }
+    }
+
+    private void GridImageContainer_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            _isDraggingSplitter = false;
+            gridImageContainer.ReleaseMouseCapture();
+        }
+    }
+
+    private void UpdateSplitPosition(System.Windows.Point p)
+    {
+        if (imgPreview.Source == null) return;
+
+        double width = gridImageContainer.ActualWidth;
+        if (width <= 0) return;
+
+        _splitPercent = p.X / width;
+        if (_splitPercent < 0) _splitPercent = 0;
+        if (_splitPercent > 1) _splitPercent = 1;
+
         UpdateSplitClip();
     }
 
@@ -62,14 +111,31 @@ public partial class UpscalerControl : UserControl
     {
         if (imgPreview.Source == null) return;
 
-        double percent = sliderSplit.Value / 100.0;
         double width = gridImageContainer.ActualWidth;
         double height = gridImageContainer.ActualHeight;
 
+        if (width <= 0 || height <= 0) return;
+
+        double clipX = width * _splitPercent;
+
         // Clip the right side of the image
-        imgPreview.Clip = new System.Windows.Media.RectangleGeometry(new Rect(width * percent, 0, width - (width * percent), height));
+        imgPreview.Clip = new System.Windows.Media.RectangleGeometry(new Rect(clipX, 0, Math.Max(0, width - clipX), height));
         
-        borderSplitLine.Margin = new Thickness(width * percent, 0, 0, 0);
+        borderSplitLine.Margin = new Thickness(clipX, 0, 0, 0);
+    }
+
+    private void BtnClearImage_Click(object sender, RoutedEventArgs e)
+    {
+        _currentImagePath = null;
+        imgOriginal.Source = null;
+        imgPreview.Source = null;
+        imgPreview.Clip = null;
+        borderSplitLine.Visibility = Visibility.Collapsed;
+        txtPrompt.Visibility = Visibility.Visible;
+        btnClearImage.Visibility = Visibility.Collapsed;
+        
+        if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
+        e.Handled = true;
     }
 
     private void Border_Drop(object sender, DragEventArgs e)
@@ -112,11 +178,13 @@ public partial class UpscalerControl : UserControl
             bmp.EndInit();
             imgPreview.Source = null;
             imgPreview.Clip = null;
-            sliderSplit.Visibility = Visibility.Collapsed;
             borderSplitLine.Visibility = Visibility.Collapsed;
 
             imgOriginal.Source = bmp;
             txtPrompt.Visibility = Visibility.Collapsed;
+            btnClearImage.Visibility = Visibility.Visible;
+
+            if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
         }
     }
 
@@ -193,9 +261,11 @@ public partial class UpscalerControl : UserControl
                 bmp.EndInit();
 
                 imgPreview.Source = bmp;
-                sliderSplit.Visibility = Visibility.Visible;
+                _splitPercent = 0.5;
                 borderSplitLine.Visibility = Visibility.Visible;
                 UpdateSplitClip();
+
+                if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.SizeWE;
 
                 sw.Stop();
                 txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath} ({sw.Elapsed.TotalSeconds:F2} giây)";
