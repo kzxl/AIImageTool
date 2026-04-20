@@ -14,9 +14,21 @@
         <!-- Drag Drop Area / Image Preview -->
         <Border Grid.Row="1" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
                 Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" Margin="0,0,0,20">
-            <Grid>
-                <TextBlock x:Name="txtPrompt" Text="Nhấp chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18"/>
+            <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged">
+                <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
+                
+                <Image x:Name="imgOriginal" Stretch="Uniform" Margin="10"/>
                 <Image x:Name="imgPreview" Stretch="Uniform" Margin="10"/>
+                
+                <Border x:Name="borderSplitLine" Width="2" Background="White" HorizontalAlignment="Left" Visibility="Collapsed" IsHitTestVisible="False">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
+                    </Border.Effect>
+                </Border>
+                
+                <Slider x:Name="sliderSplit" Minimum="0" Maximum="100" Value="50" IsMoveToPointEnabled="True" 
+                        Opacity="0.01" Visibility="Collapsed" ValueChanged="SliderSplit_ValueChanged" 
+                        VerticalAlignment="Stretch" />
             </Grid>
         </Border>
 

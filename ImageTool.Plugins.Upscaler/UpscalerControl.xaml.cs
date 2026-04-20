@@ -44,8 +44,32 @@ public partial class UpscalerControl : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"[OnLoaded Error] {ex.Message}\n{ex.StackTrace}", "Internal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Lỗi không xác định: {ex.Message}\n{ex.StackTrace}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void GridImageContainer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateSplitClip();
+    }
+
+    private void SliderSplit_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateSplitClip();
+    }
+
+    private void UpdateSplitClip()
+    {
+        if (imgPreview.Source == null) return;
+
+        double percent = sliderSplit.Value / 100.0;
+        double width = gridImageContainer.ActualWidth;
+        double height = gridImageContainer.ActualHeight;
+
+        // Clip the right side of the image
+        imgPreview.Clip = new System.Windows.Media.RectangleGeometry(new Rect(width * percent, 0, width - (width * percent), height));
+        
+        borderSplitLine.Margin = new Thickness(width * percent, 0, 0, 0);
     }
 
     private void Border_Drop(object sender, DragEventArgs e)
@@ -86,7 +110,12 @@ public partial class UpscalerControl : UserControl
             bmp.UriSource = new Uri(file);
             bmp.CacheOption = BitmapCacheOption.OnLoad; // Tránh block file ảnh để có thể xoá sau khi scale
             bmp.EndInit();
-            imgPreview.Source = bmp;
+            imgPreview.Source = null;
+            imgPreview.Clip = null;
+            sliderSplit.Visibility = Visibility.Collapsed;
+            borderSplitLine.Visibility = Visibility.Collapsed;
+
+            imgOriginal.Source = bmp;
             txtPrompt.Visibility = Visibility.Collapsed;
         }
     }
@@ -162,6 +191,10 @@ public partial class UpscalerControl : UserControl
                 bmp.EndInit();
 
                 imgPreview.Source = bmp;
+                sliderSplit.Visibility = Visibility.Visible;
+                borderSplitLine.Visibility = Visibility.Visible;
+                UpdateSplitClip();
+
                 txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath}";
                 MessageBox.Show("Xử lý Upscale hoàn tất!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
