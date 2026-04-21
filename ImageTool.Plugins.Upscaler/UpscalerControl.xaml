@@ -15,13 +15,23 @@
         <Grid Grid.Row="1" Margin="0,0,0,20">
 
             <Border x:Name="borderImageArea" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
-                    Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand">
-                <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged"
+                    Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" ClipToBounds="True">
+                <Grid>
+                    <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged"
                       Background="Transparent"
                       MouseLeftButtonDown="GridImageContainer_MouseLeftButtonDown"
                       MouseMove="GridImageContainer_MouseMove"
                       MouseLeftButtonUp="GridImageContainer_MouseLeftButtonUp"
-                      MouseLeave="GridImageContainer_MouseLeave">
+                      MouseLeave="GridImageContainer_MouseLeave"
+                      MouseWheel="GridImageContainer_MouseWheel"
+                      MouseRightButtonDown="GridImageContainer_MouseRightButtonDown"
+                      MouseRightButtonUp="GridImageContainer_MouseRightButtonUp">
+                    <Grid.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="imgScaleTransform" ScaleX="1.0" ScaleY="1.0" />
+                            <TranslateTransform x:Name="imgTranslateTransform" X="0" Y="0" />
+                        </TransformGroup>
+                    </Grid.RenderTransform>
                     <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
                     
                     <Image x:Name="imgOriginal" Stretch="Uniform" Margin="10"/>
@@ -32,18 +42,19 @@
                             <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
                         </Border.Effect>
                     </Border>
-
-                    <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
-                            Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click" Panel.ZIndex="20">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="4"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
                 </Grid>
-            </Border>
-        </Grid>
+                
+                <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
+                        Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="4"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
 
         <!-- Controls -->
         <Grid Grid.Row="2">
@@ -68,7 +79,9 @@
                 </ComboBox>
                 <ComboBox x:Name="cmbModel" Width="180" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" SelectionChanged="CmbModel_SelectionChanged">
                     <ComboBoxItem Content="Fast Resize (Lanczos)"/>
-                    <ComboBoxItem Content="UltraSharp V2 (Cục bộ)"/>
+                    <ComboBoxItem Content="UltraSharp V2 (Chất lượng)" Tag="4x-UltraSharpV2_fp32_op17.onnx"/>
+                    <ComboBoxItem Content="RealESRGAN-x4plus (Tốc độ)" Tag="real_esrgan_x4plus.onnx"/>
+                    <ComboBoxItem Content="FSRCNN (Siêu nhẹ)" Tag="fsrcnn_x4.onnx"/>
                     <ComboBoxItem Content="AuraSR (Generative API)"/>
                 </ComboBox>
                 <ComboBox x:Name="cmbScale" Width="75" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ/Độ phân giải mục tiêu">

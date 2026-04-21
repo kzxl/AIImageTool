@@ -17,15 +17,15 @@ public enum PerformanceMode
 
 public class OnnxUpscaler
 {
-    private readonly byte[] _modelBytes;
+    private readonly string _modelPath;
     private readonly int _targetDeviceId;
     private readonly PerformanceMode _performanceMode;
     private static bool _nativePreloaded = false;
 
-    public OnnxUpscaler(byte[] modelBytes, int targetDeviceId = -1, PerformanceMode performanceMode = PerformanceMode.Safe)
+    public OnnxUpscaler(string modelPath, int targetDeviceId = -1, PerformanceMode performanceMode = PerformanceMode.Safe)
     {
         PreloadNativeLibraries();
-        _modelBytes = modelBytes;
+        _modelPath = modelPath;
         _targetDeviceId = targetDeviceId;
         _performanceMode = performanceMode;
     }
@@ -53,11 +53,11 @@ public class OnnxUpscaler
         catch { }
     }
 
-    public Image<Rgba32> Process(Image<Rgba32> image, IProgress<int>? progress = null, int targetScale = 4, System.Threading.CancellationToken ct = default)
+    public Image<Rgba32> Process(Image<Rgba32> image, IProgress<int>? progress = null, int targetMp = 24, System.Threading.CancellationToken ct = default)
     {
         try 
         {
-            return ProcessReal(image, progress, targetScale, ct);
+            return ProcessReal(image, progress, targetMp, ct);
         } 
         catch (OperationCanceledException)
         {
@@ -76,35 +76,10 @@ public class OnnxUpscaler
         }
     }
 
-    private Image<Rgba32> ProcessReal(Image<Rgba32> image, IProgress<int>? progress, int targetScale, System.Threading.CancellationToken ct)
+    private Image<Rgba32> ProcessReal(Image<Rgba32> image, IProgress<int>? progress, int targetMp, System.Threading.CancellationToken ct)
     {
         int width = image.Width;
         int height = image.Height;
-        
-        // TỐI ƯU SIÊU CẤP: Tính toán động cỡ mảnh theo năng lực phần cứng
-        int tileSize = 128;
-        if (_targetDeviceId >= 0)
-        {
-            // GPU Mode: Tống cục to để khai thác hết Stream Processors
-             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 1024 : 512;
-        }
-        else 
-        {
-            // CPU Mode: Gồng nhẹ nhàng nương theo cache line 
-             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 256 : 128;
-        }
-        
-        int modelScale = 4; 
-        
-        var resultImage = new Image<Rgba32>(width * modelScale, height * modelScale);
-        
-        var xs = new List<int>();
-        var ys = new List<int>();
-        for (int y = 0; y < height; y += tileSize) ys.Add(y);
-        for (int x = 0; x < width; x += tileSize) xs.Add(x);
-        
-        int totalTiles = xs.Count * ys.Count;
-        int currentTile = 0;
 
         SessionOptions? options = null;
         InferenceSession? session = null;
@@ -118,7 +93,7 @@ public class OnnxUpscaler
                 tempOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
                 tempOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
                 tempOptions.AppendExecutionProvider_DML(_targetDeviceId); 
-                session = new InferenceSession(_modelBytes, tempOptions);
+                session = new InferenceSession(_modelPath, tempOptions);
                 options = tempOptions;
             }
             catch (Exception ex)
@@ -142,8 +117,42 @@ public class OnnxUpscaler
             else
                 options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount / 2); 
             
-            session = new InferenceSession(_modelBytes, options); 
+            session = new InferenceSession(_modelPath, options); 
         }
+
+        var inputMeta = session.InputMetadata.Values.First();
+        bool isStaticShape = inputMeta.Dimensions.Length >= 4 && inputMeta.Dimensions[2] > 0 && inputMeta.Dimensions[3] > 0;
+        int fixedH = isStaticShape ? inputMeta.Dimensions[2] : -1;
+        int fixedW = isStaticShape ? inputMeta.Dimensions[3] : -1;
+
+        int overlap = 16;
+        int tileSize = 128;
+        
+        if (isStaticShape)
+        {
+            tileSize = Math.Min(tileSize, fixedW - (overlap * 2));
+            if (tileSize <= 0) tileSize = fixedW; 
+        }
+        else if (_targetDeviceId >= 0)
+        {
+             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 1024 : 512;
+        }
+        else 
+        {
+             tileSize = (_performanceMode == PerformanceMode.Unleashed) ? 256 : 128;
+        }
+        
+        int modelScale = 4; 
+        
+        var resultImage = new Image<Rgba32>(width * modelScale, height * modelScale);
+        
+        var xs = new List<int>();
+        var ys = new List<int>();
+        for (int y = 0; y < height; y += tileSize) ys.Add(y);
+        for (int x = 0; x < width; x += tileSize) xs.Add(x);
+        
+        int totalTiles = xs.Count * ys.Count;
+        int currentTile = 0;
 
         var tileCoords = new List<(int Index, int X, int Y)>();
         int idx = 0;
@@ -239,7 +248,7 @@ public class OnnxUpscaler
                 tile = image.Clone(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
             }
             
-            using var upscaledTile = ProcessTile(session, tile, cropW, cropH);
+            using var upscaledTile = ProcessTile(session, tile, cropW, cropH, fixedW, fixedH);
             tile.Dispose();
             
             int cropOutputX = padLeft * modelScale;
@@ -263,11 +272,20 @@ public class OnnxUpscaler
         session.Dispose();
 
         ct.ThrowIfCancellationRequested();
+        
+        long currentPixels = (long)width * height;
+        long targetPixels = targetMp * 1000000L;
+        long upscaledPixels = (long)resultImage.Width * resultImage.Height;
 
-        if (targetScale != modelScale)
+        // Cho phép scale-down (thu nhỏ nếu model x4 ra ảnh vỡ RAM) VÀ scale-up thêm (nếu model chưa đạt target MP)
+        if (Math.Abs(upscaledPixels - targetPixels) > 100000) 
         {
             progress?.Report(99); 
-            resultImage.Mutate(ctx => ctx.Resize(width * targetScale, height * targetScale, KnownResamplers.Lanczos3));
+            double finalScaleFactor = Math.Sqrt((double)targetPixels / currentPixels);
+            int finalW = (int)(width * finalScaleFactor);
+            int finalH = (int)(height * finalScaleFactor);
+            
+            resultImage.Mutate(ctx => ctx.Resize(finalW, finalH, KnownResamplers.Lanczos3));
         }
 
         return resultImage;
@@ -275,9 +293,11 @@ public class OnnxUpscaler
 
     private static readonly object _gpuGlobalLock = new object();
 
-    private Image<Rgba32> ProcessTile(InferenceSession session, Image<Rgba32> tile, int width, int height)
+    private Image<Rgba32> ProcessTile(InferenceSession session, Image<Rgba32> tile, int width, int height, int fixedW, int fixedH)
     {
-        var inputTensor = new DenseTensor<float>(new[] { 1, 3, height, width });
+        int inputH = fixedH > 0 ? fixedH : height;
+        int inputW = fixedW > 0 ? fixedW : width;
+        var inputTensor = new DenseTensor<float>(new[] { 1, 3, inputH, inputW });
         
         tile.ProcessPixelRows(accessor =>
         {
@@ -293,9 +313,10 @@ public class OnnxUpscaler
             }
         });
 
+        var inputName = session.InputMetadata.Keys.First();
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor("input", inputTensor) 
+            NamedOnnxValue.CreateFromTensor(inputName, inputTensor) 
         };
 
         IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
@@ -324,16 +345,21 @@ public class OnnxUpscaler
             var outputName = session.OutputMetadata.Keys.First(); 
             var output = results.First(v => v.Name == outputName).AsTensor<float>();
 
-            int outHeight = output.Dimensions[2];
-            int outWidth = output.Dimensions[3];
+            int outModelHeight = output.Dimensions[2];
+            int outModelWidth = output.Dimensions[3];
 
-            var resultTile = new Image<Rgba32>(outWidth, outHeight);
+            int scale = outModelHeight / inputH;
+            
+            int outValidHeight = height * scale;
+            int outValidWidth = width * scale;
+
+            var resultTile = new Image<Rgba32>(outValidWidth, outValidHeight);
             resultTile.ProcessPixelRows(accessor =>
             {
-                for (int y = 0; y < outHeight; y++)
+                for (int y = 0; y < outValidHeight; y++)
                 {
                     var row = accessor.GetRowSpan(y);
-                    for (int x = 0; x < outWidth; x++)
+                    for (int x = 0; x < outValidWidth; x++)
                     {
                         row[x] = new Rgba32(
                             (float)Math.Clamp(output[0, 0, y, x], 0, 1),

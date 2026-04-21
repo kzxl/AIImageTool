@@ -29,7 +29,9 @@
   </Target>
 
   <ItemGroup>
-    <EmbeddedResource Include="Models\4x-UltraSharpV2_fp32_op17.onnx" />
+    <Content Include="Models\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

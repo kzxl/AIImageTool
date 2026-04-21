@@ -55,33 +55,84 @@ public partial class UpscalerControl : UserControl
 
     private void CmbModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (cmbScale == null) return;
+        if (cmbScale == null || cmbModel == null) return;
         cmbScale.Items.Clear();
-        if (cmbModel.SelectedIndex == 0) // Fast Resize
+        
+        var selectedItem = cmbModel.SelectedItem as ComboBoxItem;
+        string selContent = selectedItem?.Content?.ToString() ?? "";
+        
+        if (selContent.Contains("AuraSR"))
+        {
+            cmbScale.Items.Add(new ComboBoxItem { Content = "Auto (API)", Tag = "24", IsSelected = true });
+        }
+        else 
         {
             cmbScale.Items.Add(new ComboBoxItem { Content = "16 MP", Tag = "16" });
             cmbScale.Items.Add(new ComboBoxItem { Content = "21 MP", Tag = "21" });
             cmbScale.Items.Add(new ComboBoxItem { Content = "24 MP", Tag = "24", IsSelected = true });
             cmbScale.Items.Add(new ComboBoxItem { Content = "36 MP", Tag = "36" });
         }
-        else // AI Model
-        {
-            cmbScale.Items.Add(new ComboBoxItem { Content = "x2", Tag = "2" });
-            cmbScale.Items.Add(new ComboBoxItem { Content = "x4", Tag = "4", IsSelected = true });
-            cmbScale.Items.Add(new ComboBoxItem { Content = "x8", Tag = "8" });
-        }
     }
 
     private bool _isDraggingSplitter = false;
     private double _splitPercent = 0.5;
+    
+    private System.Windows.Point _lastPanPosition;
+    private bool _isPanning = false;
 
     private void GridImageContainer_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateSplitClip();
     }
 
+    private void GridImageContainer_MouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (imgOriginal.Source == null && imgPreview.Source == null) return;
+        _isPanning = true;
+        _lastPanPosition = e.GetPosition(borderImageArea);
+        gridImageContainer.CaptureMouse();
+    }
+
+    private void GridImageContainer_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_isPanning)
+        {
+            _isPanning = false;
+            if (!_isDraggingSplitter) gridImageContainer.ReleaseMouseCapture();
+        }
+    }
+
+    private void GridImageContainer_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (imgOriginal.Source == null && imgPreview.Source == null) return;
+
+        double zoomChange = e.Delta > 0 ? 1.15 : 1 / 1.15;
+        var newScale = Math.Clamp(imgScaleTransform.ScaleX * zoomChange, 1.0, 20.0);
+
+        var mousePos = e.GetPosition(borderImageArea);
+        
+        // Cố định tâm phóng to vào vị trí con trỏ chuột
+        imgTranslateTransform.X = mousePos.X - (mousePos.X - imgTranslateTransform.X) * (newScale / imgScaleTransform.ScaleX);
+        imgTranslateTransform.Y = mousePos.Y - (mousePos.Y - imgTranslateTransform.Y) * (newScale / imgScaleTransform.ScaleY);
+
+        imgScaleTransform.ScaleX = newScale;
+        imgScaleTransform.ScaleY = newScale;
+    }
+
     private void GridImageContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
+        {
+            if (imgOriginal.Source != null || imgPreview.Source != null)
+            {
+                _isPanning = true;
+                _lastPanPosition = e.GetPosition(borderImageArea);
+                gridImageContainer.CaptureMouse();
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (imgPreview.Source != null && borderSplitLine.Visibility == Visibility.Visible)
         {
             _isDraggingSplitter = true;
@@ -93,6 +144,14 @@ public partial class UpscalerControl : UserControl
 
     private void GridImageContainer_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (_isPanning)
+        {
+            var curPos = e.GetPosition(borderImageArea);
+            imgTranslateTransform.X += curPos.X - _lastPanPosition.X;
+            imgTranslateTransform.Y += curPos.Y - _lastPanPosition.Y;
+            _lastPanPosition = curPos;
+        }
+
         if (_isDraggingSplitter)
         {
             UpdateSplitPosition(e.GetPosition(gridImageContainer));
@@ -101,18 +160,26 @@ public partial class UpscalerControl : UserControl
 
     private void GridImageContainer_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (_isPanning)
+        {
+            _isPanning = false;
+            if (!_isDraggingSplitter) gridImageContainer.ReleaseMouseCapture();
+            return;
+        }
+
         if (_isDraggingSplitter)
         {
             _isDraggingSplitter = false;
-            gridImageContainer.ReleaseMouseCapture();
+            if (!_isPanning) gridImageContainer.ReleaseMouseCapture();
         }
     }
 
     private void GridImageContainer_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_isDraggingSplitter)
+        if (_isDraggingSplitter || _isPanning)
         {
             _isDraggingSplitter = false;
+            _isPanning = false;
             gridImageContainer.ReleaseMouseCapture();
         }
     }
@@ -211,6 +278,11 @@ public partial class UpscalerControl : UserControl
             imgOriginal.Source = bmp;
             txtPrompt.Visibility = Visibility.Collapsed;
             btnClearImage.Visibility = Visibility.Visible;
+            
+            imgScaleTransform.ScaleX = 1.0;
+            imgScaleTransform.ScaleY = 1.0;
+            imgTranslateTransform.X = 0;
+            imgTranslateTransform.Y = 0;
 
             if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
         }
@@ -245,10 +317,10 @@ public partial class UpscalerControl : UserControl
                 perfMode = PerformanceMode.Unleashed;
             }
 
-            int targetScale = 4;
+            int targetMp = 24;
             if (cmbScale.SelectedItem is ComboBoxItem scaleItem && int.TryParse(scaleItem.Tag?.ToString(), out int parsedScale))
             {
-                targetScale = parsedScale;
+                targetMp = parsedScale;
             }
 
             int selectedModelIndex = cmbModel.SelectedIndex;
@@ -271,18 +343,24 @@ public partial class UpscalerControl : UserControl
 
             (byte[] ImageBytes, string SavedPath) resultData = (null, null);
             
-            if (selectedModelIndex == 0)
+            var selectedItem = cmbModel.SelectedItem as ComboBoxItem;
+            string selContent = selectedItem?.Content?.ToString() ?? "";
+            
+            if (selContent.Contains("Fast Resize"))
             {
                 // Fast Resize Interpolation (No AI)
-                resultData = await ProcessFastResizeAsync(_currentImagePath, targetScale, progress, ct);
+                resultData = await ProcessFastResizeAsync(_currentImagePath, targetMp, progress, ct);
             }
-            else if (selectedModelIndex == 2)
+            else if (selContent.Contains("AuraSR"))
             {
                 resultData = await ProcessAuraSRAsync(_currentImagePath, ct);
             }
             else
             {
-                resultData = await ProcessOnnxAsync(_currentImagePath, targetDeviceId, perfMode, targetScale, progress, ct);
+                string mdFileName = selectedItem?.Tag?.ToString();
+                if (string.IsNullOrEmpty(mdFileName)) throw new Exception("ComboBox Model chưa cấu hình Tag chứa tên file ONNX!");
+                
+                resultData = await ProcessOnnxAsync(_currentImagePath, targetDeviceId, perfMode, targetMp, mdFileName, progress, ct);
             }
 
             if (resultData.ImageBytes != null)
@@ -401,36 +479,33 @@ public partial class UpscalerControl : UserControl
         return (targetBytes, dPath);
     }
 
-    private async Task<(byte[] ImageBytes, string SavedPath)> ProcessOnnxAsync(string imagePath, int targetDeviceId, PerformanceMode perfMode, int targetScale, IProgress<int> progress, CancellationToken ct)
+    private async Task<(byte[] ImageBytes, string SavedPath)> ProcessOnnxAsync(string imagePath, int targetDeviceId, PerformanceMode perfMode, int targetMp, string mdFileName, IProgress<int> progress, CancellationToken ct)
     {
         return await Task.Run(() => 
         {
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(n => n.Contains("UltraSharpV2"));
-            if (string.IsNullOrEmpty(resourceName)) throw new Exception("Không tìm thấy Model nhúng trong dll!");
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var mdPath = Path.Combine(baseDir, "Plugins", "ImageTool.Plugins.Upscaler", "Models", mdFileName);
+            
+            if (!File.Exists(mdPath))
+            {
+                // Fallback debug mode
+                mdPath = Path.Combine(baseDir, "Models", mdFileName);
+                if (!File.Exists(mdPath)) throw new Exception($"Không tìm thấy file Model tại: {mdPath}\nVui lòng copy file .onnx (và .data nếu có) vào thư mục Models.");
+            }
             
             ct.ThrowIfCancellationRequested();
             
-            using var stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream == null) throw new Exception("Không bắt được luồng Model nhúng!");
-            
-            // Có thể tối ưu truyền thẳng stream nếu thư viện ONNX hỗ trợ, ở đây giữ nguyên byte[] do logic OnnxUpscaler
-            using var ms = new MemoryStream();
-            stream.CopyTo(ms);
-            byte[] modelBytes = ms.ToArray();
-            
-            ct.ThrowIfCancellationRequested();
-
             var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
             if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
             
             string randId = Guid.NewGuid().ToString("N").Substring(0, 6);
             string originalName = Path.GetFileNameWithoutExtension(imagePath);
-            string savePath = Path.Combine(outputDir, $"{originalName}_x4_{randId}.png");
+            string savePath = Path.Combine(outputDir, $"{originalName}_{targetMp}MP_{randId}.png");
 
             using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(imagePath);
-            var upscaler = new OnnxUpscaler(modelBytes, targetDeviceId, perfMode);
-            var resultSharp = upscaler.Process(image, progress, targetScale, ct);
+            var upscaler = new OnnxUpscaler(mdPath, targetDeviceId, perfMode);
+            var resultSharp = upscaler.Process(image, progress, targetMp, ct);
+
             
             ct.ThrowIfCancellationRequested();
             
