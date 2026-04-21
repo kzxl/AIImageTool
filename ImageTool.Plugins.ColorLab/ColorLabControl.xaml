@@ -1,0 +1,143 @@
+<UserControl x:Class="ImageTool.Plugins.ColorLab.ColorLabControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1E1E1E" Foreground="White">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Color Lab &amp; Analyzer" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Image Area -->
+            <Border x:Name="borderImageArea" Grid.Column="0" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
+                    Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" Margin="0,0,10,0">
+                <Grid>
+                    <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
+                    <Image x:Name="imgPreview" Stretch="Uniform" Margin="10" MouseMove="ImgPreview_MouseMove" MouseLeftButtonDown="ImgPreview_MouseLeftButtonDown"/>
+                    <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
+                            Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click" Panel.ZIndex="20">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Tools Area -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="pnlTools" Visibility="Collapsed">
+                    
+                    <!-- Color Palette Section -->
+                    <Border Background="#252526" BorderBrush="#444" BorderThickness="1" CornerRadius="8" Margin="0,0,0,15" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Dominant Colors (Màu chủ đạo)" FontSize="16" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,10"/>
+                            <ItemsControl x:Name="icPalette">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,10,10" Width="60">
+                                            <Border Width="60" Height="40" Background="{Binding HexBrush}" BorderBrush="#555" BorderThickness="1" CornerRadius="4" Cursor="Hand" MouseLeftButtonUp="Swatch_Click"/>
+                                            <TextBlock Text="{Binding HexString}" FontSize="11" Foreground="#CCC" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Đề xuất Phối màu (Tương phản / Bổ túc):" Margin="0,10,0,5" Foreground="#AAA" FontSize="12"/>
+                            <ItemsControl x:Name="icSuggested">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="30" Height="30" Background="{Binding HexBrush}" BorderThickness="0" Margin="0,0,5,0" CornerRadius="15" ToolTip="{Binding HexString}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <TextBlock x:Name="txtHoverColor" Text="Chấm màu trực tiếp trên ảnh để làm màu Gốc." Margin="0,15,0,0" Foreground="#88C0D0" FontStyle="Italic"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Color Grading Section -->
+                    <Border Background="#252526" BorderBrush="#444" BorderThickness="1" CornerRadius="8" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Selective Color Grading" FontSize="16" FontWeight="SemiBold" Foreground="#E0E0E0" Margin="0,0,0,5"/>
+                            <TextBlock Text="Đổi dải màu cục bộ mà không ảnh hưởng toàn cảnh." FontSize="12" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Màu gốc (Source):" VerticalAlignment="Center" Width="100"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Border x:Name="bdrSource" Width="25" Height="25" Background="#FFFFFF" BorderBrush="#888" BorderThickness="1" Margin="0,0,10,0" CornerRadius="4"/>
+                                    <TextBox x:Name="txtSource" Text="#FFFFFF" TextChanged="TxtSource_TextChanged" Width="100" Height="25" VerticalContentAlignment="Center" Padding="5,0"/>
+                                    <TextBlock Text=" (Click to set)" Foreground="#888" FontStyle="Italic" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Màu phủ (Target):" VerticalAlignment="Center" Width="100"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Border x:Name="bdrTarget" Width="25" Height="25" Background="#000000" BorderBrush="#888" BorderThickness="1" Margin="0,0,10,0" CornerRadius="4"/>
+                                    <TextBox x:Name="txtTarget" Text="#000000" TextChanged="TxtTarget_TextChanged" Width="100" Height="25" VerticalContentAlignment="Center" Padding="5,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="Độ phủ (Hue Tolerance):" Margin="0,10,0,5"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Slider x:Name="slTolerance" Minimum="1" Maximum="90" Value="25" Width="200" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Value, ElementName=slTolerance, StringFormat=\{0:F0\} độ}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#55C1E7"/>
+                            </StackPanel>
+
+                            <Button x:Name="btnApplyColor" Content="Chuyển Màu Mới" Height="35" Margin="0,20,0,0" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnApplyColor_Click">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                            
+                            <!-- Save Button -->
+                            <Button x:Name="btnSaveImage" Content="Lưu Bức Ảnh" Height="30" Margin="0,10,0,0" Background="#1E6E43" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnSaveImage_Click">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+
+                            <StackPanel x:Name="pnlProgress" Visibility="Collapsed" Margin="0,15,0,0">
+                                <TextBlock Text="Đang xử lý phân mảng màu..." Foreground="#AAA" Margin="0,0,0,5"/>
+                                <ProgressBar x:Name="pbProgress" Height="4" IsIndeterminate="True" Foreground="#007ACC" Background="#444" BorderThickness="0"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

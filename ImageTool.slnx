@@ -1,7 +1,9 @@
 <Solution>
   <Project Path="ImageTool.Core/ImageTool.Core.csproj" />
   <Project Path="ImageTool.Host/ImageTool.Host.csproj" />
+  <Project Path="ImageTool.Plugins.ColorLab/ImageTool.Plugins.ColorLab.csproj" />
   <Project Path="ImageTool.Plugins.FaceRestorer/ImageTool.Plugins.FaceRestorer.csproj" />
+  <Project Path="ImageTool.Plugins.MetaEditor/ImageTool.Plugins.MetaEditor.csproj" />
   <Project Path="ImageTool.Plugins.Upscaler/ImageTool.Plugins.Upscaler.csproj" />
   <Project Path="ImageTool.Shared/ImageTool.Shared.csproj" />
   <Project Path="ImageTool.Worker.Upscaler/ImageTool.Worker.Upscaler.csproj" />

@@ -11,36 +11,39 @@
 
         <TextBlock Text="AI Image Upscaler" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
 
-        <!-- Drag Drop Area / Image Preview -->
-        <Border x:Name="borderImageArea" Grid.Row="1" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
-                Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" Margin="0,0,0,20">
-            <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged"
-                  Background="Transparent"
-                  MouseLeftButtonDown="GridImageContainer_MouseLeftButtonDown"
-                  MouseMove="GridImageContainer_MouseMove"
-                  MouseLeftButtonUp="GridImageContainer_MouseLeftButtonUp"
-                  MouseLeave="GridImageContainer_MouseLeave">
-                <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
-                
-                <Image x:Name="imgOriginal" Stretch="Uniform" Margin="10"/>
-                <Image x:Name="imgPreview" Stretch="Uniform" Margin="10"/>
-                
-                <Border x:Name="borderSplitLine" Width="2" Background="White" HorizontalAlignment="Left" Visibility="Collapsed" IsHitTestVisible="False">
-                    <Border.Effect>
-                        <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
-                    </Border.Effect>
-                </Border>
+        <!-- Drag Drop Area / Image Preview & Metadata -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
 
-                <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
-                        Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click" Panel.ZIndex="20">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="4"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-            </Grid>
-        </Border>
+            <Border x:Name="borderImageArea" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
+                    Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand">
+                <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged"
+                      Background="Transparent"
+                      MouseLeftButtonDown="GridImageContainer_MouseLeftButtonDown"
+                      MouseMove="GridImageContainer_MouseMove"
+                      MouseLeftButtonUp="GridImageContainer_MouseLeftButtonUp"
+                      MouseLeave="GridImageContainer_MouseLeave">
+                    <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
+                    
+                    <Image x:Name="imgOriginal" Stretch="Uniform" Margin="10"/>
+                    <Image x:Name="imgPreview" Stretch="Uniform" Margin="10"/>
+                    
+                    <Border x:Name="borderSplitLine" Width="2" Background="White" HorizontalAlignment="Left" Visibility="Collapsed" IsHitTestVisible="False">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
+                        </Border.Effect>
+                    </Border>
+
+                    <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
+                            Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click" Panel.ZIndex="20">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Controls -->
         <Grid Grid.Row="2">
@@ -58,21 +61,26 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <ComboBox x:Name="cmbDevice" Width="160" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Thiết bị thực thi (GPU/CPU)" DisplayMemberPath="Name" />
-                <ComboBox x:Name="cmbPerformance" Width="100" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Mức độ hiệu năng hệ thống">
+                <ComboBox x:Name="cmbDevice" Width="140" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Thiết bị thực thi (GPU/CPU)" DisplayMemberPath="Name" />
+                <ComboBox x:Name="cmbPerformance" Width="90" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Mức độ hiệu năng hệ thống">
                     <ComboBoxItem Content="An toàn" Tag="Safe" />
                     <ComboBoxItem Content="Bung lụa" Tag="Unleashed" />
                 </ComboBox>
-                <ComboBox x:Name="cmbModel" Width="160" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center">
+                <ComboBox x:Name="cmbModel" Width="180" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" SelectionChanged="CmbModel_SelectionChanged">
+                    <ComboBoxItem Content="Fast Resize (Lanczos)"/>
                     <ComboBoxItem Content="UltraSharp V2 (Cục bộ)"/>
                     <ComboBoxItem Content="AuraSR (Generative API)"/>
                 </ComboBox>
-                <ComboBox x:Name="cmbScale" Width="55" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ phóng to (x2 mặc định thu nhỏ nét hơn, x8 dùng nội suy)">
-                    <ComboBoxItem Content="x2" Tag="2"/>
-                    <ComboBoxItem Content="x4" Tag="4"/>
-                    <ComboBoxItem Content="x8" Tag="8"/>
+                <ComboBox x:Name="cmbScale" Width="75" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ/Độ phân giải mục tiêu">
+                    <!-- Sẽ code-behind render -->
                 </ComboBox>
-                <Button x:Name="btnProcess" Content="Upscale" Width="100" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnProcess_Click"/>
+                <Button x:Name="btnProcess" Content="Upscale" Width="100" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnProcess_Click">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="4"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

@@ -9,7 +9,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 
 namespace ImageTool.Plugins.Upscaler;
 
@@ -27,6 +30,8 @@ public partial class UpscalerControl : UserControl
 
     private async void UpscalerControl_Loaded(object sender, RoutedEventArgs e)
     {
+        CmbModel_SelectionChanged(null, null);
+
         try 
         {
             cmbDevice.IsEnabled = false;
@@ -45,6 +50,25 @@ public partial class UpscalerControl : UserControl
         catch (Exception ex)
         {
             MessageBox.Show($"Lỗi không xác định: {ex.Message}\n{ex.StackTrace}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void CmbModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (cmbScale == null) return;
+        cmbScale.Items.Clear();
+        if (cmbModel.SelectedIndex == 0) // Fast Resize
+        {
+            cmbScale.Items.Add(new ComboBoxItem { Content = "16 MP", Tag = "16" });
+            cmbScale.Items.Add(new ComboBoxItem { Content = "21 MP", Tag = "21" });
+            cmbScale.Items.Add(new ComboBoxItem { Content = "24 MP", Tag = "24", IsSelected = true });
+            cmbScale.Items.Add(new ComboBoxItem { Content = "36 MP", Tag = "36" });
+        }
+        else // AI Model
+        {
+            cmbScale.Items.Add(new ComboBoxItem { Content = "x2", Tag = "2" });
+            cmbScale.Items.Add(new ComboBoxItem { Content = "x4", Tag = "4", IsSelected = true });
+            cmbScale.Items.Add(new ComboBoxItem { Content = "x8", Tag = "8" });
         }
     }
 
@@ -140,6 +164,8 @@ public partial class UpscalerControl : UserControl
 
     private void Border_Drop(object sender, DragEventArgs e)
     {
+        if (!string.IsNullOrEmpty(_currentImagePath)) return;
+
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
@@ -152,6 +178,8 @@ public partial class UpscalerControl : UserControl
 
     private void Border_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
+        if (!string.IsNullOrEmpty(_currentImagePath)) return;
+
         var openFileDialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Chọn ảnh cần phóng to",
@@ -243,7 +271,12 @@ public partial class UpscalerControl : UserControl
 
             (byte[] ImageBytes, string SavedPath) resultData = (null, null);
             
-            if (selectedModelIndex == 1)
+            if (selectedModelIndex == 0)
+            {
+                // Fast Resize Interpolation (No AI)
+                resultData = await ProcessFastResizeAsync(_currentImagePath, targetScale, progress, ct);
+            }
+            else if (selectedModelIndex == 2)
             {
                 resultData = await ProcessAuraSRAsync(_currentImagePath, ct);
             }
@@ -402,6 +435,57 @@ public partial class UpscalerControl : UserControl
             ct.ThrowIfCancellationRequested();
             
             resultSharp.SaveAsPng(savePath);
+            byte[] outBytes = File.ReadAllBytes(savePath);
+            return (ImageBytes: outBytes, SavedPath: savePath);
+        }, ct);
+    }
+
+    private async Task<(byte[] ImageBytes, string SavedPath)> ProcessFastResizeAsync(string imagePath, int targetMp, IProgress<int> progress, CancellationToken ct)
+    {
+        return await Task.Run(() => 
+        {
+            ct.ThrowIfCancellationRequested();
+            progress.Report(10);
+            
+            var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+            if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
+            
+            string randId = Guid.NewGuid().ToString("N").Substring(0, 6);
+            string originalName = Path.GetFileNameWithoutExtension(imagePath);
+            string savePath = Path.Combine(outputDir, $"{originalName}_{targetMp}MP_Lanczos_{randId}.png");
+
+            using var image = SixLabors.ImageSharp.Image.Load(imagePath);
+            progress.Report(30);
+
+            long currentPixels = (long)image.Width * image.Height;
+            long targetPixels = targetMp * 1000000L;
+            
+            if (currentPixels >= targetPixels)
+            {
+                // Nếu ảnh đã to hơn mức chọn thì không resize
+                image.SaveAsPng(savePath);
+            }
+            else
+            {
+                double scaleFactor = Math.Sqrt((double)targetPixels / currentPixels);
+                int newWidth = (int)(image.Width * scaleFactor);
+                int newHeight = (int)(image.Height * scaleFactor);
+                
+                progress.Report(50);
+                
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+                    Sampler = KnownResamplers.Lanczos3
+                }));
+                
+                progress.Report(80);
+                image.SaveAsPng(savePath);
+            }
+            
+            progress.Report(100);
+            ct.ThrowIfCancellationRequested();
+            
             byte[] outBytes = File.ReadAllBytes(savePath);
             return (ImageBytes: outBytes, SavedPath: savePath);
         }, ct);

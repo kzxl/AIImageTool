@@ -34,7 +34,7 @@
     <ItemGroup>
       <PluginFiles Include="$(TargetDir)**" />
     </ItemGroup>
-    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(SolutionDir)ImageTool.Host\bin\$(Configuration)\net8.0-windows\win-x64\Plugins\ImageTool.Plugins.FaceRestorer\%(RecursiveDir)" />
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(MSBuildProjectDirectory)\..\ImageTool.Host\bin\$(Configuration)\net8.0-windows\win-x64\Plugins\ImageTool.Plugins.FaceRestorer\%(RecursiveDir)" />
   </Target>
 
 </Project>

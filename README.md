@@ -17,7 +17,15 @@ AIImageTool là một ứng dụng Desktop (WPF, .NET 8) mã nguồn mở phục
 - Phục hồi lại độ sắc nét tự nhiên cho chân dung và khuôn mặt bị vỡ, nhoè, mờ (thường bị mất chi tiết sau khi upscale bằng các model phong cảnh).
 - Quy trình chạy song song và tương thích tốt với DirectML qua Hardware Acceleration.
 
-### 3. Core & Host Architecture
+### 3. Color Lab (Hiệu chỉnh màu sắc)
+- Cung cấp giao diện trực quan hỗ trợ xem, chọn và tinh chỉnh màu sắc cho ảnh.
+- Cơ chế khóa an toàn, ngăn xung đột khi đang load dữ liệu hình ảnh lớn.
+
+### 4. Meta Editor (Chỉnh sửa siêu dữ liệu)
+- Đọc, hiển thị và cho phép điều chỉnh trực tiếp thông tin Metadata/EXIF đính kèm của hình ảnh.
+- Tích hợp tính năng khoá luồng (Locking Mechanism) đảm bảo ổn định và an toàn dữ liệu trong suốt quá trình người dùng tinh chỉnh.
+
+### Core & Host Architecture
 - Giao diện người dùng Windows Presentation Foundation (WPF) hiện đại, phản hồi kết quả AI theo tiến trình thời gian thực.
 - Khả năng **Hot-load Plugins:** Module lõi tự động dò tìm và nạp thư viện `IImagePlugin` từ các tệp `.dll` đặt trong thư mục `Plugins`.
 - **Kiến trúc Multi-Thread (In-Process Parallel):** Đảm bảo xử lý AI và render hoàn toàn In-Process bằng OnnxRuntime tối ưu, giải quyết triệt để lỗi thắt cổ chai, chia sẻ Native DLLs ngay lập tức và tránh các lỗi LoadLibrary từ hệ điều hành.

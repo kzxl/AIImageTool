@@ -5,20 +5,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4">
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </PackageReference>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12">
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </PackageReference>
-    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <Target Name="CopyPlugin" AfterTargets="Build">
@@ -27,9 +21,5 @@
     </ItemGroup>
     <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(MSBuildProjectDirectory)\..\ImageTool.Host\bin\$(Configuration)\net8.0-windows\win-x64\Plugins\%(RecursiveDir)" />
   </Target>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Models\4x-UltraSharpV2_fp32_op17.onnx" />
-  </ItemGroup>
 
 </Project>

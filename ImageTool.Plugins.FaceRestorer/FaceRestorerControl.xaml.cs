@@ -19,6 +19,8 @@ public partial class FaceRestorerControl : UserControl
 
     private void Border_Drop(object sender, DragEventArgs e)
     {
+        if (!string.IsNullOrEmpty(_currentImagePath)) return;
+
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
