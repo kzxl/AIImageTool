@@ -19,11 +19,25 @@ AIImageTool là một ứng dụng Desktop (WPF, .NET 8) mã nguồn mở phục
 
 ### 3. Color Lab (Hiệu chỉnh màu sắc)
 - Cung cấp giao diện trực quan hỗ trợ xem, chọn và tinh chỉnh màu sắc cho ảnh.
+- **Selective Color Grading:** Thay thế có chọn lọc một dải màu cụ thể sang màu đích với chuyển đổi mềm mại dựa trên không gian màu HSL.
+- **Phân tích Palette tự động (K-Means):** Tự động trích xuất 5 màu chủ đạo và gợi ý bảng phối màu (Analogous, Complementary, Split-Complementary, Triadic).
+- **LUT Processor (.cube):** Tải và áp dụng file 3D LUT chuẩn `.cube` với điều chỉnh cường độ hiệu ứng (intensity slider).
+- **White Balance:**
+  - **Auto (Gray World):** Tự động cân bằng trắng theo thuật toán Gray World.
+  - **Manual (White Point Pick):** Cân bằng trắng thủ công bằng cách chọn màu điểm tham chiếu trên ảnh.
+- **Color Unification:** Đồng nhất tone màu toàn ảnh về một gam màu chỉ định với điều chỉnh cường độ.
+- **Noise Reduction:** Khử nhiễu màu sắc (Color Noise) cho ảnh bằng bộ lọc thích ứng.
 - Cơ chế khóa an toàn, ngăn xung đột khi đang load dữ liệu hình ảnh lớn.
 
 ### 4. Meta Editor (Chỉnh sửa siêu dữ liệu)
 - Đọc, hiển thị và cho phép điều chỉnh trực tiếp thông tin Metadata/EXIF đính kèm của hình ảnh.
 - Tích hợp tính năng khoá luồng (Locking Mechanism) đảm bảo ổn định và an toàn dữ liệu trong suốt quá trình người dùng tinh chỉnh.
+
+### 5. Vision Tagger — AI Auto Tagger (Phân tích & gán nhãn ảnh)
+- Tự động phân tích nội dung hình ảnh và sinh ra mô tả văn bản (Caption) cùng danh sách Tag từ khóa bằng AI Vision.
+- Giao diện xem trước ảnh tích hợp, hỗ trợ định dạng JPG, JPEG, PNG, WebP.
+- Chức năng **Copy Description** và **Copy Tags** (định dạng `tag1, tag2, tag3`) tiện lợi cho các workflow AI prompt engineering và quản lý thư viện ảnh.
+- Kiến trúc mở: Backend AI có thể tích hợp ONNX Local Model, Python Vision Worker hoặc Cloud API.
 
 ### Core & Host Architecture
 - Giao diện người dùng Windows Presentation Foundation (WPF) hiện đại, phản hồi kết quả AI theo tiến trình thời gian thực.

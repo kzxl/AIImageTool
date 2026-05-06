@@ -19,6 +19,8 @@ public class ColorSwatch
 {
     public string HexString { get; set; }
     public SolidColorBrush HexBrush { get; set; }
+    public float Percentage { get; set; }
+    public string PercentageString => $"{Percentage * 100:0.#}%";
 }
 
 public partial class ColorLabControl : UserControl
@@ -135,43 +137,12 @@ public partial class ColorLabControl : UserControl
 
     private async void ExtractDominantColorsAsync()
     {
-        var topColors = await Task.Run(() => 
-        {
-            // Logic bóc màu đơn giản: Resize nhỏ lại để lấy trung bình, sau đó gom nhóm
-            using var smallImg = _workingImage.Clone(x => x.Resize(64, 64));
-            var colorCount = new Dictionary<string, int>();
-            
-            smallImg.ProcessPixelRows(accessor => 
-            {
-                for (int y = 0; y < accessor.Height; y++)
-                {
-                    Span<Rgba32> row = accessor.GetRowSpan(y);
-                    foreach (ref Rgba32 p in row)
-                    {
-                        // Lọc bỏ Đen nhám và Trắng bóc
-                        if (p.A < 255 || (p.R < 20 && p.G < 20 && p.B < 20) || (p.R > 240 && p.G > 240 && p.B > 240)) continue;
-                        
-                        // Làm tròn màu để gom cụm dễ hơn (quantize 32 mức)
-                        int r = (p.R / 32) * 32;
-                        int g = (p.G / 32) * 32;
-                        int b = (p.B / 32) * 32;
-                        string hex = $"#{r:X2}{g:X2}{b:X2}";
-                        
-                        if (colorCount.ContainsKey(hex)) colorCount[hex]++;
-                        else colorCount[hex] = 1;
-                    }
-                }
-            });
+        var dominantInfos = await Task.Run(() => AdvancedColorProcessor.GetKMeansColors(_workingImage, 5, 10));
 
-            return colorCount.OrderByDescending(x => x.Value)
-                             .Take(5)
-                             .Select(x => x.Key)
-                             .ToList();
-        });
-
-        var swatches = topColors.Select(hex => new ColorSwatch { 
-            HexString = hex, 
-            HexBrush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex))
+        var swatches = dominantInfos.Select(info => new ColorSwatch { 
+            HexString = info.Hex, 
+            HexBrush = new SolidColorBrush(info.WpfColor),
+            Percentage = info.Percentage
         }).ToList();
 
         icPalette.ItemsSource = swatches;
@@ -183,13 +154,22 @@ public partial class ColorLabControl : UserControl
             var hsl = ColorSpaceConverter.ToHsl(new Rgb(c.R/255f, c.G/255f, c.B/255f));
             
             var suggested = new List<ColorSwatch>();
-            // Complementary
+            
+            // 1. Analogous (Tương đồng - dịu mắt, hài hòa)
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 30) % 360, hsl.S, hsl.L))));
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 330) % 360, hsl.S, hsl.L))));
+            
+            // 2. Complementary (Tương phản - nổi bật)
             float compH = (hsl.H + 180) % 360;
-            var compRgb = ColorSpaceConverter.ToRgb(new Hsl(compH, hsl.S, hsl.L));
-            suggested.Add(CreateSwatch(compRgb));
-            // Triadic
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl(compH, hsl.S, hsl.L))));
+            
+            // 3. Split-Complementary (Tương phản rẽ nhánh - dễ dùng hơn Complementary)
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 150) % 360, hsl.S, hsl.L))));
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 210) % 360, hsl.S, hsl.L))));
+
+            // 4. Triadic (Tam giác đều - cân bằng)
             suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 120) % 360, hsl.S, hsl.L))));
-            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 240) % 360, hsl.S, Math.Min(1, hsl.L+0.1f)))));
+            suggested.Add(CreateSwatch(ColorSpaceConverter.ToRgb(new Hsl((hsl.H + 240) % 360, hsl.S, hsl.L))));
 
             icSuggested.ItemsSource = suggested;
 
@@ -332,6 +312,174 @@ public partial class ColorLabControl : UserControl
         {
             _workingImage.Save(dlg.FileName);
             MessageBox.Show("Lưu thành công!", "Đã xong", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    // --- LUT PROCESSING ---
+    private LUT3D _currentLut;
+
+    private async void BtnLoadLUT_Click(object sender, RoutedEventArgs e)
+    {
+        var ofd = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn file LUT (.cube)",
+            Filter = "LUT Cube files (*.cube)|*.cube|All files (*.*)|*.*",
+            Multiselect = false
+        };
+
+        if (ofd.ShowDialog() == true)
+        {
+            btnLoadLUT.IsEnabled = false;
+            try
+            {
+                _currentLut = await Task.Run(() => LUTParser.ParseCubeFile(ofd.FileName));
+                txtCurrentLUT.Text = $"LUT: {_currentLut.Title} ({_currentLut.Size}x{_currentLut.Size}x{_currentLut.Size})";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi load LUT: {ex.Message}");
+            }
+            btnLoadLUT.IsEnabled = true;
+        }
+    }
+
+    private async void BtnApplyLUT_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workingImage == null || _currentLut == null) return;
+        
+        try
+        {
+            btnApplyLUT.IsEnabled = false;
+            txtStatus.Text = "Đang map màu 3D LUT...";
+            pnlProgress.Visibility = Visibility.Visible;
+
+            float intensity = (float)slLutIntensity.Value;
+
+            await Task.Run(() => LUTProcessor.ApplyLUT(_workingImage, _currentLut, intensity));
+
+            UpdatePreviewUI();
+            btnSaveImage.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi map màu LUT: {ex.Message}");
+        }
+        finally
+        {
+            btnApplyLUT.IsEnabled = true;
+            pnlProgress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    // --- COLOR CORRECTION (WHITE BALANCE) ---
+    private async void BtnAutoWB_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workingImage == null) return;
+        
+        try
+        {
+            btnAutoWB.IsEnabled = false;
+            txtStatus.Text = "Đang chạy cân bằng thuật toán Gray World...";
+            pnlProgress.Visibility = Visibility.Visible;
+
+            await Task.Run(() => ColorCorrectionProcessor.ApplyGrayWorld(_workingImage));
+
+            UpdatePreviewUI();
+            btnSaveImage.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi Auto WB: {ex.Message}");
+        }
+        finally
+        {
+            btnAutoWB.IsEnabled = true;
+            pnlProgress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void BtnApplyWBPick_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workingImage == null) return;
+        
+        try
+        {
+            btnApplyWBPick.IsEnabled = false;
+            txtStatus.Text = "Đang bù trừ màu gốc...";
+            pnlProgress.Visibility = Visibility.Visible;
+
+            var clr = SourceColor; // Dùng màu hút ở Tab Selective
+            await Task.Run(() => ColorCorrectionProcessor.ApplyWhitePoint(_workingImage, clr));
+
+            UpdatePreviewUI();
+            btnSaveImage.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi cân bằng tay: {ex.Message}");
+        }
+        finally
+        {
+            btnApplyWBPick.IsEnabled = true;
+            pnlProgress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    // --- COLOR UNIFICATION & NOISE ---
+    private async void BtnApplyUnify_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workingImage == null) return;
+        
+        try
+        {
+            if (this.FindName("btnApplyUnify") is Button btn) btn.IsEnabled = false;
+            txtStatus.Text = "Đang đồng nhất tone màu...";
+            pnlProgress.Visibility = Visibility.Visible;
+
+            var baseClr = SourceColor; // Dùng màu hút ở text source chính
+            float intensity = 0.5f;
+            if (this.FindName("slUnifyIntensity") is Slider sl)
+                intensity = (float)sl.Value / 100f; // 0..100 -> 0..1
+
+            await Task.Run(() => AdvancedColorProcessor.ApplyColorUnification(_workingImage, baseClr, intensity));
+
+            UpdatePreviewUI();
+            btnSaveImage.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi đồng nhất tone: {ex.Message}");
+        }
+        finally
+        {
+            if (this.FindName("btnApplyUnify") is Button btn) btn.IsEnabled = true;
+            pnlProgress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void BtnApplyNoiseReduction_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workingImage == null) return;
+        
+        try
+        {
+            if (this.FindName("btnApplyNoiseReduction") is Button btn) btn.IsEnabled = false;
+            txtStatus.Text = "Đang khử nhiễu ảnh...";
+            pnlProgress.Visibility = Visibility.Visible;
+
+            await Task.Run(() => AdvancedColorProcessor.ApplyColorNoiseReduction(_workingImage, 1));
+
+            UpdatePreviewUI();
+            btnSaveImage.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi khử nhiễu: {ex.Message}");
+        }
+        finally
+        {
+            if (this.FindName("btnApplyNoiseReduction") is Button btn) btn.IsEnabled = true;
+            pnlProgress.Visibility = Visibility.Collapsed;
         }
     }
 }
