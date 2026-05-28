@@ -94,6 +94,13 @@
                         </Style>
                     </Button.Resources>
                 </Button>
+                <Button x:Name="btnBatch" Content="Batch" Width="80" Height="35" Margin="6,0,0,0"
+                        Background="#7A4FBF" Foreground="White" BorderThickness="0" Cursor="Hand"
+                        Click="BtnBatch_Click" IsEnabled="False" ToolTip="Chạy hàng loạt trên các ảnh đã chọn">
+                    <Button.Resources>
+                        <Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style>
+                    </Button.Resources>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

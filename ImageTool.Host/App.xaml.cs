@@ -2,7 +2,6 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using ImageTool.Core;
 using ImageTool.Shared;
-
 namespace ImageTool.Host;
 
 public partial class App : Application
@@ -32,12 +31,29 @@ public partial class App : Application
 
         // Core/Shared Services
         services.AddSingleton<IEventBus, EventBus>();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IImageMetaService, ImageMetaService>();
+        services.AddSingleton<IWorkspaceService, WorkspaceService>();
+        services.AddSingleton<IThumbnailService, ThumbnailService>();
+        services.AddSingleton<IHistoryService, HistoryService>();
+        services.AddSingleton<IBatchService, BatchService>();
+        services.AddSingleton<IModelDownloader, ModelDownloader>();
+        services.AddSingleton<IStyleService, StyleService>();
         services.AddSingleton<PluginLoader>();
         services.AddSingleton<AiWorkerManager>();
     }
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        // Register built-in capabilities
+        var batch = _serviceProvider.GetService(typeof(IEventBus)) as IEventBus; // ensure DI built
+        var batchSvc = (IBatchService)_serviceProvider.GetService(typeof(IBatchService))!;
+        batchSvc?.RegisterCapability(new ImageTool.Shared.ExportBatchAdapter());
+
+        var styleSvc = (IStyleService)_serviceProvider.GetService(typeof(IStyleService))!;
+        if (styleSvc != null)
+            batchSvc?.RegisterCapability(new ImageTool.Shared.StyleBatchAdapter(styleSvc));
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }

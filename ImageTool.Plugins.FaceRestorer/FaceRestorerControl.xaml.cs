@@ -1,9 +1,11 @@
 using System;
 using System.IO;
-using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using ImageTool.Core;
 using SixLabors.ImageSharp;
 
 namespace ImageTool.Plugins.FaceRestorer;
@@ -11,31 +13,52 @@ namespace ImageTool.Plugins.FaceRestorer;
 public partial class FaceRestorerControl : UserControl
 {
     private string _currentImagePath = "";
+    private IWorkspaceService? _workspace;
+    private IModelDownloader? _downloader;
+    private GpenProcessor? _processor;
 
     public FaceRestorerControl()
     {
         InitializeComponent();
     }
 
+    public void AttachServices(IServiceProvider sp)
+    {
+        _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
+        _downloader = sp.GetService(typeof(IModelDownloader)) as IModelDownloader;
+        if (_workspace != null)
+        {
+            _workspace.ActiveImageChanged += (s, e) => Dispatcher.BeginInvoke(() => LoadImage(e.CurrentPath));
+        }
+    }
+
+    private void LoadImage(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            imgPreview.Source = null;
+            txtPrompt.Visibility = Visibility.Visible;
+            _currentImagePath = "";
+            return;
+        }
+        _currentImagePath = path;
+        var bmp = new BitmapImage();
+        bmp.BeginInit();
+        bmp.CacheOption = BitmapCacheOption.OnLoad;
+        bmp.UriSource = new Uri(path);
+        bmp.DecodePixelWidth = 800;
+        bmp.EndInit();
+        bmp.Freeze();
+        imgPreview.Source = bmp;
+        txtPrompt.Visibility = Visibility.Collapsed;
+    }
+
     private void Border_Drop(object sender, DragEventArgs e)
     {
-        if (!string.IsNullOrEmpty(_currentImagePath)) return;
-
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files != null && files.Length > 0)
-            {
-                _currentImagePath = files[0];
-                txtPrompt.Visibility = Visibility.Collapsed;
-                
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(_currentImagePath);
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                imgPreview.Source = bmp;
-            }
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files != null && files.Length > 0) LoadImage(files[0]);
         }
     }
 
@@ -43,60 +66,67 @@ public partial class FaceRestorerControl : UserControl
     {
         if (string.IsNullOrEmpty(_currentImagePath))
         {
-            MessageBox.Show("Please drop an image first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Hãy chọn ảnh trước.", "Face Restorer", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (_downloader == null)
+        {
+            MessageBox.Show("Service chưa khởi tạo.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
         btnProcess.Content = "Processing...";
         btnProcess.IsEnabled = false;
         pbProgress.Visibility = Visibility.Visible;
-        txtStatus.Visibility = Visibility.Visible;
         pbProgress.Value = 0;
 
-        try 
+        try
         {
+            txtStatus.Text = "Đang chuẩn bị model GPEN-BFR-512 (lần đầu sẽ tải ~284MB)...";
+            var modelPath = await _downloader.EnsureAsync(KnownModels.GpenBfr512, new Progress<DownloadProgress>(p =>
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    txtStatus.Text = $"Đang tải model: {p.BytesReceived / (1024.0 * 1024):N1} MB ({p.Percent:N1}%)";
+                    pbProgress.Value = p.Percent;
+                });
+            }));
+
+            _processor ??= await Task.Run(() => new GpenProcessor(modelPath));
+
             var progress = new Progress<int>(percent =>
             {
                 pbProgress.Value = percent;
-                txtStatus.Text = $"Đang tái tạo cấu trúc khuôn mặt... {percent}%";
+                txtStatus.Text = $"Đang phục hồi khuôn mặt... {percent}%";
             });
 
-            var resultData = await System.Threading.Tasks.Task.Run(() => 
+            string capturedPath = _currentImagePath;
+            var result = await Task.Run(() =>
             {
-                // Gọi tới GfpganProcessor
-                using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(_currentImagePath);
+                using var src = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(capturedPath);
+                using var restored = _processor!.Process(src, progress, CancellationToken.None);
 
-                var processor = new GfpganProcessor(new byte[0]); // Dummy model bytes
-                var resultSharp = processor.Process(image, progress);
-
-                using var outStream = new MemoryStream();
-                resultSharp.SaveAsPng(outStream);
-                
-                var outputDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
-                if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
-                
+                var outDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+                Directory.CreateDirectory(outDir);
+                string baseName = Path.GetFileNameWithoutExtension(capturedPath);
                 string randId = Guid.NewGuid().ToString("N").Substring(0, 6);
-                string originalName = Path.GetFileNameWithoutExtension(_currentImagePath);
-                string savePath = Path.Combine(outputDir, $"{originalName}_gfpgan_{randId}.png");
-                resultSharp.SaveAsPng(savePath);
-
-                return (ImageBytes: outStream.ToArray(), SavedPath: savePath);
+                string savePath = Path.Combine(outDir, $"{baseName}_gpen_{randId}.png");
+                restored.SaveAsPng(savePath);
+                return savePath;
             });
 
             var bmp = new BitmapImage();
             bmp.BeginInit();
-            bmp.StreamSource = new MemoryStream(resultData.ImageBytes);
             bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.UriSource = new Uri(result);
             bmp.EndInit();
-
-            imgPreview.Source = bmp; 
-            txtStatus.Text = $"Hoàn tất! Đã xuất file ra Output.";
-
-            MessageBox.Show($"Phục hồi khuôn mặt thành công!\nĐã lưu tại:\n{resultData.SavedPath}", "Tuyệt vời", MessageBoxButton.OK, MessageBoxImage.Information);
+            bmp.Freeze();
+            imgPreview.Source = bmp;
+            txtStatus.Text = $"Hoàn tất, đã lưu: {Path.GetFileName(result)}";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Lỗi: {ex.Message}", "Face Restorer", MessageBoxButton.OK, MessageBoxImage.Error);
             txtStatus.Text = "Lỗi xử lý!";
         }
         finally

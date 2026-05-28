@@ -16,6 +16,7 @@ public class ColorLabPlugin : IImagePlugin
     {
         _serviceProvider = serviceProvider;
         _uiComponent = new ColorLabControl();
+        _uiComponent.AttachServices(serviceProvider);
     }
 
     public object GetUIComponent()

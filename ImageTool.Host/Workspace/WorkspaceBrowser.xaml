@@ -1,0 +1,140 @@
+<UserControl x:Class="ImageTool.Host.Workspace.WorkspaceBrowser"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1E1E1E" Foreground="#DDD">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="200" MinHeight="100"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#252526" Padding="10,8">
+            <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold" Foreground="#888"/>
+        </Border>
+
+        <TreeView x:Name="treeFolders"
+                  Grid.Row="1"
+                  Background="#1E1E1E" Foreground="#CCC" BorderThickness="0"
+                  ItemsSource="{Binding Roots}"
+                  SelectedItemChanged="TreeView_SelectedItemChanged">
+            <TreeView.Resources>
+                <HierarchicalDataTemplate DataType="{x:Type local:FolderNode}"
+                                          xmlns:local="clr-namespace:ImageTool.Host.Workspace"
+                                          ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding Name}" Padding="2,1" />
+                </HierarchicalDataTemplate>
+            </TreeView.Resources>
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <EventSetter Event="Expanded" Handler="TreeViewItem_Expanded"/>
+                    <Setter Property="Foreground" Value="#CCC"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+
+        <GridSplitter Grid.Row="2" Height="3" HorizontalAlignment="Stretch" Background="#333"/>
+
+        <!-- Filter & Sort bar -->
+        <Border Grid.Row="3" Background="#1E1E1E" Padding="6,4" BorderBrush="#2A2A2A" BorderThickness="0,1,0,1">
+            <StackPanel>
+                <DockPanel LastChildFill="True">
+                    <TextBlock Text="🔍" Foreground="#888" VerticalAlignment="Center" Margin="2,0,4,0"/>
+                    <TextBox x:Name="txtSearch" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0"
+                             Padding="4,2" TextChanged="TxtSearch_TextChanged" Height="22"/>
+                </DockPanel>
+                <DockPanel Margin="0,4,0,0">
+                    <TextBlock Text="Rating ≥" Foreground="#888" FontSize="11" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbMinRating" Width="48" Margin="4,0,8,0" Height="22"
+                              SelectedIndex="0" SelectionChanged="CmbMinRating_SelectionChanged">
+                        <ComboBoxItem Content="—"/>
+                        <ComboBoxItem Content="1"/>
+                        <ComboBoxItem Content="2"/>
+                        <ComboBoxItem Content="3"/>
+                        <ComboBoxItem Content="4"/>
+                        <ComboBoxItem Content="5"/>
+                    </ComboBox>
+                    <TextBlock Text="Sort:" Foreground="#888" FontSize="11" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbSort" Margin="4,0,0,0" Height="22"
+                              SelectedIndex="0" SelectionChanged="CmbSort_SelectionChanged">
+                        <ComboBoxItem Content="Tên A→Z" Tag="NameAsc"/>
+                        <ComboBoxItem Content="Tên Z→A" Tag="NameDesc"/>
+                        <ComboBoxItem Content="Mới nhất" Tag="DateDesc"/>
+                        <ComboBoxItem Content="Cũ nhất" Tag="DateAsc"/>
+                        <ComboBoxItem Content="Lớn → nhỏ" Tag="SizeDesc"/>
+                        <ComboBoxItem Content="Nhỏ → lớn" Tag="SizeAsc"/>
+                        <ComboBoxItem Content="Rating cao" Tag="RatingDesc"/>
+                    </ComboBox>
+                </DockPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="Label:" Foreground="#888" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <Button Tag="None" Width="20" Height="20" Background="Transparent" BorderBrush="#666" BorderThickness="1" Margin="0,0,2,0" Click="LabelFilter_Click" ToolTip="Tất cả"/>
+                    <Button Tag="Red" Width="20" Height="20" Background="Red" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
+                    <Button Tag="Yellow" Width="20" Height="20" Background="Gold" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
+                    <Button Tag="Green" Width="20" Height="20" Background="LimeGreen" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
+                    <Button Tag="Blue" Width="20" Height="20" Background="DodgerBlue" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
+                    <Button Tag="Purple" Width="20" Height="20" Background="MediumPurple" BorderThickness="0" Click="LabelFilter_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="4" Background="#1E1E1E">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          CanContentScroll="True">
+                <ItemsControl ItemsSource="{Binding Thumbnails}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" IsItemsHost="True"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="130" Height="140" Margin="4" Background="#2A2A2A"
+                                    BorderThickness="2" CornerRadius="3"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="#444"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#55C1E7"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#FFD24E"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Image Source="{Binding Thumb}" Stretch="Uniform" Margin="3"/>
+
+                                    <!-- Color label dot -->
+                                    <Border Width="10" Height="10" CornerRadius="5"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6"
+                                            Background="{Binding LabelBrush}" />
+
+                                    <!-- Pick flag -->
+                                    <TextBlock Text="{Binding PickDisplay}" Foreground="LimeGreen" FontWeight="Bold"
+                                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0"/>
+
+                                    <!-- Rating + filename -->
+                                    <Border VerticalAlignment="Bottom" Background="#AA000000" Padding="4,2">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding RatingDisplay}"
+                                                       Foreground="#FFD24E" FontSize="10"/>
+                                            <TextBlock Text="{Binding FileName}" Foreground="#DDD" FontSize="10"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -43,14 +43,11 @@ class Program
                 Environment.Exit(1);
             }
 
-            Console.WriteLine($"[DEBUG] Loading model from {modelPath}...");
-            byte[] modelBytes = File.ReadAllBytes(modelPath);
-
             Console.WriteLine($"[DEBUG] Loading image from {input}...");
             using var image = Image.Load<Rgba32>(input);
 
             Console.WriteLine($"[DEBUG] Initializing Upscaler (Device: {deviceId}, Mode: {mode})...");
-            var upscaler = new OnnxUpscaler(modelBytes, deviceId, mode);
+            var upscaler = new OnnxUpscaler(modelPath, deviceId, mode);
 
             var progress = new Progress<int>(percent =>
             {

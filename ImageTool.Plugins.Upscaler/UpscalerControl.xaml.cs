@@ -10,6 +10,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
+using ImageTool.Core;
+using Microsoft.Extensions.DependencyInjection;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
@@ -22,10 +24,71 @@ public partial class UpscalerControl : UserControl
     private static readonly HttpClient _sharedHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
     private CancellationTokenSource _cancellationTokenSource;
 
+    private IBatchService? _batch;
+    private IWorkspaceService? _workspace;
+
     public UpscalerControl()
     {
         InitializeComponent();
         this.Loaded += UpscalerControl_Loaded;
+    }
+
+    public void AttachServices(IServiceProvider sp)
+    {
+        _batch = sp.GetService<IBatchService>();
+        _workspace = sp.GetService<IWorkspaceService>();
+        if (_workspace != null)
+        {
+            _workspace.SelectionChanged += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    int n = e.Selection.Count;
+                    btnBatch.Content = n > 1 ? $"Batch ({n})" : "Batch";
+                    btnBatch.IsEnabled = n > 0 && _batch != null;
+                });
+            };
+        }
+    }
+
+    private void BtnBatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null || _batch == null) return;
+        var sel = _workspace.Selection.ToList();
+        if (sel.Count == 0)
+        {
+            MessageBox.Show("Hãy chọn ảnh trong browser trước (Ctrl+click multi-select).", "Batch", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        // Đọc thông số hiện tại từ UI
+        int targetDeviceId = -1;
+        if (cmbDevice.SelectedItem is GpuInfo selectedGpu) targetDeviceId = selectedGpu.DeviceId;
+
+        var perfMode = (cmbPerformance.SelectedItem is ComboBoxItem perfItem && perfItem.Tag?.ToString() == "Unleashed")
+            ? "Unleashed" : "Safe";
+
+        int targetMp = 24;
+        if (cmbScale.SelectedItem is ComboBoxItem scaleItem && int.TryParse(scaleItem.Tag?.ToString(), out int parsedScale)) targetMp = parsedScale;
+
+        var modelItem = cmbModel.SelectedItem as ComboBoxItem;
+        string modelFile = modelItem?.Tag?.ToString() ?? ""; // "" = Lanczos fallback
+
+        var jobs = sel.Select(p => new BatchJob
+        {
+            PluginId = UpscalerBatchAdapter.Plugin,
+            OpType = UpscalerBatchAdapter.OpUpscale,
+            InputPath = p,
+            Params = new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["model"] = modelFile,
+                ["device"] = targetDeviceId.ToString(),
+                ["targetMp"] = targetMp.ToString(),
+                ["perf"] = perfMode
+            }
+        }).ToList();
+
+        _batch.EnqueueRange(jobs);
     }
 
     private async void UpscalerControl_Loaded(object sender, RoutedEventArgs e)

@@ -1,26 +1,148 @@
 <Window x:Class="ImageTool.Host.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Image Studio" Height="600" Width="900" Background="#1E1E1E">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- Sidebar -->
-        <Border Grid.Column="0" Background="#252526" BorderBrush="#333" BorderThickness="0,0,1,0">
-            <ListBox x:Name="lstPlugins" Background="Transparent" BorderThickness="0" 
-                     Foreground="White" SelectionChanged="LstPlugins_SelectionChanged">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}" Padding="10,5" FontSize="14" Cursor="Hand" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+        xmlns:ws="clr-namespace:ImageTool.Host.Workspace"
+        Title="Image Studio" Height="800" Width="1400" Background="#141414"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <!-- Top toolbar -->
+        <Border DockPanel.Dock="Top" Background="#1E1E1E" Height="40" Padding="10,0">
+            <DockPanel>
+                <Button x:Name="btnOpenFolder" DockPanel.Dock="Left" Content="📁  Open Folder"
+                        Padding="12,4" Background="#2D2D30" Foreground="#DDD" BorderThickness="0"
+                        VerticalAlignment="Center" Cursor="Hand" Click="BtnOpenFolder_Click"/>
+                <Button x:Name="btnRecent" DockPanel.Dock="Left" Content="▾" Width="28"
+                        Padding="6,4" Margin="2,0,0,0" Background="#2D2D30" Foreground="#DDD"
+                        BorderThickness="0" VerticalAlignment="Center" Cursor="Hand"
+                        Click="BtnRecent_Click" ToolTip="Recent folders"/>
+                <TextBlock x:Name="txtFolder" DockPanel.Dock="Left" VerticalAlignment="Center"
+                           Margin="15,0,0,0" Foreground="#888" FontSize="11"/>
+                <Button x:Name="btnPopOutTools" DockPanel.Dock="Right" Content="⇱ Pop Out Tools"
+                        Padding="10,4" Background="#2D2D30" Foreground="#DDD" BorderThickness="0"
+                        VerticalAlignment="Center" Cursor="Hand" Click="BtnPopOutTools_Click"
+                        ToolTip="Tách panel Tools sang cửa sổ riêng (multi-monitor)"/>
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#666"
+                           FontSize="11" Text="ImageTool" Margin="0,0,15,0"/>
+            </DockPanel>
         </Border>
 
-        <!-- Main Content (Plugin UI) -->
-        <ContentControl x:Name="contentPresenter" Grid.Column="1" />
-    </Grid>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280" MinWidth="200"/>
+                <ColumnDefinition Width="3"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="3"/>
+                <ColumnDefinition Width="380" MinWidth="250"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Workspace Browser -->
+            <ws:WorkspaceBrowser x:Name="browser" Grid.Column="0"/>
+
+            <GridSplitter Grid.Column="1" Width="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+            <!-- Center: Preview + Filmstrip -->
+            <DockPanel Grid.Column="2">
+                <ws:Filmstrip x:Name="filmstrip" DockPanel.Dock="Bottom"/>
+                <ws:CenterPreview x:Name="centerView"/>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Width="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+            <!-- Right: Info + History + Style + Batch + Export + Tool panel -->
+            <Grid Grid.Column="4" Background="#1E1E1E">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="160" MinHeight="80"/>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="100" MinHeight="60"/>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="100" MinHeight="60"/>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="120" MinHeight="60"/>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="180" MinHeight="100"/>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#252526" Padding="10,8">
+                    <TextBlock Text="TOOLS" FontSize="11" FontWeight="SemiBold" Foreground="#888"/>
+                </Border>
+
+                <ws:InfoPanel x:Name="infoPanel" Grid.Row="1"/>
+
+                <GridSplitter Grid.Row="2" Height="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+                <ws:HistoryPanel x:Name="historyPanel" Grid.Row="3"/>
+
+                <GridSplitter Grid.Row="4" Height="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+                <ws:StylePanel x:Name="stylePanel" Grid.Row="5"/>
+
+                <GridSplitter Grid.Row="6" Height="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+                <ws:BatchQueuePanel x:Name="batchPanel" Grid.Row="7"/>
+
+                <GridSplitter Grid.Row="8" Height="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+                <ws:ExportPanel x:Name="exportPanel" Grid.Row="9"/>
+
+                <GridSplitter Grid.Row="10" Height="3" HorizontalAlignment="Stretch" Background="#2A2A2A"/>
+
+                <Grid Grid.Row="11" x:Name="toolsHost">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Plugin tab strip (vertical icons) -->
+                    <ListBox x:Name="lstPlugins" Grid.Column="0" Width="60"
+                             Background="#1A1A1A" BorderThickness="0,0,1,0" BorderBrush="#333"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             SelectionChanged="LstPlugins_SelectionChanged">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#AAA"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="bd" Background="{TemplateBinding Background}" Padding="0,10">
+                                                <ContentPresenter HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#2D2D30"/>
+                                                    <Setter Property="Foreground" Value="#55C1E7"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#262626"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Glyph}" FontSize="20" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ShortName}" FontSize="9" HorizontalAlignment="Center"
+                                               Margin="0,4,0,0" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="56"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Active plugin UI -->
+                    <ContentControl x:Name="contentPresenter" Grid.Column="1" Background="#1E1E1E"/>
+                </Grid>
+            </Grid>
+        </Grid>
+    </DockPanel>
 </Window>

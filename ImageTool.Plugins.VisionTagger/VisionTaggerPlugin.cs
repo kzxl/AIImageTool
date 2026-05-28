@@ -6,21 +6,20 @@ namespace ImageTool.Plugins.VisionTagger;
 
 public class VisionTaggerPlugin : IImagePlugin
 {
-    private UserControl? _uiComponent;
+    private VisionTaggerControl? _uiComponent;
 
     public string Name => "Auto Tagger";
     public string Version => "1.0.0";
-    public string Description => "Tự động phân tích, tạo mô tả và gán thẻ (Tags) cho hình ảnh sử dụng AI.";
+    public string Description => "Phân tích nội dung và sinh tag bằng WD ViT v3 (ONNX local).";
 
     public void Initialize(IServiceProvider serviceProvider)
     {
-        // Khởi tạo các service cần thiết hoặc cấu trúc model ở đây
-        // (Tuỳ thuộc vào việc sử dụng ONNX, Python Worker, hay Cloud API)
+        _uiComponent = new VisionTaggerControl();
+        _uiComponent.AttachServices(serviceProvider);
     }
 
     public object GetUIComponent()
     {
-        _uiComponent ??= new VisionTaggerControl();
-        return _uiComponent;
+        return _uiComponent ??= new VisionTaggerControl();
     }
 }

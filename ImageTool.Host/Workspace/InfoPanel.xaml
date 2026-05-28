@@ -1,0 +1,47 @@
+<UserControl x:Class="ImageTool.Host.Workspace.InfoPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1A1A1A" Foreground="#DDD">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="120"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#252526" Padding="10,8">
+            <TextBlock Text="INFO" FontSize="11" FontWeight="SemiBold" Foreground="#888"/>
+        </Border>
+
+        <Border Grid.Row="1" Background="#0F0F0F" Margin="6">
+            <Grid>
+                <Image x:Name="imgHistogram" Stretch="Fill"/>
+                <TextBlock x:Name="txtHistEmpty" Text="(histogram)" Foreground="#444" FontSize="10"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="#252526" Padding="10,4">
+            <TextBlock Text="EXIF" FontSize="10" FontWeight="SemiBold" Foreground="#888"/>
+        </Border>
+
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Padding="6">
+            <ItemsControl x:Name="icExif">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Name}" Foreground="#888" FontSize="10"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" Foreground="#DDD" FontSize="10"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

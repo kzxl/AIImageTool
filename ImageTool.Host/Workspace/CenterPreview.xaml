@@ -1,0 +1,107 @@
+<UserControl x:Class="ImageTool.Host.Workspace.CenterPreview"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#141414" Foreground="#DDD" Focusable="True"
+             KeyDown="UserControl_KeyDown">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Mode bar -->
+        <Border Grid.Row="0" Background="#1E1E1E" Padding="10,6">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button x:Name="btnModeSingle" Content="◰  Single (E)" Padding="10,4" Margin="0,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnModeSingle_Click"/>
+                    <Button x:Name="btnModeGrid" Content="▦  Grid (G)" Padding="10,4" Margin="0,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnModeGrid_Click"/>
+                    <Button x:Name="btnModeCull" Content="❐  Cull (C)" Padding="10,4" Margin="0,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnModeCull_Click"/>
+                    <Button x:Name="btnModeFull" Content="⛶  Full (F)" Padding="10,4" Margin="0,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnModeFull_Click"/>
+                </StackPanel>
+                <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="#AAA"
+                           FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
+                <TextBlock x:Name="txtMeta" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                           Foreground="#666" FontSize="11" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Mode containers -->
+        <Grid Grid.Row="1" Background="#141414">
+            <!-- SINGLE mode -->
+            <Grid x:Name="paneSingle" Visibility="Visible" ClipToBounds="True">
+                <TextBlock x:Name="txtPlaceholder"
+                           Text="Chọn ảnh ở Browser hoặc bấm 📁  Open Folder"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#555" FontSize="16"/>
+                <Image x:Name="imgPreview" Stretch="Uniform" Margin="20"/>
+            </Grid>
+
+            <!-- GRID mode -->
+            <ScrollViewer x:Name="paneGrid" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="icGrid">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" IsItemsHost="True"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="200" Height="220" Margin="6" Background="#1E1E1E"
+                                    BorderThickness="2" CornerRadius="3" Cursor="Hand"
+                                    MouseLeftButtonUp="GridItem_MouseLeftButtonUp">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="#444"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#FFD24E"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="BorderBrush" Value="#55C1E7"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Grid>
+                                    <Image Source="{Binding Thumb}" Stretch="Uniform" Margin="3"/>
+                                    <Border Width="10" Height="10" CornerRadius="5"
+                                            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6"
+                                            Background="{Binding LabelBrush}"/>
+                                    <Border VerticalAlignment="Bottom" Background="#AA000000" Padding="4,2">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding RatingDisplay}"
+                                                       Foreground="#FFD24E" FontSize="10"/>
+                                            <TextBlock Text="{Binding FileName}" Foreground="#DDD" FontSize="10"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- CULL mode (compare 2-4 selected) -->
+            <UniformGrid x:Name="paneCull" Visibility="Collapsed" Background="#141414"/>
+
+            <!-- FULL mode (no margin) -->
+            <Grid x:Name="paneFull" Visibility="Collapsed" Background="#000">
+                <Image x:Name="imgFull" Stretch="Uniform"/>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Background="#1E1E1E" Padding="8,4">
+            <TextBlock x:Name="txtSelection" Text="Selection: 0" Foreground="#888" FontSize="11"/>
+        </Border>
+    </Grid>
+</UserControl>

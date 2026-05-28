@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ImageTool.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -28,10 +29,33 @@ public partial class ColorLabControl : UserControl
     private string _currentImagePath;
     private BitmapSource _currentBitmapSource;
     private SixLabors.ImageSharp.Image<Rgba32> _workingImage;
+    private IHistoryService? _history;
+    private IWorkspaceService? _workspace;
 
     public ColorLabControl()
     {
         InitializeComponent();
+    }
+
+    public void AttachServices(IServiceProvider sp)
+    {
+        _history = sp.GetService(typeof(IHistoryService)) as IHistoryService;
+        _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
+    }
+
+    private void RecordOp(string opType, string title, Dictionary<string, string>? @params = null)
+    {
+        if (_history == null) return;
+        var path = _currentImagePath ?? _workspace?.ActiveImage;
+        if (string.IsNullOrEmpty(path)) return;
+
+        _history.Push(path, new EditOperation
+        {
+            PluginId = "ColorLab",
+            OpType = opType,
+            Title = title,
+            Params = @params ?? new Dictionary<string, string>()
+        });
     }
 
     private System.Windows.Media.Color SourceColor 
@@ -287,6 +311,12 @@ public partial class ColorLabControl : UserControl
             });
 
             UpdatePreviewUI();
+            RecordOp("SelectiveColor", $"Selective {txtSource.Text} → {txtTarget.Text}",
+                new Dictionary<string, string> {
+                    ["source"] = txtSource.Text,
+                    ["target"] = txtTarget.Text,
+                    ["tolerance"] = ((int)slTolerance.Value).ToString()
+                });
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -358,6 +388,8 @@ public partial class ColorLabControl : UserControl
             await Task.Run(() => LUTProcessor.ApplyLUT(_workingImage, _currentLut, intensity));
 
             UpdatePreviewUI();
+            RecordOp("ApplyLUT", $"LUT (intensity {intensity:F2})",
+                new Dictionary<string, string> { ["intensity"] = intensity.ToString("F3") });
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -385,6 +417,7 @@ public partial class ColorLabControl : UserControl
             await Task.Run(() => ColorCorrectionProcessor.ApplyGrayWorld(_workingImage));
 
             UpdatePreviewUI();
+            RecordOp("AutoWhiteBalance", "Auto WB (Gray World)");
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -412,6 +445,8 @@ public partial class ColorLabControl : UserControl
             await Task.Run(() => ColorCorrectionProcessor.ApplyWhitePoint(_workingImage, clr));
 
             UpdatePreviewUI();
+            RecordOp("ManualWhiteBalance", $"Manual WB at {txtSource.Text}",
+                new Dictionary<string, string> { ["source"] = txtSource.Text });
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -444,6 +479,11 @@ public partial class ColorLabControl : UserControl
             await Task.Run(() => AdvancedColorProcessor.ApplyColorUnification(_workingImage, baseClr, intensity));
 
             UpdatePreviewUI();
+            RecordOp("ColorUnify", $"Unify tone ({intensity * 100:F0}%)",
+                new Dictionary<string, string> {
+                    ["baseColor"] = txtSource.Text,
+                    ["intensity"] = intensity.ToString("F3")
+                });
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)
@@ -470,6 +510,7 @@ public partial class ColorLabControl : UserControl
             await Task.Run(() => AdvancedColorProcessor.ApplyColorNoiseReduction(_workingImage, 1));
 
             UpdatePreviewUI();
+            RecordOp("NoiseReduction", "Color noise reduction");
             btnSaveImage.Visibility = Visibility.Visible;
         }
         catch (Exception ex)

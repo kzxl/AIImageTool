@@ -1,6 +1,8 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp;
@@ -22,12 +24,71 @@ public class OnnxUpscaler
     private readonly PerformanceMode _performanceMode;
     private static bool _nativePreloaded = false;
 
+    // Session pool: key = (modelPath, deviceId, perfMode). Reuse giữa các lần Process().
+    private record struct SessionKey(string ModelPath, int DeviceId, PerformanceMode Mode);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<SessionKey, Lazy<InferenceSession>> _sessionPool = new();
+
     public OnnxUpscaler(string modelPath, int targetDeviceId = -1, PerformanceMode performanceMode = PerformanceMode.Safe)
     {
         PreloadNativeLibraries();
         _modelPath = modelPath;
         _targetDeviceId = targetDeviceId;
         _performanceMode = performanceMode;
+    }
+
+    public static void DisposePool()
+    {
+        foreach (var kv in _sessionPool)
+        {
+            try { if (kv.Value.IsValueCreated) kv.Value.Value.Dispose(); } catch { }
+        }
+        _sessionPool.Clear();
+    }
+
+    private InferenceSession GetOrCreateSession(out bool usedGpu, List<string> gpuInitErrors)
+    {
+        usedGpu = false;
+        if (_targetDeviceId >= 0)
+        {
+            var key = new SessionKey(_modelPath, _targetDeviceId, _performanceMode);
+            try
+            {
+                var lazy = _sessionPool.GetOrAdd(key, k => new Lazy<InferenceSession>(() =>
+                {
+                    var opts = new SessionOptions
+                    {
+                        GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
+                        ExecutionMode = ExecutionMode.ORT_SEQUENTIAL
+                    };
+                    opts.AppendExecutionProvider_DML(k.DeviceId);
+                    return new InferenceSession(k.ModelPath, opts);
+                }, true));
+                var s = lazy.Value;
+                usedGpu = true;
+                return s;
+            }
+            catch (Exception ex)
+            {
+                gpuInitErrors.Add($"GPU {_targetDeviceId}: {ex.Message}");
+                _sessionPool.TryRemove(key, out _);
+            }
+        }
+
+        // CPU fallback
+        var cpuKey = new SessionKey(_modelPath, -1, _performanceMode);
+        var cpuLazy = _sessionPool.GetOrAdd(cpuKey, k => new Lazy<InferenceSession>(() =>
+        {
+            var opts = new SessionOptions
+            {
+                GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
+                ExecutionMode = ExecutionMode.ORT_SEQUENTIAL
+            };
+            opts.IntraOpNumThreads = k.Mode == PerformanceMode.Unleashed
+                ? Math.Max(1, (int)(Environment.ProcessorCount * 0.8))
+                : Math.Max(1, Environment.ProcessorCount / 2);
+            return new InferenceSession(k.ModelPath, opts);
+        }, true));
+        return cpuLazy.Value;
     }
 
     private static void PreloadNativeLibraries()
@@ -81,43 +142,11 @@ public class OnnxUpscaler
         int width = image.Width;
         int height = image.Height;
 
-        SessionOptions? options = null;
-        InferenceSession? session = null;
-        List<string> gpuInitErrors = new List<string>();
-
-        if (_targetDeviceId >= 0)
+        var gpuInitErrors = new List<string>();
+        var session = GetOrCreateSession(out bool usedGpu, gpuInitErrors);
+        if (!usedGpu && _targetDeviceId >= 0 && gpuInitErrors.Any())
         {
-            try 
-            {
-                var tempOptions = new SessionOptions();
-                tempOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-                tempOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-                tempOptions.AppendExecutionProvider_DML(_targetDeviceId); 
-                session = new InferenceSession(_modelPath, tempOptions);
-                options = tempOptions;
-            }
-            catch (Exception ex)
-            {
-                gpuInitErrors.Add($"GPU {_targetDeviceId}: {ex.Message}");
-            }
-        }
-
-        if (session == null)
-        {
-            if (_targetDeviceId >= 0 && gpuInitErrors.Any())
-            {
-                System.Diagnostics.Debug.WriteLine("GPU Fallback: " + string.Join(" | ", gpuInitErrors));
-            }
-            options = new SessionOptions();
-            options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-            options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
-            
-            if (_performanceMode == PerformanceMode.Unleashed)
-                options.IntraOpNumThreads = Math.Max(1, (int)(Environment.ProcessorCount * 0.8)); 
-            else
-                options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount / 2); 
-            
-            session = new InferenceSession(_modelPath, options); 
+            System.Diagnostics.Debug.WriteLine("GPU Fallback: " + string.Join(" | ", gpuInitErrors));
         }
 
         var inputMeta = session.InputMetadata.Values.First();
@@ -164,7 +193,6 @@ public class OnnxUpscaler
             }
         }
 
-        object imageLock = new object();
         int maxParallel = 1;
         double ramThreshold = 60.0;
         int ramCheckFreq = 1;
@@ -242,11 +270,7 @@ public class OnnxUpscaler
             int cropW = currentW + padLeft + padRight;
             int cropH = currentH + padTop + padBottom;
 
-            Image<Rgba32> tile;
-            lock(imageLock)
-            {
-                tile = image.Clone(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
-            }
+            Image<Rgba32> tile = image.Clone(ctx => ctx.Crop(new Rectangle(cropX, cropY, cropW, cropH)));
             
             using var upscaledTile = ProcessTile(session, tile, cropW, cropH, fixedW, fixedH);
             tile.Dispose();
@@ -268,8 +292,7 @@ public class OnnxUpscaler
         // Chờ công nhân ghép xong
         mergerTask.Wait(ct);
 
-        options?.Dispose();
-        session.Dispose();
+        // Pool giữ session cho lần sau, không dispose ở đây.
 
         ct.ThrowIfCancellationRequested();
         
@@ -297,82 +320,118 @@ public class OnnxUpscaler
     {
         int inputH = fixedH > 0 ? fixedH : height;
         int inputW = fixedW > 0 ? fixedW : width;
-        var inputTensor = new DenseTensor<float>(new[] { 1, 3, inputH, inputW });
-        
-        tile.ProcessPixelRows(accessor =>
+        int planeSize = inputH * inputW;
+
+        // Mượn buffer 3 planes (R/G/B) từ pool, tái sử dụng giữa các tile
+        var pool = ArrayPool<float>.Shared;
+        float[] inputBuf = pool.Rent(3 * planeSize);
+        try
         {
-            for (int y = 0; y < height; y++)
+            int rOff = 0, gOff = planeSize, bOff = 2 * planeSize;
+            Array.Clear(inputBuf, 0, 3 * planeSize); // padding zeros nếu tile nhỏ hơn fixed
+
+            const float inv255 = 1f / 255f;
+            int innerW = width;
+            int innerH = height;
+            int strideIn = inputW;
+            tile.ProcessPixelRows(accessor =>
             {
-                var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < width; x++)
-                {
-                    inputTensor[0, 0, y, x] = row[x].R / 255f;
-                    inputTensor[0, 1, y, x] = row[x].G / 255f;
-                    inputTensor[0, 2, y, x] = row[x].B / 255f;
-                }
-            }
-        });
-
-        var inputName = session.InputMetadata.Keys.First();
-        var inputs = new List<NamedOnnxValue>
-        {
-            NamedOnnxValue.CreateFromTensor(inputName, inputTensor) 
-        };
-
-        IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
-        try 
-        {
-            // BẮT BUỘC: DirectML không hỗ trợ thread-safe trên hàm Run(). Gửi đồng thời lệnh tới DirectML Queue sẽ gây Hard Crash app.
-            if (_targetDeviceId >= 0)
-            {
-                lock (_gpuGlobalLock)
-                {
-                    results = session.Run(inputs);
-                }
-            }
-            else
-            {
-                results = session.Run(inputs);
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"ONNX Inference Exception: {ex.Message}", ex);
-        }
-        
-        using (results)
-        {
-            var outputName = session.OutputMetadata.Keys.First(); 
-            var output = results.First(v => v.Name == outputName).AsTensor<float>();
-
-            int outModelHeight = output.Dimensions[2];
-            int outModelWidth = output.Dimensions[3];
-
-            int scale = outModelHeight / inputH;
-            
-            int outValidHeight = height * scale;
-            int outValidWidth = width * scale;
-
-            var resultTile = new Image<Rgba32>(outValidWidth, outValidHeight);
-            resultTile.ProcessPixelRows(accessor =>
-            {
-                for (int y = 0; y < outValidHeight; y++)
+                for (int y = 0; y < innerH; y++)
                 {
                     var row = accessor.GetRowSpan(y);
-                    for (int x = 0; x < outValidWidth; x++)
+                    int off = y * strideIn;
+                    for (int x = 0; x < innerW; x++)
                     {
-                        row[x] = new Rgba32(
-                            (float)Math.Clamp(output[0, 0, y, x], 0, 1),
-                            (float)Math.Clamp(output[0, 1, y, x], 0, 1),
-                            (float)Math.Clamp(output[0, 2, y, x], 0, 1),
-                            1f
-                        );
+                        var px = row[x];
+                        inputBuf[rOff + off + x] = px.R * inv255;
+                        inputBuf[gOff + off + x] = px.G * inv255;
+                        inputBuf[bOff + off + x] = px.B * inv255;
                     }
                 }
             });
 
-            return resultTile;
+            var inputTensor = new DenseTensor<float>(new Memory<float>(inputBuf, 0, 3 * planeSize),
+                new[] { 1, 3, inputH, inputW });
+
+            var inputName = session.InputMetadata.Keys.First();
+            var inputs = new List<NamedOnnxValue>
+            {
+                NamedOnnxValue.CreateFromTensor(inputName, inputTensor)
+            };
+
+            IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results;
+            try
+            {
+                if (_targetDeviceId >= 0)
+                {
+                    lock (_gpuGlobalLock) { results = session.Run(inputs); }
+                }
+                else
+                {
+                    results = session.Run(inputs);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"ONNX Inference Exception: {ex.Message}", ex);
+            }
+
+            using (results)
+            {
+                var outputName = session.OutputMetadata.Keys.First();
+                var output = results.First(v => v.Name == outputName).AsTensor<float>();
+
+                int outModelHeight = output.Dimensions[2];
+                int outModelWidth = output.Dimensions[3];
+                int scale = outModelHeight / inputH;
+                int outValidHeight = height * scale;
+                int outValidWidth = width * scale;
+                int outPlane = outModelHeight * outModelWidth;
+
+                // Đọc trực tiếp từ Tensor buffer khi có thể, tránh ToArray() sao chép full output (vài MB/tile).
+                // Memory<T> capture được vào lambda (Span<T> là ref struct nên không capture được).
+                ReadOnlyMemory<float> oFlat = output is DenseTensor<float> dense
+                    ? dense.Buffer
+                    : new ReadOnlyMemory<float>(output.ToArray());
+
+                int rOut = 0, gOut = outPlane, bOut = 2 * outPlane;
+                int strideOut = outModelWidth;
+
+                var resultTile = new Image<Rgba32>(outValidWidth, outValidHeight);
+                resultTile.ProcessPixelRows(accessor =>
+                {
+                    var span = oFlat.Span;
+                    for (int y = 0; y < outValidHeight; y++)
+                    {
+                        var row = accessor.GetRowSpan(y);
+                        int off = y * strideOut;
+                        int rBase = rOut + off;
+                        int gBase = gOut + off;
+                        int bBase = bOut + off;
+                        for (int x = 0; x < outValidWidth; x++)
+                        {
+                            byte rb = FloatToByte(span[rBase + x]);
+                            byte gb = FloatToByte(span[gBase + x]);
+                            byte bb = FloatToByte(span[bBase + x]);
+                            row[x] = new Rgba32(rb, gb, bb, (byte)255);
+                        }
+                    }
+                });
+
+                return resultTile;
+            }
         }
+        finally
+        {
+            pool.Return(inputBuf);
+        }
+    }
+
+    private static byte FloatToByte(float v)
+    {
+        if (v <= 0f) return 0;
+        if (v >= 1f) return 255;
+        return (byte)(v * 255f + 0.5f);
     }
 
     private Image<Rgba32> SimulateProcess(Image<Rgba32> image, IProgress<int>? progress, System.Threading.CancellationToken ct)
