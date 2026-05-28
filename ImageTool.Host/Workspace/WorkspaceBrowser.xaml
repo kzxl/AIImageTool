@@ -11,8 +11,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#252526" Padding="10,8">
-            <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold" Foreground="#888"/>
+        <Border Grid.Row="0" Background="#252526" Padding="10,6">
+            <DockPanel>
+                <TextBlock Text="FOLDERS" FontSize="11" FontWeight="SemiBold" Foreground="#888"/>
+            </DockPanel>
         </Border>
 
         <TreeView x:Name="treeFolders"
@@ -37,47 +39,28 @@
 
         <GridSplitter Grid.Row="2" Height="3" HorizontalAlignment="Stretch" Background="#333"/>
 
-        <!-- Filter & Sort bar -->
+        <!-- Compact: chỉ search + sort, filter (rating/label) chuyển lên TopBar MainWindow -->
         <Border Grid.Row="3" Background="#1E1E1E" Padding="6,4" BorderBrush="#2A2A2A" BorderThickness="0,1,0,1">
-            <StackPanel>
-                <DockPanel LastChildFill="True">
-                    <TextBlock Text="🔍" Foreground="#888" VerticalAlignment="Center" Margin="2,0,4,0"/>
-                    <TextBox x:Name="txtSearch" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0"
-                             Padding="4,2" TextChanged="TxtSearch_TextChanged" Height="22"/>
-                </DockPanel>
-                <DockPanel Margin="0,4,0,0">
-                    <TextBlock Text="Rating ≥" Foreground="#888" FontSize="11" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="cmbMinRating" Width="48" Margin="4,0,8,0" Height="22"
-                              SelectedIndex="0" SelectionChanged="CmbMinRating_SelectionChanged">
-                        <ComboBoxItem Content="—"/>
-                        <ComboBoxItem Content="1"/>
-                        <ComboBoxItem Content="2"/>
-                        <ComboBoxItem Content="3"/>
-                        <ComboBoxItem Content="4"/>
-                        <ComboBoxItem Content="5"/>
-                    </ComboBox>
-                    <TextBlock Text="Sort:" Foreground="#888" FontSize="11" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="cmbSort" Margin="4,0,0,0" Height="22"
-                              SelectedIndex="0" SelectionChanged="CmbSort_SelectionChanged">
-                        <ComboBoxItem Content="Tên A→Z" Tag="NameAsc"/>
-                        <ComboBoxItem Content="Tên Z→A" Tag="NameDesc"/>
-                        <ComboBoxItem Content="Mới nhất" Tag="DateDesc"/>
-                        <ComboBoxItem Content="Cũ nhất" Tag="DateAsc"/>
-                        <ComboBoxItem Content="Lớn → nhỏ" Tag="SizeDesc"/>
-                        <ComboBoxItem Content="Nhỏ → lớn" Tag="SizeAsc"/>
-                        <ComboBoxItem Content="Rating cao" Tag="RatingDesc"/>
-                    </ComboBox>
-                </DockPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock Text="Label:" Foreground="#888" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <Button Tag="None" Width="20" Height="20" Background="Transparent" BorderBrush="#666" BorderThickness="1" Margin="0,0,2,0" Click="LabelFilter_Click" ToolTip="Tất cả"/>
-                    <Button Tag="Red" Width="20" Height="20" Background="Red" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
-                    <Button Tag="Yellow" Width="20" Height="20" Background="Gold" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
-                    <Button Tag="Green" Width="20" Height="20" Background="LimeGreen" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
-                    <Button Tag="Blue" Width="20" Height="20" Background="DodgerBlue" BorderThickness="0" Margin="0,0,2,0" Click="LabelFilter_Click"/>
-                    <Button Tag="Purple" Width="20" Height="20" Background="MediumPurple" BorderThickness="0" Click="LabelFilter_Click"/>
-                </StackPanel>
-            </StackPanel>
+            <DockPanel>
+                <ComboBox x:Name="cmbSort" DockPanel.Dock="Right" Width="100" Height="22" Margin="6,0,0,0"
+                          SelectedIndex="0" SelectionChanged="CmbSort_SelectionChanged"
+                          ToolTip="Sắp xếp">
+                    <ComboBoxItem Content="Tên A→Z" Tag="NameAsc"/>
+                    <ComboBoxItem Content="Tên Z→A" Tag="NameDesc"/>
+                    <ComboBoxItem Content="Mới nhất" Tag="DateDesc"/>
+                    <ComboBoxItem Content="Cũ nhất" Tag="DateAsc"/>
+                    <ComboBoxItem Content="Lớn → nhỏ" Tag="SizeDesc"/>
+                    <ComboBoxItem Content="Nhỏ → lớn" Tag="SizeAsc"/>
+                    <ComboBoxItem Content="Rating cao" Tag="RatingDesc"/>
+                </ComboBox>
+                <TextBlock Text="🔍" Foreground="#888" VerticalAlignment="Center" Margin="2,0,4,0" DockPanel.Dock="Left"/>
+                <TextBox x:Name="txtSearch" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0"
+                         Padding="4,2" TextChanged="TxtSearch_TextChanged" Height="22"
+                         ToolTip="Tìm theo tên file"/>
+                <!-- Hidden control giữ binding/ref để code-behind không lỗi (rating/label đã chuyển TopBar) -->
+                <ComboBox x:Name="cmbMinRating" Visibility="Collapsed" SelectedIndex="0"
+                          SelectionChanged="CmbMinRating_SelectionChanged"/>
+            </DockPanel>
         </Border>
 
         <Border Grid.Row="4" Background="#1E1E1E">

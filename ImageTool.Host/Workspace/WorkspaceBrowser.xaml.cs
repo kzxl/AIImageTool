@@ -234,7 +234,15 @@ public class FolderNode : System.ComponentModel.INotifyPropertyChanged
     {
         Path = path;
         Name = string.IsNullOrEmpty(System.IO.Path.GetFileName(path)) ? path : System.IO.Path.GetFileName(path);
-        Children.Add(new FolderNode(string.Empty) { _placeholder = true });
+        // Placeholder để TreeViewItem render expand arrow; tạo qua private ctor để tránh recursion vô hạn.
+        Children.Add(new FolderNode());
+    }
+
+    private FolderNode()
+    {
+        Path = string.Empty;
+        Name = string.Empty;
+        _placeholder = true;
     }
 
     private bool _placeholder;

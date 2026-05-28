@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using ImageTool.Core;
+using ImageTool.Host.Workspace;
 using ImageTool.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,8 +23,9 @@ public partial class MainWindow : Window
     private readonly IStyleService _styles;
     private List<PluginEntry> _pluginEntries = new();
     private ToolsWindow? _toolsWindow;
-    private UIElement? _toolsHostOriginalParent;
-    private int _toolsHostOriginalRow;
+    private Grid? _toolsHostOriginalParent;
+    private int _toolsHostOriginalColumn;
+    private bool _suppressModeSync;
 
     public MainWindow(
         PluginLoader pluginLoader,
@@ -68,11 +71,83 @@ public partial class MainWindow : Window
         };
 
         _workspace.FolderOpened += (s, e) =>
-            Dispatcher.BeginInvoke(() => txtFolder.Text = e.FolderPath);
+            Dispatcher.BeginInvoke(() => BuildBreadcrumb(e.FolderPath));
+
+        _workspace.SelectionChanged += (s, e) =>
+            Dispatcher.BeginInvoke(() => UpdateSelectionInfo(e.Selection.Count));
+
+        centerView.ModeChanged += (s, mode) =>
+        {
+            if (_suppressModeSync) return;
+            _suppressModeSync = true;
+            switch (mode)
+            {
+                case LighttableMode.Single: rbModeSingle.IsChecked = true; break;
+                case LighttableMode.Grid:   rbModeGrid.IsChecked = true; break;
+                case LighttableMode.Cull:   rbModeCull.IsChecked = true; break;
+                case LighttableMode.Full:   rbModeFull.IsChecked = true; break;
+            }
+            _suppressModeSync = false;
+        };
 
         PreviewKeyDown += MainWindow_PreviewKeyDown;
 
         LoadPlugins();
+    }
+
+    private void BuildBreadcrumb(string folderPath)
+    {
+        breadcrumb.Items.Clear();
+        if (string.IsNullOrEmpty(folderPath)) return;
+
+        var parts = new List<(string Display, string FullPath)>();
+        var p = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        while (!string.IsNullOrEmpty(p))
+        {
+            string name = Path.GetFileName(p);
+            if (string.IsNullOrEmpty(name)) name = p; // Drive root
+            parts.Insert(0, (name, p));
+            var parent = Path.GetDirectoryName(p);
+            if (parent == p) break;
+            p = parent ?? string.Empty;
+        }
+
+        for (int i = 0; i < parts.Count; i++)
+        {
+            var (display, full) = parts[i];
+            var btn = new Button
+            {
+                Content = display,
+                Style = (System.Windows.Style)FindResource("CrumbButtonStyle"),
+                Tag = full
+            };
+            btn.Click += (s, e) =>
+            {
+                var path = (string)((Button)s!).Tag;
+                if (Directory.Exists(path))
+                {
+                    _workspace.OpenFolder(path);
+                    _settings.AddRecentFolder(path);
+                }
+            };
+            breadcrumb.Items.Add(btn);
+
+            if (i < parts.Count - 1)
+            {
+                breadcrumb.Items.Add(new TextBlock
+                {
+                    Text = "›",
+                    Foreground = (Brush)FindResource("TextDimBrush"),
+                    Margin = new Thickness(2, 0, 2, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+            }
+        }
+    }
+
+    private void UpdateSelectionInfo(int count)
+    {
+        txtSelInfo.Text = count > 0 ? $"{count} selected" : "";
     }
 
     private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -187,7 +262,7 @@ public partial class MainWindow : Window
         if (parent == null) return;
 
         _toolsHostOriginalParent = parent;
-        _toolsHostOriginalRow = Grid.GetRow(toolsHost);
+        _toolsHostOriginalColumn = Grid.GetColumn(toolsHost);
         parent.Children.Remove(toolsHost);
 
         _toolsWindow = new ToolsWindow { Owner = this };
@@ -200,15 +275,49 @@ public partial class MainWindow : Window
             _toolsWindow?.DetachContent();
             if (_toolsHostOriginalParent is Grid origParent && toolsHost.Parent == null)
             {
-                Grid.SetRow(toolsHost, _toolsHostOriginalRow);
+                Grid.SetColumn(toolsHost, _toolsHostOriginalColumn);
                 origParent.Children.Add(toolsHost);
             }
             _toolsWindow = null;
+            btnPopOutTools.IsEnabled = true;
         };
 
         _toolsWindow.Show();
         btnPopOutTools.IsEnabled = false;
         Closed += (s, args) => _toolsWindow?.Close();
+    }
+
+    private void ModeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_suppressModeSync) return;
+        if (sender is RadioButton rb && rb.Tag is string tag &&
+            Enum.TryParse<LighttableMode>(tag, out var mode))
+        {
+            _suppressModeSync = true;
+            centerView.SwitchMode(mode);
+            _suppressModeSync = false;
+        }
+    }
+
+    private void CmbQuickRating_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_workspace == null || cmbQuickRating == null) return;
+        _workspace.Filter.MinRating = cmbQuickRating.SelectedIndex;
+        _workspace.ApplyFilterAndSort();
+    }
+
+    private void QuickLabel_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        if (sender is FrameworkElement fe && fe.Tag is string tag)
+        {
+            if (tag == "None") _workspace.Filter.RequiredLabel = null;
+            else if (Enum.TryParse<ColorLabel>(tag, out var cl))
+            {
+                _workspace.Filter.RequiredLabel = _workspace.Filter.RequiredLabel == cl ? null : cl;
+            }
+            _workspace.ApplyFilterAndSort();
+        }
     }
 
     private void PlaceOnSecondaryMonitor(Window w)

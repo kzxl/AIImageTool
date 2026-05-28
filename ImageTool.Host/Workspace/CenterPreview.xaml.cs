@@ -138,7 +138,9 @@ public partial class CenterPreview : UserControl
         }
     }
 
-    private void SetMode(LighttableMode m)
+    private void SetMode(LighttableMode m) => SwitchMode(m);
+
+    public void SwitchMode(LighttableMode m)
     {
         _mode = m;
         paneSingle.Visibility = m == LighttableMode.Single ? Visibility.Visible : Visibility.Collapsed;
@@ -146,7 +148,11 @@ public partial class CenterPreview : UserControl
         paneCull.Visibility = m == LighttableMode.Cull ? Visibility.Visible : Visibility.Collapsed;
         paneFull.Visibility = m == LighttableMode.Full ? Visibility.Visible : Visibility.Collapsed;
         if (m == LighttableMode.Cull) RebuildCullView();
+        ModeChanged?.Invoke(this, m);
     }
+
+    public LighttableMode CurrentMode => _mode;
+    public event EventHandler<LighttableMode>? ModeChanged;
 
     private void RebuildCullView()
     {
