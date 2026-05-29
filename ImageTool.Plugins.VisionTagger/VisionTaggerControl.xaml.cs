@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,6 +20,7 @@ public partial class VisionTaggerControl : UserControl
     private IWorkspaceService? _workspace;
     private IModelDownloader? _downloader;
     private IImageToolHost? _host;
+    private IImageMetaService? _meta;
     private WdTaggerProcessor? _processor;
     private string? _currentPath;
 
@@ -32,6 +35,7 @@ public partial class VisionTaggerControl : UserControl
         _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
         _downloader = sp.GetService(typeof(IModelDownloader)) as IModelDownloader;
         _host = sp.GetService(typeof(IImageToolHost)) as IImageToolHost;
+        _meta = sp.GetService(typeof(IImageMetaService)) as IImageMetaService;
 
         if (_host != null)
         {
@@ -120,5 +124,28 @@ public partial class VisionTaggerControl : UserControl
     {
         if (Tags.Count == 0) return;
         Clipboard.SetText(string.Join(", ", Tags));
+    }
+
+    /// <summary>Lưu các tag AI vào metadata ảnh (gộp với keyword sẵn có), phục vụ tìm kiếm/smart collection.</summary>
+    private void BtnSaveTags_Click(object sender, RoutedEventArgs e)
+    {
+        if (_meta == null || string.IsNullOrEmpty(_currentPath))
+        {
+            MessageBox.Show("Chưa có ảnh hoặc service metadata.", "Lưu Keywords", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (Tags.Count == 0) return;
+
+        // Bỏ tiền tố "★ " của character tag, gộp với keyword đang có, khử trùng (không phân biệt hoa thường).
+        var existing = _meta.Get(_currentPath).Tags;
+        var merged = new List<string>(existing);
+        var seen = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in Tags)
+        {
+            var t = raw.StartsWith("★ ") ? raw.Substring(2).Trim() : raw.Trim();
+            if (t.Length > 0 && seen.Add(t)) merged.Add(t);
+        }
+        _meta.SetTags(_currentPath, merged);
+        MessageBox.Show($"Đã lưu {merged.Count} keyword vào ảnh.", "Lưu Keywords", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

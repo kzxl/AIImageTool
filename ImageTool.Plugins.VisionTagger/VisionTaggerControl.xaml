@@ -44,6 +44,8 @@
         <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Text="Từ Khoá (Tags)" FontSize="15" FontWeight="SemiBold"/>
             <Button x:Name="btnCopyTags" Content="Copy All" Margin="10,0,0,0" Padding="6,2" Click="BtnCopyTags_Click"/>
+            <Button x:Name="btnSaveTags" Content="Lưu vào Keywords" Margin="6,0,0,0" Padding="6,2"
+                    Click="BtnSaveTags_Click" ToolTip="Lưu tags vào metadata ảnh (dùng cho tìm kiếm/smart collection)"/>
         </StackPanel>
 
         <!-- Area chứa tags -->
