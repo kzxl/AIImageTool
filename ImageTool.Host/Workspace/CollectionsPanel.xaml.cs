@@ -28,6 +28,7 @@ public partial class CollectionsPanel : UserControl
         if (_catalog == null) return;
         var collections = _catalog.GetCollections();
         lstCollections.ItemsSource = collections;
+        lstSmart.ItemsSource = _catalog.GetSmartCollections();
     }
 
     private void BtnAddCollection_Click(object sender, RoutedEventArgs e)
@@ -70,6 +71,42 @@ public partial class CollectionsPanel : UserControl
         if (result != MessageBoxResult.Yes) return;
 
         _catalog.DeleteCollection(col.Id);
+    }
+
+    // ===== Smart Collections (8.3) =====
+    private void BtnAddSmart_Click(object sender, RoutedEventArgs e)
+    {
+        if (_catalog == null) return;
+        var dlg = new SmartCollectionDialog { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.CollectionName)) return;
+        _catalog.CreateSmartCollection(dlg.CollectionName!, dlg.Query);
+    }
+
+    private void LstSmart_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_catalog == null || _workspace == null) return;
+        if (lstSmart.SelectedItem is not SmartCollection sc) return;
+        var images = _catalog.GetSmartCollectionImages(sc.Id);
+        _workspace.OpenCatalogView(images.Select(i => i.FilePath).ToList(), sc.Name + " (smart)");
+    }
+
+    private void MenuSmartEdit_Click(object sender, RoutedEventArgs e)
+    {
+        if (_catalog == null) return;
+        if (lstSmart.SelectedItem is not SmartCollection sc) return;
+        var dlg = new SmartCollectionDialog(sc.Name, sc.Query) { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.CollectionName)) return;
+        _catalog.UpdateSmartCollection(sc.Id, dlg.CollectionName!, dlg.Query);
+    }
+
+    private void MenuSmartDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (_catalog == null) return;
+        if (lstSmart.SelectedItem is not SmartCollection sc) return;
+        var result = MessageBox.Show($"Delete smart collection \"{sc.Name}\"?",
+            "Delete Smart Collection", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (result != MessageBoxResult.Yes) return;
+        _catalog.DeleteSmartCollection(sc.Id);
     }
 
     private static string? PromptInput(string title, string prompt, string defaultValue = "")

@@ -85,6 +85,19 @@ public class CatalogQuery
     public bool SortDescending { get; set; } = true;
 }
 
+/// <summary>
+/// Smart Collection (8.3): "bộ sưu tập động" định nghĩa bằng rule (CatalogQuery), không lưu danh
+/// sách ảnh cố định mà resolve mỗi lần truy vấn. Query serialize JSON trong DB.
+/// </summary>
+public class SmartCollection
+{
+    public long Id { get; set; }
+    public string Name { get; set; } = "";
+    public CatalogQuery Query { get; set; } = new();
+    public DateTime CreatedAt { get; set; }
+    public int ImageCount { get; set; }
+}
+
 public interface ICatalogService
 {
     IReadOnlyList<CatalogImage> SearchAdvanced(CatalogQuery query);
@@ -110,6 +123,13 @@ public interface ICatalogService
     void AddToCollection(long collectionId, IEnumerable<string> filePaths);
     void RemoveFromCollection(long collectionId, IEnumerable<string> filePaths);
     IReadOnlyList<CatalogImage> GetCollectionImages(long collectionId);
+
+    // Smart Collections (8.3) — bộ sưu tập động theo rule.
+    IReadOnlyList<SmartCollection> GetSmartCollections();
+    SmartCollection CreateSmartCollection(string name, CatalogQuery query);
+    void UpdateSmartCollection(long id, string name, CatalogQuery query);
+    void DeleteSmartCollection(long id);
+    IReadOnlyList<CatalogImage> GetSmartCollectionImages(long id);
 
     event EventHandler<ImportCompletedEventArgs>? ImportCompleted;
     event EventHandler? CollectionsChanged;

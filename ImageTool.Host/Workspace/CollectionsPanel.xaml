@@ -6,6 +6,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="#252526" Padding="10,6">
@@ -34,6 +36,40 @@
                         <TextBlock DockPanel.Dock="Right" Text="{Binding ImageCount}"
                                    Foreground="#666" FontSize="10" VerticalAlignment="Center"
                                    Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Border Grid.Row="2" Background="#252526" Padding="10,6">
+            <DockPanel>
+                <Button x:Name="btnAddSmart" DockPanel.Dock="Right" Content="+" Width="22" Height="22"
+                        Background="#333" Foreground="#CCC" BorderThickness="0" FontSize="14"
+                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                        Click="BtnAddSmart_Click" ToolTip="New Smart Collection (rule-based)"/>
+                <TextBlock Text="SMART COLLECTIONS" FontSize="11" FontWeight="SemiBold" Foreground="#888"
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <ListBox x:Name="lstSmart" Grid.Row="3" Background="Transparent" BorderThickness="0"
+                 Foreground="#CCC" FontSize="11" MaxHeight="200"
+                 SelectionChanged="LstSmart_SelectionChanged">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Edit Rules" Click="MenuSmartEdit_Click"/>
+                    <MenuItem Header="Delete" Click="MenuSmartDelete_Click"/>
+                </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="4,2">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ImageCount}"
+                                   Foreground="#666" FontSize="10" VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                        <TextBlock Text="⚙" Foreground="#55C1E7" FontSize="10" Margin="0,0,4,0" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                     </DockPanel>

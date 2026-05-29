@@ -86,6 +86,15 @@ public class CatalogService : ICatalogService
             );
             CREATE INDEX IF NOT EXISTS IX_CollectionImage_ImageId ON CollectionImage(ImageId);
             """);
+
+        conn.Execute("""
+            CREATE TABLE IF NOT EXISTS SmartCollection (
+                Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name      TEXT NOT NULL,
+                QueryJson TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL
+            );
+            """);
     }
 
     public async Task<int> ImportAsync(IEnumerable<string> filePaths, ImportOptions options,
@@ -369,5 +378,71 @@ public class CatalogService : ICatalogService
             WHERE col.CollectionId = @collectionId
             ORDER BY col.SortOrder, ci.FileName
             """, new { collectionId }).ToList();
+    }
+
+    // ===== Smart Collections (8.3) =====
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOpts = new() { IncludeFields = false };
+
+    public IReadOnlyList<SmartCollection> GetSmartCollections()
+    {
+        using var conn = Open();
+        var rows = conn.Query<(long Id, string Name, string QueryJson, string CreatedAt)>(
+            "SELECT Id, Name, QueryJson, CreatedAt FROM SmartCollection ORDER BY Name").ToList();
+        var result = new List<SmartCollection>(rows.Count);
+        foreach (var r in rows)
+        {
+            var query = DeserializeQuery(r.QueryJson);
+            int count = conn.Query<CatalogImage>(BuildAdvancedSql(query).Sql, BuildAdvancedSql(query).Parameters).Count();
+            result.Add(new SmartCollection
+            {
+                Id = r.Id, Name = r.Name, Query = query,
+                CreatedAt = DateTime.TryParse(r.CreatedAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt) ? dt : DateTime.MinValue,
+                ImageCount = count
+            });
+        }
+        return result;
+    }
+
+    public SmartCollection CreateSmartCollection(string name, CatalogQuery query)
+    {
+        using var conn = Open();
+        var now = DateTime.UtcNow;
+        var json = System.Text.Json.JsonSerializer.Serialize(query, JsonOpts);
+        var id = conn.ExecuteScalar<long>(
+            "INSERT INTO SmartCollection (Name, QueryJson, CreatedAt) VALUES (@name, @json, @now); SELECT last_insert_rowid();",
+            new { name, json, now = now.ToString("o") });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+        return new SmartCollection { Id = id, Name = name, Query = query, CreatedAt = now };
+    }
+
+    public void UpdateSmartCollection(long id, string name, CatalogQuery query)
+    {
+        using var conn = Open();
+        var json = System.Text.Json.JsonSerializer.Serialize(query, JsonOpts);
+        conn.Execute("UPDATE SmartCollection SET Name = @name, QueryJson = @json WHERE Id = @id", new { id, name, json });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void DeleteSmartCollection(long id)
+    {
+        using var conn = Open();
+        conn.Execute("DELETE FROM SmartCollection WHERE Id = @id", new { id });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public IReadOnlyList<CatalogImage> GetSmartCollectionImages(long id)
+    {
+        using var conn = Open();
+        var json = conn.ExecuteScalar<string?>("SELECT QueryJson FROM SmartCollection WHERE Id = @id", new { id });
+        if (json == null) return Array.Empty<CatalogImage>();
+        var query = DeserializeQuery(json);
+        var (sql, parameters) = BuildAdvancedSql(query);
+        return conn.Query<CatalogImage>(sql, parameters).ToList();
+    }
+
+    private static CatalogQuery DeserializeQuery(string json)
+    {
+        try { return System.Text.Json.JsonSerializer.Deserialize<CatalogQuery>(json, JsonOpts) ?? new CatalogQuery(); }
+        catch { return new CatalogQuery(); }
     }
 }
