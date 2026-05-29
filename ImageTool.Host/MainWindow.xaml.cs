@@ -183,6 +183,20 @@ public partial class MainWindow : Window
         bool ctrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
         bool shift = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) != 0;
 
+        // Không nuốt phím khi đang gõ vào ô nhập liệu (TextBox/ComboBox editable).
+        bool typing = System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.TextBox
+            || System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase;
+
+        // Phím chuyển module kiểu Lightroom (không khi đang gõ, không khi giữ modifier).
+        if (!typing && !ctrl && !shift)
+        {
+            switch (e.Key)
+            {
+                case System.Windows.Input.Key.D: SelectRightTab("Develop"); e.Handled = true; return;
+                case System.Windows.Input.Key.M: SelectRightTab("Develop"); developPanel.FocusMasking(); e.Handled = true; return;
+            }
+        }
+
         if (ctrl && shift)
         {
             switch (e.Key)
@@ -232,6 +246,17 @@ public partial class MainWindow : Window
     // ===== Copy/Paste Develop settings =====
     private static string OpLabel(EditOperation op)
         => string.IsNullOrEmpty(op.Title) ? op.OpType : op.Title;
+
+    /// <summary>Chọn tab panel phải theo header (kiểu LR module switch D/M).</summary>
+    private void SelectRightTab(string header)
+    {
+        foreach (var item in rightTabs.Items)
+            if (item is TabItem ti && ti.Header is string h && h == header)
+            {
+                ti.IsSelected = true;
+                return;
+            }
+    }
 
     private readonly System.Windows.Threading.DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(3) };
 

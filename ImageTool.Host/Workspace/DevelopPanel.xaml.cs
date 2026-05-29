@@ -258,6 +258,7 @@ public partial class DevelopPanel : UserControl
 
         // Local Adjustments / Masking (6.4 brush + 6.7 full slider set)
         var gMask = AddGroup("Local Adjustments", false);
+        _maskExpander = gMask.Parent as Expander;
         BuildMaskUI(gMask);
     }
 

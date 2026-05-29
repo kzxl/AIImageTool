@@ -18,9 +18,18 @@ public partial class DevelopPanel
     private StackPanel? _maskEditPanel;
     private readonly Dictionary<string, Slider> _maskSliders = new(StringComparer.OrdinalIgnoreCase);
     private TextBlock? _maskHint;
+    private Expander? _maskExpander;
 
     /// <summary>Bắn khi user chọn 1 brush mask để bắt đầu vẽ (CenterPreview lắng nghe). null = thôi vẽ.</summary>
     public event EventHandler<LocalMask?>? BrushMaskActivated;
+
+    /// <summary>Mở rộng + cuộn tới nhóm Local Adjustments (phím M kiểu LR Masking module).</summary>
+    public void FocusMasking()
+    {
+        if (_maskExpander == null) return;
+        _maskExpander.IsExpanded = true;
+        _maskExpander.BringIntoView();
+    }
 
     /// <summary>Dựng nhóm "Local Adjustments" (gọi từ BuildUI).</summary>
     private void BuildMaskUI(StackPanel host)
