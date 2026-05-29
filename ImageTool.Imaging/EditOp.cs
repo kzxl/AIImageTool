@@ -97,6 +97,9 @@ public sealed class EditOpRegistry
         LutCubeOp.Register(reg);
         SelectiveColorOp.Register(reg);
         ColorUnifyOp.Register(reg);
+        BlackWhiteOp.Register(reg);
+        InvertOp.Register(reg);
+        ChannelGainOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;
