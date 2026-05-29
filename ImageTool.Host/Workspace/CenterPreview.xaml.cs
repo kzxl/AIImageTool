@@ -222,6 +222,15 @@ public partial class CenterPreview : UserControl, IImageToolHost
     public void SwitchMode(LighttableMode m)
     {
         _mode = m;
+        // Rời compare mode khi chọn mode khác (compare là lớp phủ riêng).
+        if (_compareMode)
+        {
+            _compareMode = false;
+            paneCompare.Visibility = Visibility.Collapsed;
+            imgCompareBefore.Source = null;
+            imgCompareAfter.Source = null;
+            btnCompare.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
+        }
         paneSingle.Visibility = m == LighttableMode.Single ? Visibility.Visible : Visibility.Collapsed;
         paneGrid.Visibility = m == LighttableMode.Grid ? Visibility.Visible : Visibility.Collapsed;
         paneCull.Visibility = m == LighttableMode.Cull ? Visibility.Visible : Visibility.Collapsed;
@@ -279,6 +288,9 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.C: SetMode(LighttableMode.Cull); e.Handled = true; break;
             case Key.F: SetMode(LighttableMode.Full); e.Handled = true; break;
             case Key.R: ToggleCropMode(); e.Handled = true; break;
+            case Key.Y: // Y: bật/tắt so sánh before/after cạnh nhau (không khi giữ Ctrl = redo)
+                if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) { ToggleCompareMode(); e.Handled = true; }
+                break;
             case Key.Oem5: // phím "\" : xem ảnh gốc (before) khi giữ
                 if (!_showingBefore) ShowBefore(true);
                 e.Handled = true;

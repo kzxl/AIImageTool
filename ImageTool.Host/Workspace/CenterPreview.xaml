@@ -29,6 +29,9 @@
                     <Button x:Name="btnCrop" Content="◳  Crop (R)" Padding="10,4" Margin="12,0,4,0"
                             Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                             Click="BtnCrop_Click" ToolTip="Bật/tắt cắt ảnh (kéo khung)"/>
+                    <Button x:Name="btnCompare" Content="◫  Before/After (Y)" Padding="10,4" Margin="4,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnCompare_Click" ToolTip="So sánh ảnh gốc và ảnh đã chỉnh cạnh nhau"/>
                 </StackPanel>
                 <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="#AAA"
                            FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
@@ -162,6 +165,29 @@
             <!-- FULL mode (no margin) -->
             <Grid x:Name="paneFull" Visibility="Collapsed" Background="#000">
                 <Image x:Name="imgFull" Stretch="Uniform"/>
+            </Grid>
+
+            <!-- COMPARE mode (side-by-side before/after) -->
+            <Grid x:Name="paneCompare" Visibility="Collapsed" Background="#141414">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0" Margin="8">
+                    <Image x:Name="imgCompareBefore" Stretch="Uniform"/>
+                    <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
+                            Background="#AA000000" CornerRadius="2" Padding="6,2">
+                        <TextBlock Text="BEFORE" Foreground="#DDD" FontSize="10" FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+                <Grid Grid.Column="1" Margin="8">
+                    <Image x:Name="imgCompareAfter" Stretch="Uniform"/>
+                    <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
+                            Background="#CC55C1E7" CornerRadius="2" Padding="6,2">
+                        <TextBlock Text="AFTER" Foreground="#000" FontSize="10" FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+                <Border Width="1" Background="#333" HorizontalAlignment="Center"/>
             </Grid>
         </Grid>
 
