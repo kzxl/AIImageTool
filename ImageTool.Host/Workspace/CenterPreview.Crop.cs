@@ -27,6 +27,33 @@ public partial class CenterPreview
             _cropX = c.X; _cropY = c.Y; _cropW = c.W; _cropH = c.H;
             if (_cropMode) DrawCropOverlay();
         };
+        // Nạp preset tỉ lệ vào combobox 1 lần.
+        if (cmbCropRatio.Items.Count == 0)
+        {
+            foreach (var p in ImageTool.Imaging.CropAspect.Presets)
+                cmbCropRatio.Items.Add(new System.Windows.Controls.ComboBoxItem { Content = p.Name, Tag = p });
+            cmbCropRatio.SelectedIndex = 0;
+        }
+    }
+
+    private void CmbCropRatio_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (!_cropMode || cmbCropRatio.SelectedItem is not System.Windows.Controls.ComboBoxItem item) return;
+        if (item.Tag is not ValueTuple<string, double, double> preset) return;
+        if (imgPreview.Source is not BitmapSource bs) return;
+
+        if (preset.Item2 <= 0 || preset.Item3 <= 0)
+        {
+            // Original / Free: full khung.
+            _cropX = 0; _cropY = 0; _cropW = 1f; _cropH = 1f;
+        }
+        else
+        {
+            var r = ImageTool.Imaging.CropAspect.Centered(bs.PixelWidth, bs.PixelHeight, preset.Item2, preset.Item3);
+            _cropX = r.X; _cropY = r.Y; _cropW = r.W; _cropH = r.H;
+        }
+        DrawCropOverlay();
+        _developPanel?.SetCropRect(_cropX, _cropY, _cropW, _cropH);
     }
 
     private void BtnCrop_Click(object sender, RoutedEventArgs e) => ToggleCropMode();
@@ -48,6 +75,7 @@ public partial class CenterPreview
             }
             cropOverlay.Visibility = Visibility.Visible;
             btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF));
+            cmbCropRatio.Visibility = Visibility.Visible;
             // render ảnh chưa cắt rồi vẽ overlay (DrawCropOverlay được gọi cuối RenderDevelopAsync).
             _ = RenderDevelopAsync(path);
         }
@@ -55,6 +83,7 @@ public partial class CenterPreview
         {
             cropOverlay.Visibility = Visibility.Collapsed;
             cropOverlay.Children.Clear();
+            cmbCropRatio.Visibility = Visibility.Collapsed;
             btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30));
             // render lại có áp crop.
             _ = RenderDevelopAsync(path);

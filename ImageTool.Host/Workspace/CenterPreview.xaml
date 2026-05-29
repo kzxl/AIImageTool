@@ -32,6 +32,9 @@
                     <Button x:Name="btnCompare" Content="◫  Before/After (Y)" Padding="10,4" Margin="4,0,4,0"
                             Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                             Click="BtnCompare_Click" ToolTip="So sánh ảnh gốc và ảnh đã chỉnh cạnh nhau"/>
+                    <ComboBox x:Name="cmbCropRatio" Width="110" Margin="4,0,0,0" Visibility="Collapsed"
+                              VerticalAlignment="Center" SelectionChanged="CmbCropRatio_SelectionChanged"
+                              ToolTip="Tỉ lệ khung cắt"/>
                 </StackPanel>
                 <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="#AAA"
                            FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>

@@ -223,6 +223,18 @@ public sealed class DevelopRenderer
         catch { return null; }
     }
 
+    /// <summary>Phân tích Auto White Balance trên proxy. Trả gain per-channel; null nếu lỗi.</summary>
+    public AutoWhiteBalance.Gains? AnalyzeAutoWhiteBalance(string path)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return AutoWhiteBalance.Analyze(proxy, AutoWhiteBalance.Strategy.GrayWorld);
+        }
+        catch { return null; }
+    }
+
     /// <summary>
     /// Tính histogram + clip warning cho ảnh đã áp ops (trên proxy, downscale thêm cho nhanh).
     /// Dùng cho histogram live trong DevelopPanel (11.3). Null nếu không decode được.

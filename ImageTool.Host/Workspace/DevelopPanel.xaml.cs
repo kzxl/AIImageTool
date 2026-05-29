@@ -54,6 +54,13 @@ public partial class DevelopPanel : UserControl
     // Crop rectangle (chuẩn hoá [0..1]). Mặc định full khung. Set bởi CenterPreview overlay.
     private float _cropX, _cropY, _cropW = 1f, _cropH = 1f;
 
+    // B&W + Invert toggles.
+    private CheckBox? _chkBw;
+    private CheckBox? _chkInvert;
+
+    // Auto WB gains (áp qua ChannelGainOp). 1,1,1 = không.
+    private float _wbGainR = 1f, _wbGainG = 1f, _wbGainB = 1f;
+
     private readonly DispatcherTimer _debounce;
     private bool _pendingCommit;
 
@@ -107,6 +114,11 @@ public partial class DevelopPanel : UserControl
         AddSlider(gWb, "kelvin", "Temp (K)", 2000, 12000, 6500, "0");
         AddSlider(gWb, "temp", "Temp (fine)", -1, 1, 0);
         AddSlider(gWb, "tint", "Tint", -1, 1, 0);
+        var wbBtnRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        var btnAutoWb = new Button { Content = "Auto WB", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 4, 0), ToolTip = "Tự cân bằng trắng (gray-world)" };
+        btnAutoWb.Click += BtnAutoWb_Click;
+        wbBtnRow.Children.Add(btnAutoWb);
+        gWb.Children.Add(wbBtnRow);
 
         var gTone = AddGroup("Tone", true);
         AddSlider(gTone, "exposure", "Exposure", -5, 5, 0, "0.00");
@@ -237,6 +249,22 @@ public partial class DevelopPanel : UserControl
         var gFx = AddGroup("Effects", false);
         AddSlider(gFx, "vignette", "Vignette", -1, 1, 0);
         AddSlider(gFx, "grain", "Grain", 0, 1, 0);
+        _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
+        _chkInvert.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _chkInvert.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        gFx.Children.Add(_chkInvert);
+
+        // Black & White
+        var gBw = AddGroup("Black & White", false);
+        _chkBw = new CheckBox { Content = "Chuyển đen trắng", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
+        _chkBw.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _chkBw.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        gBw.Children.Add(_chkBw);
+        AddSlider(gBw, "bw_r", "Red mix", 0, 1, 0.299, "0.00");
+        AddSlider(gBw, "bw_g", "Green mix", 0, 1, 0.587, "0.00");
+        AddSlider(gBw, "bw_b", "Blue mix", 0, 1, 0.114, "0.00");
+        AddSlider(gBw, "bw_toneHue", "Tone Hue", 0, 360, 0, "0");
+        AddSlider(gBw, "bw_toneStr", "Tone Strength", 0, 1, 0);
 
         // Geometry
         var gGeo = AddGroup("Geometry", false);
@@ -472,6 +500,28 @@ public partial class DevelopPanel : UserControl
         SetVal("cg_hi_lum", grade?.Lum[2] ?? 0);
         SetVal("cg_blend", grade?.Blending ?? 0.5f);
 
+        // Black & White (8b)
+        var bwP = FindOp(path!, BlackWhiteOp.Type);
+        if (_chkBw != null) _chkBw.IsChecked = bwP != null && bwP.TryGetValue("enabled", out var bwe) && bwe == "true";
+        SetVal("bw_r", bwP != null ? Param(path!, BlackWhiteOp.Type, "wr") : 0.299);
+        SetVal("bw_g", bwP != null ? Param(path!, BlackWhiteOp.Type, "wg") : 0.587);
+        SetVal("bw_b", bwP != null ? Param(path!, BlackWhiteOp.Type, "wb") : 0.114);
+        SetVal("bw_toneHue", Param(path!, BlackWhiteOp.Type, "toneHue"));
+        SetVal("bw_toneStr", Param(path!, BlackWhiteOp.Type, "toneStr"));
+
+        // Invert (8c)
+        var invP = FindOp(path!, InvertOp.Type);
+        if (_chkInvert != null) _chkInvert.IsChecked = invP != null && invP.TryGetValue("enabled", out var ive) && ive == "true";
+
+        // Auto WB gains (ChannelGain)
+        var gainP = FindOp(path!, ChannelGainOp.Type);
+        _wbGainR = gainP != null ? (float)Param(path!, ChannelGainOp.Type, "r") : 1f;
+        _wbGainG = gainP != null ? (float)Param(path!, ChannelGainOp.Type, "g") : 1f;
+        _wbGainB = gainP != null ? (float)Param(path!, ChannelGainOp.Type, "b") : 1f;
+        if (_wbGainR <= 0f) _wbGainR = 1f;
+        if (_wbGainG <= 0f) _wbGainG = 1f;
+        if (_wbGainB <= 0f) _wbGainB = 1f;
+
         // Local adjustment masks (6.4/6.7)
         LoadMasks(path!);
 
@@ -574,6 +624,10 @@ public partial class DevelopPanel : UserControl
         // 0b) White balance Kelvin (trước Basic).
         var wbk = new WhiteBalanceKelvinOp { Kelvin = (float)GetVal("kelvin"), Tint = 0f };
         if (!wbk.IsIdentity) ops.Add(Op(WhiteBalanceKelvinOp.Type, "WB (Kelvin)", wbk.ToParams()));
+
+        // 0c) Auto White Balance gains (ChannelGain) — sau WB Kelvin, trước Basic.
+        var wbGain = new ChannelGainOp { R = _wbGainR, G = _wbGainG, B = _wbGainB };
+        if (!wbGain.IsIdentity) ops.Add(Op(ChannelGainOp.Type, "Auto WB", wbGain.ToParams()));
 
         // 1) Basic
         var basic = new DevelopBasicOp
@@ -678,6 +732,19 @@ public partial class DevelopPanel : UserControl
         var grain = new GrainOp { Amount = (float)GetVal("grain") };
         if (!grain.IsIdentity) ops.Add(Op(GrainOp.Type, "Grain", grain.ToParams()));
 
+        // 8b) Black & White (sau màu, trước local). Chuyển xám + nhuộm.
+        var bw = new BlackWhiteOp
+        {
+            Enabled = _chkBw?.IsChecked == true,
+            RedWeight = (float)GetVal("bw_r"), GreenWeight = (float)GetVal("bw_g"), BlueWeight = (float)GetVal("bw_b"),
+            ToneHue = (float)GetVal("bw_toneHue"), ToneStrength = (float)GetVal("bw_toneStr"),
+        };
+        if (!bw.IsIdentity) ops.Add(Op(BlackWhiteOp.Type, "Black & White", bw.ToParams()));
+
+        // 8c) Invert (negative) — cuối cùng trước local.
+        var inv = new InvertOp { Enabled = _chkInvert?.IsChecked == true };
+        if (!inv.IsIdentity) ops.Add(Op(InvertOp.Type, "Negative / Invert", inv.ToParams()));
+
         // 9) Local adjustments (masked ops) — sau cùng để áp lên kết quả global.
         AppendMaskOps(ops);
 
@@ -734,6 +801,10 @@ public partial class DevelopPanel : UserControl
         if (_curveEditor != null) _curveEditor.SetPoints("0,0;1,1");
         Array.Clear(_gradeHue); Array.Clear(_gradeSat);
         for (int i = 0; i < 4; i++) _gradeWheels[i]?.SetValue(0, 0);
+        // reset B&W / Invert / Auto WB
+        if (_chkBw != null) _chkBw.IsChecked = false;
+        if (_chkInvert != null) _chkInvert.IsChecked = false;
+        _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         _loading = false;
         _history.UpsertGroup(_currentPath, "Develop", Array.Empty<EditOperation>());
@@ -760,6 +831,16 @@ public partial class DevelopPanel : UserControl
     {
         if (_clipboard == null || _history == null || _currentPath == null) return;
         _clipboard.Copy(_history, _currentPath);
+    }
+
+    /// <summary>Auto White Balance (13.2): phân tích gray-world rồi áp qua ChannelGainOp.</summary>
+    private void BtnAutoWb_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var g = _renderer.AnalyzeAutoWhiteBalance(_currentPath);
+        if (g == null) return;
+        _wbGainR = g.Value.R; _wbGainG = g.Value.G; _wbGainB = g.Value.B;
+        Commit();
     }
 
     private void BtnLutPick_Click(object sender, RoutedEventArgs e)
