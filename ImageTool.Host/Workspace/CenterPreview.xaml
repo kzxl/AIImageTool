@@ -66,6 +66,14 @@
                         </TransformGroup>
                     </Image.RenderTransform>
                 </Image>
+                <Image x:Name="imgClip" Stretch="Uniform" Margin="20" Visibility="Collapsed" IsHitTestVisible="False" RenderTransformOrigin="0,0">
+                    <Image.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="zoomScaleClip" ScaleX="1" ScaleY="1"/>
+                            <TranslateTransform x:Name="zoomPanClip" X="0" Y="0"/>
+                        </TransformGroup>
+                    </Image.RenderTransform>
+                </Image>
                 <Image x:Name="imgAfter" Stretch="Uniform" Margin="20" Visibility="Collapsed" RenderTransformOrigin="0,0">
                     <Image.RenderTransform>
                         <TransformGroup>

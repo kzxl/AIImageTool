@@ -213,6 +213,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             txtFile.Text = Path.GetFileName(path);
             txtMeta.Text = $"{bmp.PixelWidth} x {bmp.PixelHeight}  |  edit · {pointer} bước";
             if (_cropMode) DrawCropOverlay();
+            RefreshClipOverlayIfActive();
         }
         catch { }
     }
@@ -288,6 +289,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.C: SetMode(LighttableMode.Cull); e.Handled = true; break;
             case Key.F: SetMode(LighttableMode.Full); e.Handled = true; break;
             case Key.R: ToggleCropMode(); e.Handled = true; break;
+            case Key.J: ToggleClipOverlay(); e.Handled = true; break;
             case Key.Y: // Y: bật/tắt so sánh before/after cạnh nhau (không khi giữ Ctrl = redo)
                 if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) { ToggleCompareMode(); e.Handled = true; }
                 break;
@@ -528,6 +530,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
         zoomScaleAfter.ScaleY = zoomScale.ScaleY;
         zoomPanAfter.X = zoomPan.X;
         zoomPanAfter.Y = zoomPan.Y;
+        if (_clipOverlay) SyncClipTransform();
     }
 
     private void UpdateZoomBadge()
