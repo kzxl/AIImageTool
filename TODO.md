@@ -3,7 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-29
+> Cập nhật lần cuối: 2026-05-29 (d) — thêm section 13 (B&W, Auto WB, Invert, crop-ratio, export presets,
+> filename tokenizer, histogram channel toggle, clipping overlay). 178/178 test pass, build 0 warning.
 
 ---
 
@@ -265,9 +266,34 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **12.2** Gỡ `ImageTool.Worker.Upscaler` (out-of-process .NET cũ) — đã xác nhận in-process `OnnxUpscaler`
       thay thế hoàn toàn, không project/code nào tham chiếu; xoá khỏi solution + git.
 - [x] **12.3** Pin SDK ổn định qua `global.json` (9.0.312, latestFeature) — hết cảnh báo NETSDK1057.
-- [x] **12.4** 112 unit test cho `ImageTool.Imaging` (op linear, replay, mask hình học/luminance/màu/brush,
-      geometry + perspective, color unify, tone-curve math, cached pipeline, SIMD, decode/encode, XMP).
+- [x] **12.4** 178 unit test cho `ImageTool` (op linear, replay, mask, geometry + perspective, color unify,
+      tone-curve math, cached pipeline, histogram, B&W/Invert/Auto WB, crop aspect, catalog query/smart collection,
+      keyword helper, filename tokenizer, op display names, SIMD, decode/encode, XMP).
 - [x] **12.5** Tài liệu `ImageTool.Imaging/WRITING_OPS.md` — hướng dẫn viết op mới.
+
+---
+
+## 13. TÍNH NĂNG MỚI & UX BỔ SUNG (phiên 2026-05-29 d)
+
+> Đề xuất + thực hiện thêm để hoàn thiện phần mềm. Tất cả op có test, build 0 warning, commit từng phần.
+
+- [x] **13.1** Black & White conversion (`BlackWhiteOp`): channel mixer mono (R/G/B weights) + nhuộm
+      (ToneHue/ToneStrength). UI group "Black & White" trong Develop. + test.
+- [x] **13.2** Auto White Balance (`AutoWhiteBalance`: gray-world + white-patch) → áp qua `ChannelGainOp`.
+      Nút "Auto WB" trong nhóm White Balance. + test.
+- [x] **13.3** Negative / Invert (`InvertOp`, đảo trong sRGB cho workflow scan phim). Toggle trong Effects. + test.
+- [x] **13.4** Crop aspect-ratio presets (`CropAspect`: 1:1/4:3/3:2/16:9/5:4/dọc + Original). ComboBox trong
+      thanh Crop, căn giữa khung. + test.
+- [x] **13.5** Export presets (`ExportPreset` trong AppSettings): lưu/gọi/xoá toàn bộ thiết lập Export (combo + nút).
+- [x] **13.6** Filename token engine (`FileNameTokenizer`): {name}/{ext}/{n:000}/{date[:fmt]}/{time}/{w}/{h}/{parent},
+      chống trùng theo lô. Nối vào Export pattern. + test. (Hạ tầng batch rename sẵn sàng.)
+- [x] **13.8** Histogram RGB/Luma channel toggle trong DevelopPanel.
+- [x] **13.9** Clipping overlay trên preview (phím **J**): đỏ = highlight cháy, xanh = shadow crushed,
+      đồng bộ zoom/pan, cập nhật theo render.
+- [x] **13.11** Nối B&W / Invert / Auto WB / crop-ratio vào Develop + Crop UI.
+- [ ] **13.7** Batch Rename UI (dialog đổi tên hàng loạt tại chỗ) — engine `FileNameTokenizer.ResolveBatch` đã sẵn,
+      còn thiếu dialog + thao tác File.Move an toàn.
+- [ ] **13.10** Histogram tương tác kéo trực tiếp để chỉnh tone (mới có hiển thị + clip warning).
 
 ---
 
