@@ -1,0 +1,44 @@
+<UserControl x:Class="ImageTool.Host.Workspace.CollectionsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#1E1E1E" Foreground="#DDD">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#252526" Padding="10,6">
+            <DockPanel>
+                <Button x:Name="btnAddCollection" DockPanel.Dock="Right" Content="+" Width="22" Height="22"
+                        Background="#333" Foreground="#CCC" BorderThickness="0" FontSize="14"
+                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                        Click="BtnAddCollection_Click" ToolTip="New Collection"/>
+                <TextBlock Text="COLLECTIONS" FontSize="11" FontWeight="SemiBold" Foreground="#888"
+                           VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <ListBox x:Name="lstCollections" Grid.Row="1" Background="Transparent" BorderThickness="0"
+                 Foreground="#CCC" FontSize="11"
+                 SelectionChanged="LstCollections_SelectionChanged">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Rename" Click="MenuRename_Click"/>
+                    <MenuItem Header="Delete" Click="MenuDelete_Click"/>
+                </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="4,2">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ImageCount}"
+                                   Foreground="#666" FontSize="10" VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

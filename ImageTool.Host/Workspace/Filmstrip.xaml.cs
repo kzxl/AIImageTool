@@ -11,6 +11,8 @@ public partial class Filmstrip : UserControl
     private IWorkspaceService? _workspace;
     private IThumbnailService? _thumbs;
     private IImageMetaService? _meta;
+    private IHistoryService? _history;
+    private DevelopClipboard? _clipboard;
 
     public ObservableCollection<ThumbItem> Items { get; private set; } = new();
 
@@ -30,6 +32,13 @@ public partial class Filmstrip : UserControl
         _workspace.SelectionChanged += OnSelectionChanged;
         _thumbs.ThumbnailReady += OnThumbReady;
         _meta.MetaChanged += OnMetaChanged;
+    }
+
+    /// <summary>Cấp service cho context menu (gọi sau Bind).</summary>
+    public void BindContext(IHistoryService history, DevelopClipboard clipboard)
+    {
+        _history = history;
+        _clipboard = clipboard;
     }
 
     private void OnFolderOpened(object? sender, FolderOpenedEventArgs e)
@@ -122,6 +131,23 @@ public partial class Filmstrip : UserControl
                 _workspace.SetSelection(new[] { item.ImagePath });
             }
             _workspace.SetActiveImage(item.ImagePath);
+        }
+    }
+
+    private void StripItem_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is ThumbItem item &&
+            _workspace != null && _meta != null && _history != null && _clipboard != null)
+        {
+            // Nếu ảnh chưa nằm trong selection -> chọn riêng nó (UX chuẩn).
+            if (!_workspace.Selection.Contains(item.ImagePath))
+            {
+                _workspace.SetSelection(new[] { item.ImagePath });
+                _workspace.SetActiveImage(item.ImagePath);
+            }
+            fe.ContextMenu = ImageContextMenu.Build(item.ImagePath, _workspace, _meta, _history, _clipboard);
+            fe.ContextMenu.IsOpen = true;
+            e.Handled = true;
         }
     }
 }

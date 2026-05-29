@@ -25,6 +25,14 @@
                 <TextBlock Text="Max Long Edge (px, 0 = giữ nguyên)" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
                 <TextBox x:Name="txtMaxLong" Text="0" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"/>
 
+                <TextBlock Text="Output Sharpening" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                <ComboBox x:Name="cmbSharpen" Height="22" SelectedIndex="0" Margin="0,0,0,8">
+                    <ComboBoxItem Content="None" Tag="none"/>
+                    <ComboBoxItem Content="Screen (web/màn hình)" Tag="screen"/>
+                    <ComboBoxItem Content="Print Low (giấy thường)" Tag="low"/>
+                    <ComboBoxItem Content="Print High (matte/HiRes)" Tag="high"/>
+                </ComboBox>
+
                 <TextBlock Text="Output Folder" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
                 <DockPanel Margin="0,0,0,8">
                     <Button x:Name="btnBrowse" DockPanel.Dock="Right" Content="..." Width="30" Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand" Click="BtnBrowse_Click"/>

@@ -92,8 +92,18 @@ public partial class App : Application
         services.AddSingleton<IBatchService, BatchService>();
         services.AddSingleton<IModelDownloader, ModelDownloader>();
         services.AddSingleton<IStyleService, StyleService>();
+        services.AddSingleton<ICatalogService, CatalogService>();
         services.AddSingleton<PluginLoader>();
         services.AddSingleton<AiWorkerManager>();
+        services.AddSingleton<ImageToolHostProvider>();
+        services.AddSingleton<DevelopClipboard>();
+
+        // Cấp IImageToolHost cho plugin (chỉ tham chiếu Core) resolve qua IServiceProvider.
+        // Provider.Host được set ở MainWindow ctor trước khi LoadPlugins()/Initialize() chạy.
+        services.AddSingleton<IImageToolHost>(sp =>
+            sp.GetRequiredService<ImageToolHostProvider>().Host
+            ?? throw new InvalidOperationException(
+                "IImageToolHost chưa sẵn sàng (MainWindow chưa khởi tạo CenterPreview)."));
     }
 
     private void OnStartup(object sender, StartupEventArgs e)
@@ -103,7 +113,8 @@ public partial class App : Application
             // Register built-in capabilities
             var batch = _serviceProvider.GetService(typeof(IEventBus)) as IEventBus; // ensure DI built
             var batchSvc = (IBatchService)_serviceProvider.GetService(typeof(IBatchService))!;
-            batchSvc?.RegisterCapability(new ImageTool.Shared.ExportBatchAdapter());
+            var historySvc = (IHistoryService)_serviceProvider.GetService(typeof(IHistoryService))!;
+            batchSvc?.RegisterCapability(new ImageTool.Shared.ExportBatchAdapter(historySvc));
 
             var styleSvc = (IStyleService)_serviceProvider.GetService(typeof(IStyleService))!;
             if (styleSvc != null)

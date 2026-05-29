@@ -5,6 +5,7 @@
         Title="Image Studio" Height="820" Width="1480"
         Background="{DynamicResource BgBaseBrush}"
         WindowStartupLocation="CenterScreen">
+    <Grid>
     <DockPanel>
         <!-- ========== TOP BAR ========== -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource BgPanelBrush}" Height="44"
@@ -14,8 +15,11 @@
                 <Button x:Name="btnOpenFolder" DockPanel.Dock="Left" Content="📁  Open" Padding="14,6"
                         VerticalAlignment="Center" Click="BtnOpenFolder_Click"/>
                 <Button x:Name="btnRecent" DockPanel.Dock="Left" Content="▾" Width="28" Padding="6,6"
-                        Margin="2,0,12,0" VerticalAlignment="Center" Click="BtnRecent_Click"
+                        Margin="2,0,4,0" VerticalAlignment="Center" Click="BtnRecent_Click"
                         ToolTip="Recent folders"/>
+                <Button x:Name="btnImport" DockPanel.Dock="Left" Content="⬇  Import" Padding="14,6"
+                        VerticalAlignment="Center" Margin="4,0,12,0" Click="BtnImport_Click"
+                        ToolTip="Import photos into catalog"/>
 
                 <!-- Right: Pop Out + Mode Switcher + Quick Filter -->
                 <Button x:Name="btnPopOutTools" DockPanel.Dock="Right" Content="⇱  Pop Out Tools"
@@ -123,6 +127,9 @@
             <Grid Grid.Column="4" x:Name="toolsHost" Background="{DynamicResource BgPanelBrush}">
                 <TabControl x:Name="rightTabs" Background="Transparent"
                             BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0">
+                    <TabItem Header="Develop">
+                        <ws:DevelopPanel x:Name="developPanel"/>
+                    </TabItem>
                     <TabItem Header="Info">
                         <ws:InfoPanel x:Name="infoPanel"/>
                     </TabItem>
@@ -197,4 +204,16 @@
             </Grid>
         </Grid>
     </DockPanel>
+
+    <!-- Toast notification (overlay, không chặn) -->
+    <Border x:Name="toastBorder" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+            Margin="0,0,0,40" Background="#E6222222" CornerRadius="6" Padding="16,10"
+            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+            Visibility="Collapsed" Panel.ZIndex="100">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="0" Opacity="0.6"/>
+        </Border.Effect>
+        <TextBlock x:Name="txtToast" Foreground="#EEE" FontSize="13"/>
+    </Border>
+    </Grid>
 </Window>

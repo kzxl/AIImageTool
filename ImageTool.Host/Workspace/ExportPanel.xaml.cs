@@ -54,6 +54,7 @@ public partial class ExportPanel : UserControl
             ? System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output")
             : txtOutDir.Text;
         string pattern = string.IsNullOrWhiteSpace(txtPattern.Text) ? "{name}.{ext}" : txtPattern.Text;
+        string outputSharpen = (cmbSharpen.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none";
 
         var jobs = paths.Select(p => new BatchJob
         {
@@ -66,7 +67,8 @@ public partial class ExportPanel : UserControl
                 ["quality"] = quality.ToString(),
                 ["maxLongEdge"] = maxLong.ToString(),
                 ["outDir"] = outDir,
-                ["pattern"] = pattern
+                ["pattern"] = pattern,
+                ["outputSharpen"] = outputSharpen
             }
         });
 

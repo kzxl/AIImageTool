@@ -1,0 +1,40 @@
+<UserControl x:Class="ImageTool.Host.Workspace.DevelopPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource BgPanelBrush}" Foreground="#DDD">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource BgPanelBrush}">
+            <DockPanel>
+                <TextBlock Text="DEVELOP" FontWeight="Bold" FontSize="12"
+                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                <Button x:Name="btnReset" DockPanel.Dock="Right" Content="Reset" Padding="8,3"
+                        Click="BtnReset_Click" ToolTip="Đưa tất cả về 0"/>
+                <Button x:Name="btnAuto" DockPanel.Dock="Right" Content="Auto" Padding="8,3" Margin="0,0,6,0"
+                        Click="BtnAuto_Click" ToolTip="Tự động cân chỉnh tông (phân tích histogram)"/>
+                <Button x:Name="btnPaste" DockPanel.Dock="Right" Content="Paste" Padding="8,3" Margin="0,0,6,0"
+                        Click="BtnPaste_Click" ToolTip="Dán settings vào ảnh đang chọn (Ctrl+Shift+V)"/>
+                <Button x:Name="btnCopy" DockPanel.Dock="Right" Content="Copy" Padding="8,3" Margin="0,0,6,0"
+                        Click="BtnCopy_Click" ToolTip="Copy settings của ảnh này (Ctrl+Shift+C)"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Preset bar -->
+        <Border DockPanel.Dock="Top" Padding="10,4" Background="{DynamicResource BgPanelBrush}"
+                BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <TextBlock Text="Preset" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <Button x:Name="btnSavePreset" DockPanel.Dock="Right" Content="＋ Lưu" Padding="6,2"
+                        Click="BtnSavePreset_Click" ToolTip="Lưu settings hiện tại thành preset"/>
+                <ComboBox x:Name="cmbPreset" Height="22" SelectionChanged="CmbPreset_SelectionChanged"
+                          ToolTip="Áp preset đã lưu"/>
+            </DockPanel>
+        </Border>
+
+        <TextBlock x:Name="txtNoImage" DockPanel.Dock="Top" Text="Chọn 1 ảnh để bắt đầu chỉnh"
+                   Foreground="#777" Margin="12,8" Visibility="Collapsed"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="panelSliders" Margin="8,4"/>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

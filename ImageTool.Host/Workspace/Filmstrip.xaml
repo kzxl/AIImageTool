@@ -14,7 +14,8 @@
                     <DataTemplate>
                         <Border Width="90" Height="90" Margin="3" Background="#222"
                                 BorderThickness="2" CornerRadius="2" Cursor="Hand"
-                                MouseLeftButtonUp="StripItem_MouseLeftButtonUp">
+                                MouseLeftButtonUp="StripItem_MouseLeftButtonUp"
+                                MouseRightButtonUp="StripItem_MouseRightButtonUp">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Setter Property="BorderBrush" Value="#333"/>
@@ -33,6 +34,12 @@
                                 <Border Width="8" Height="8" CornerRadius="4"
                                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3"
                                         Background="{Binding LabelBrush}"/>
+                                <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="3"
+                                        Background="#CC55C1E7" CornerRadius="2" Padding="2,0"
+                                        Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"
+                                        ToolTip="Đã chỉnh sửa">
+                                    <TextBlock Text="✎" Foreground="#000" FontSize="8" FontWeight="Bold"/>
+                                </Border>
                                 <TextBlock Text="{Binding RatingDisplay}" Foreground="#FFD24E" FontSize="9"
                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,3,2"/>
                             </Grid>

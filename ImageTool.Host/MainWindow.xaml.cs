@@ -21,6 +21,8 @@ public partial class MainWindow : Window
     private readonly IBatchService _batch;
     private readonly ISettingsService _settings;
     private readonly IStyleService _styles;
+    private readonly ImageToolHostProvider _hostProvider;
+    private readonly DevelopClipboard _developClipboard;
     private List<PluginEntry> _pluginEntries = new();
     private ToolsWindow? _toolsWindow;
     private Grid? _toolsHostOriginalParent;
@@ -37,7 +39,8 @@ public partial class MainWindow : Window
         IHistoryService history,
         IBatchService batch,
         ISettingsService settings,
-        IStyleService styles)
+        IStyleService styles,
+        ImageToolHostProvider hostProvider)
     {
         InitializeComponent();
         _pluginLoader = pluginLoader;
@@ -50,18 +53,30 @@ public partial class MainWindow : Window
         _batch = batch;
         _settings = settings;
         _styles = styles;
+        _hostProvider = hostProvider;
+        _hostProvider.Host = centerView; // CenterPreview implement IImageToolHost
+        _developClipboard = serviceProvider.GetRequiredService<DevelopClipboard>();
 
         // Load saved batch parallel
         _batch.MaxParallel = Math.Max(1, _settings.Current.BatchParallel);
 
         browser.Bind(_workspace, _thumbs, _meta);
-        centerView.Bind(_workspace, _thumbs, _meta);
+        browser.BindCollections(_serviceProvider.GetRequiredService<ICatalogService>(), _workspace);
+        browser.BindContext(_history, _developClipboard);
+        centerView.Bind(_workspace, _thumbs, _meta, _history);
+        centerView.BindContext(_developClipboard);
+        centerView.ProgressReported += (s, p) =>
+            Dispatcher.BeginInvoke(() => txtStatus.Text = p.Percent < 0 ? "Ready" : $"{p.Status} {p.Percent}%");
         filmstrip.Bind(_workspace, _thumbs, _meta);
+        filmstrip.BindContext(_history, _developClipboard);
         infoPanel.Bind(_workspace);
         historyPanel.Bind(_workspace, _history);
         batchPanel.Bind(_batch);
         exportPanel.Bind(_workspace, _batch);
         stylePanel.Bind(_styles, _workspace, _batch);
+        developPanel.Bind(_workspace, _history, centerView.Renderer, _developClipboard, _styles);
+        centerView.BindCropPanel(developPanel);
+        centerView.BindBrushPanel(developPanel);
 
         _aiManager.StartWorker();
         Closed += (s, e) =>
@@ -91,6 +106,17 @@ public partial class MainWindow : Window
         };
 
         PreviewKeyDown += MainWindow_PreviewKeyDown;
+
+        // Toast: tự ẩn sau timer.
+        _toastTimer.Tick += (s, e) => { _toastTimer.Stop(); toastBorder.Visibility = Visibility.Collapsed; };
+        // Báo khi job batch xong (export/style/upscale...).
+        _batch.JobUpdated += (s, job) =>
+        {
+            if (job.Status == BatchJobStatus.Completed)
+                Dispatcher.BeginInvoke(() => ShowToast($"Xong: {job.DisplayName}"));
+            else if (job.Status == BatchJobStatus.Failed)
+                Dispatcher.BeginInvoke(() => ShowToast($"Lỗi: {job.DisplayName}"));
+        };
 
         LoadPlugins();
     }
@@ -155,13 +181,33 @@ public partial class MainWindow : Window
         if (_workspace.ActiveImage == null) return;
         var path = _workspace.ActiveImage;
         bool ctrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
+        bool shift = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Shift) != 0;
+
+        if (ctrl && shift)
+        {
+            switch (e.Key)
+            {
+                case System.Windows.Input.Key.C: CopyDevelopSettings(); e.Handled = true; return;
+                case System.Windows.Input.Key.V: PasteDevelopSettings(); e.Handled = true; return;
+            }
+        }
 
         if (ctrl)
         {
             switch (e.Key)
             {
-                case System.Windows.Input.Key.Z: _history.Undo(path); e.Handled = true; return;
-                case System.Windows.Input.Key.Y: _history.Redo(path); e.Handled = true; return;
+                case System.Windows.Input.Key.Z:
+                {
+                    var op = _history.Undo(path);
+                    txtStatus.Text = op != null ? $"Hoàn tác: {OpLabel(op)}" : "Không còn gì để hoàn tác";
+                    e.Handled = true; return;
+                }
+                case System.Windows.Input.Key.Y:
+                {
+                    var op = _history.Redo(path);
+                    txtStatus.Text = op != null ? $"Làm lại: {OpLabel(op)}" : "Không còn gì để làm lại";
+                    e.Handled = true; return;
+                }
             }
         }
 
@@ -181,6 +227,50 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.D8: _meta.SetLabel(path, ColorLabel.Green); e.Handled = true; break;
             case System.Windows.Input.Key.D9: _meta.SetLabel(path, ColorLabel.Blue); e.Handled = true; break;
         }
+    }
+
+    // ===== Copy/Paste Develop settings =====
+    private static string OpLabel(EditOperation op)
+        => string.IsNullOrEmpty(op.Title) ? op.OpType : op.Title;
+
+    private readonly System.Windows.Threading.DispatcherTimer _toastTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+
+    /// <summary>Hiển thị toast không chặn ở đáy cửa sổ, tự ẩn sau 3s.</summary>
+    public void ShowToast(string message)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            txtToast.Text = message;
+            toastBorder.Visibility = Visibility.Visible;
+            _toastTimer.Stop();
+            _toastTimer.Start();
+        });
+    }
+
+    public void CopyDevelopSettings()
+    {
+        var src = _workspace.ActiveImage;
+        if (string.IsNullOrEmpty(src)) return;
+        if (_developClipboard.Copy(_history, src))
+            txtStatus.Text = _developClipboard.HasData
+                ? $"Đã copy settings ({_developClipboard.Count} bước) từ {Path.GetFileName(src)}"
+                : "Đã copy (ảnh gốc, không có chỉnh sửa)";
+    }
+
+    public void PasteDevelopSettings()
+    {
+        if (!_developClipboard.HasCopied)
+        {
+            txtStatus.Text = "Chưa có settings nào được copy (Ctrl+Shift+C trước)";
+            return;
+        }
+        // Áp cho toàn bộ ảnh đang chọn; nếu không có selection thì ảnh active.
+        var targets = _workspace.Selection.Count > 0
+            ? _workspace.Selection.ToList()
+            : (_workspace.ActiveImage != null ? new List<string> { _workspace.ActiveImage } : new List<string>());
+        if (targets.Count == 0) return;
+        int n = _developClipboard.PasteToMany(_history, targets);
+        txtStatus.Text = $"Đã dán settings vào {n} ảnh";
     }
 
     private void LoadPlugins()
@@ -220,6 +310,13 @@ public partial class MainWindow : Window
             _workspace.OpenFolder(dlg.FolderName);
             _settings.AddRecentFolder(dlg.FolderName);
         }
+    }
+
+    private void BtnImport_Click(object sender, RoutedEventArgs e)
+    {
+        var catalog = _serviceProvider.GetRequiredService<ICatalogService>();
+        var dlg = new ImportDialog(catalog, _thumbs, _workspace) { Owner = this };
+        dlg.ShowDialog();
     }
 
     private void BtnRecent_Click(object sender, RoutedEventArgs e)

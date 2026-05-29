@@ -14,6 +14,9 @@ public partial class WorkspaceBrowser : UserControl, System.ComponentModel.INoti
     private IWorkspaceService? _workspace;
     private IThumbnailService? _thumbs;
     private IImageMetaService? _meta;
+    private ICatalogService? _catalog;
+    private IHistoryService? _history;
+    private DevelopClipboard? _clipboard;
 
     public ObservableCollection<FolderNode> Roots { get; } = new();
 
@@ -47,6 +50,64 @@ public partial class WorkspaceBrowser : UserControl, System.ComponentModel.INoti
         _workspace.SelectionChanged += OnSelectionChanged;
         _thumbs.ThumbnailReady += OnThumbReady;
         _meta.MetaChanged += OnMetaChanged;
+    }
+
+    public void BindCollections(ICatalogService catalog, IWorkspaceService workspace)
+    {
+        _catalog = catalog;
+        collectionsPanel.Bind(catalog, workspace);
+    }
+
+    /// <summary>Cấp service cho context menu thumbnail (gọi sau Bind).</summary>
+    public void BindContext(IHistoryService history, DevelopClipboard clipboard)
+    {
+        _history = history;
+        _clipboard = clipboard;
+    }
+
+    /// <summary>Folder đang được chọn trong tree (null nếu chưa chọn hoặc là placeholder).</summary>
+    private FolderNode? SelectedFolder =>
+        treeFolders.SelectedItem as FolderNode is { IsPlaceholder: false } fn ? fn : null;
+
+    private void MiOpenInWorkspace_Click(object sender, RoutedEventArgs e)
+    {
+        var fn = SelectedFolder;
+        if (fn != null) _workspace?.OpenFolder(fn.Path);
+    }
+
+    private void MiImport_Click(object sender, RoutedEventArgs e) => OpenImportDialog(SelectedFolder?.Path);
+
+    private void MiShowInExplorer_Click(object sender, RoutedEventArgs e)
+    {
+        var fn = SelectedFolder;
+        if (fn == null || !Directory.Exists(fn.Path)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = fn.Path,
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    private void BtnOpenWorkspace_Click(object sender, RoutedEventArgs e)
+    {
+        var fn = SelectedFolder;
+        if (fn != null) _workspace?.OpenFolder(fn.Path);
+    }
+
+    private void BtnImport_Click(object sender, RoutedEventArgs e) => OpenImportDialog(SelectedFolder?.Path);
+
+    private void OpenImportDialog(string? sourceFolder)
+    {
+        if (_catalog == null || _thumbs == null || _workspace == null) return;
+        var dlg = new ImportDialog(_catalog, _thumbs, _workspace, sourceFolder)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        dlg.ShowDialog();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -183,6 +244,22 @@ public partial class WorkspaceBrowser : UserControl, System.ComponentModel.INoti
         }
     }
 
+    private void Thumbnail_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is ThumbItem item &&
+            _workspace != null && _meta != null && _history != null && _clipboard != null)
+        {
+            if (!_workspace.Selection.Contains(item.ImagePath))
+            {
+                _workspace.SetSelection(new[] { item.ImagePath });
+                _workspace.SetActiveImage(item.ImagePath);
+            }
+            fe.ContextMenu = ImageContextMenu.Build(item.ImagePath, _workspace, _meta, _history, _clipboard);
+            fe.ContextMenu.IsOpen = true;
+            e.Handled = true;
+        }
+    }
+
     private void TxtSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (_workspace == null) return;
@@ -223,7 +300,7 @@ public partial class WorkspaceBrowser : UserControl, System.ComponentModel.INoti
     }
 }
 
-public class FolderNode : System.ComponentModel.INotifyPropertyChanged
+public class FolderNode
 {
     public string Path { get; }
     public string Name { get; }
@@ -268,8 +345,6 @@ public class FolderNode : System.ComponentModel.INotifyPropertyChanged
         }
         catch { }
     }
-
-    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 }
 
 public class ThumbItem : System.ComponentModel.INotifyPropertyChanged
@@ -283,6 +358,7 @@ public class ThumbItem : System.ComponentModel.INotifyPropertyChanged
     private PickFlag _pick;
     private bool _isSelected;
     private bool _isActive;
+    private bool _isEdited;
 
     public BitmapImage? Thumb { get => _thumb; private set { _thumb = value; Raise(nameof(Thumb)); } }
     public int Rating { get => _rating; set { if (_rating == value) return; _rating = value; Raise(nameof(Rating), nameof(RatingDisplay)); } }
@@ -290,6 +366,8 @@ public class ThumbItem : System.ComponentModel.INotifyPropertyChanged
     public PickFlag Pick { get => _pick; set { if (_pick == value) return; _pick = value; Raise(nameof(Pick), nameof(PickDisplay)); } }
     public bool IsSelected { get => _isSelected; set { if (_isSelected == value) return; _isSelected = value; Raise(nameof(IsSelected)); } }
     public bool IsActive { get => _isActive; set { if (_isActive == value) return; _isActive = value; Raise(nameof(IsActive)); } }
+    /// <summary>True nếu ảnh có chỉnh sửa Develop -> hiển thị badge trong grid/filmstrip.</summary>
+    public bool IsEdited { get => _isEdited; set { if (_isEdited == value) return; _isEdited = value; Raise(nameof(IsEdited)); } }
 
     public string RatingDisplay => _rating > 0 ? new string('★', _rating) : "";
     public string PickDisplay => _pick switch { PickFlag.Pick => "✓", PickFlag.Reject => "✗", _ => "" };
