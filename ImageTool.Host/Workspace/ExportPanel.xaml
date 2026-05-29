@@ -8,6 +8,13 @@
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="10">
+                <TextBlock Text="Preset" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
+                <DockPanel Margin="0,0,0,10">
+                    <Button x:Name="btnSavePreset" DockPanel.Dock="Right" Content="＋" Width="24" Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand" Click="BtnSavePreset_Click" ToolTip="Lưu thiết lập hiện tại thành preset"/>
+                    <Button x:Name="btnDeletePreset" DockPanel.Dock="Right" Content="✕" Width="24" Margin="0,0,4,0" Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand" Click="BtnDeletePreset_Click" ToolTip="Xoá preset đang chọn"/>
+                    <ComboBox x:Name="cmbPreset" Height="22" SelectionChanged="CmbPreset_SelectionChanged" ToolTip="Áp preset đã lưu"/>
+                </DockPanel>
+
                 <TextBlock Text="Format" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
                 <ComboBox x:Name="cmbFormat" Height="22" SelectedIndex="0" Margin="0,0,0,8">
                     <ComboBoxItem Content="PNG (lossless)" Tag="png"/>
@@ -41,7 +48,7 @@
 
                 <TextBlock Text="Filename Pattern" FontSize="11" Foreground="#888" Margin="0,0,0,4"/>
                 <TextBox x:Name="txtPattern" Text="{}{name}_export.{ext}" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"/>
-                <TextBlock Text="Tokens: {name} {ext} {w} {h} {id}" FontSize="9" Foreground="#666" Margin="0,0,0,12"/>
+                <TextBlock Text="Tokens: {name} {ext} {w} {h} {n:000} {date} {date:yyyyMMdd} {parent}" FontSize="9" Foreground="#666" Margin="0,0,0,12" TextWrapping="Wrap"/>
 
                 <Button x:Name="btnExportSelection" Content="Export Selection" Height="32" Background="#1E6E43" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnExportSelection_Click"/>
                 <TextBlock x:Name="txtHint" Text="Chọn ảnh trong browser rồi bấm Export." FontSize="10" Foreground="#666" Margin="0,6,0,0" TextWrapping="Wrap"/>

@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         infoPanel.Bind(_workspace);
         historyPanel.Bind(_workspace, _history);
         batchPanel.Bind(_batch);
-        exportPanel.Bind(_workspace, _batch);
+        exportPanel.Bind(_workspace, _batch, _settings);
         stylePanel.Bind(_styles, _workspace, _batch);
         developPanel.Bind(_workspace, _history, centerView.Renderer, _developClipboard, _styles);
         centerView.BindCropPanel(developPanel);

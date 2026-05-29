@@ -96,12 +96,17 @@ public class ExportBatchAdapter : IBatchCapable
                 "tif" or "tiff" => "tiff",
                 _ => "png"
             };
-            string fileName = pattern
-                .Replace("{name}", baseName)
-                .Replace("{ext}", ext)
-                .Replace("{w}", image.Width.ToString())
-                .Replace("{h}", image.Height.ToString())
-                .Replace("{id}", job.Id);
+            string fileName = FileNameTokenizer.Resolve(pattern, new FileNameTokenizer.Context
+            {
+                OriginalName = baseName,
+                Extension = ext,
+                Width = image.Width,
+                Height = image.Height,
+                ParentFolder = new DirectoryInfo(Path.GetDirectoryName(job.InputPath) ?? ".").Name,
+                Now = DateTime.Now,
+            });
+            // legacy token {id} (job id) vẫn hỗ trợ.
+            fileName = fileName.Replace("{id}", job.Id);
             if (!fileName.EndsWith("." + ext, StringComparison.OrdinalIgnoreCase)) fileName += "." + ext;
             string outPath = Path.Combine(outDir, fileName);
 
