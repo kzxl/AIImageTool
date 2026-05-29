@@ -2,11 +2,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ImageTool.Core\ImageTool.Core.csproj" />
+    <ProjectReference Include="..\ImageTool.Imaging\ImageTool.Imaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
   </ItemGroup>
 
   <PropertyGroup>

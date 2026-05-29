@@ -24,6 +24,7 @@ public class WorkspaceService : IWorkspaceService
     }
 
     public string? CurrentFolder { get; private set; }
+    public string? CurrentViewName { get; private set; }
     public ReadOnlyObservableCollection<string> Images => _imagesRo;
     public ReadOnlyObservableCollection<string> Selection => _selectionRo;
     public string? ActiveImage { get; private set; }
@@ -40,6 +41,7 @@ public class WorkspaceService : IWorkspaceService
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath)) return;
 
         CurrentFolder = folderPath;
+        CurrentViewName = null;
         _selection.Clear();
         _images.Clear();
 
@@ -77,6 +79,32 @@ public class WorkspaceService : IWorkspaceService
             if (ctx != null) ctx.Post(_ => Apply(), null);
             else Apply();
         });
+    }
+
+    public void OpenCatalogView(IEnumerable<string> imagePaths, string? viewName = null)
+    {
+        CurrentFolder = null;
+        CurrentViewName = viewName ?? "All Photos";
+        _selection.Clear();
+
+        _allImages = imagePaths.Where(p => File.Exists(p)).ToList();
+        var visible = ApplyFilterAndSortInternal();
+
+        void Apply()
+        {
+            _images.Clear();
+            foreach (var p in visible) _images.Add(p);
+
+            var prev = ActiveImage;
+            ActiveImage = null;
+            FolderOpened?.Invoke(this, new FolderOpenedEventArgs(CurrentViewName, visible));
+            if (prev != null) ActiveImageChanged?.Invoke(this, new ImageSelectedEventArgs(prev, null));
+            SelectionChanged?.Invoke(this, new BatchSelectionChangedEventArgs(Array.Empty<string>()));
+        }
+
+        var ctx = _uiContext;
+        if (ctx != null) ctx.Post(_ => Apply(), null);
+        else Apply();
     }
 
     private readonly System.Threading.SynchronizationContext? _uiContext = System.Threading.SynchronizationContext.Current;

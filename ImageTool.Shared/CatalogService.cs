@@ -1,0 +1,301 @@
+using System.Data;
+using Microsoft.Data.Sqlite;
+using Dapper;
+using ImageTool.Core;
+
+namespace ImageTool.Shared;
+
+public class CatalogService : ICatalogService
+{
+    private readonly string _dbPath;
+    private readonly string _connectionString;
+
+    public event EventHandler<ImportCompletedEventArgs>? ImportCompleted;
+    public event EventHandler? CollectionsChanged;
+
+    public CatalogService()
+    {
+        var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageTool");
+        Directory.CreateDirectory(appData);
+        _dbPath = Path.Combine(appData, "catalog.db");
+        _connectionString = $"Data Source={_dbPath}";
+        EnsureSchema();
+    }
+
+    private IDbConnection Open()
+    {
+        var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        conn.Execute("PRAGMA journal_mode=WAL;");
+        return conn;
+    }
+
+    private void EnsureSchema()
+    {
+        using var conn = Open();
+        conn.Execute("""
+            CREATE TABLE IF NOT EXISTS CatalogImage (
+                Id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                FilePath    TEXT NOT NULL UNIQUE,
+                FileName    TEXT NOT NULL,
+                FolderPath  TEXT NOT NULL,
+                FileSize    INTEGER,
+                ImportedAt  TEXT NOT NULL,
+                ImportMode  INTEGER NOT NULL DEFAULT 0,
+                OriginalPath TEXT,
+                DateTaken       TEXT,
+                CameraMake      TEXT,
+                CameraModel     TEXT,
+                LensModel       TEXT,
+                FocalLength     REAL,
+                Aperture        REAL,
+                ShutterSpeed    TEXT,
+                Iso             INTEGER,
+                Width           INTEGER,
+                Height          INTEGER,
+                Orientation     INTEGER
+            );
+            CREATE INDEX IF NOT EXISTS IX_CatalogImage_FolderPath ON CatalogImage(FolderPath);
+            CREATE INDEX IF NOT EXISTS IX_CatalogImage_FileName ON CatalogImage(FileName);
+            CREATE INDEX IF NOT EXISTS IX_CatalogImage_DateTaken ON CatalogImage(DateTaken);
+
+            CREATE TABLE IF NOT EXISTS Collection (
+                Id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name        TEXT NOT NULL,
+                Description TEXT,
+                CreatedAt   TEXT NOT NULL,
+                SortOrder   INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS CollectionImage (
+                CollectionId INTEGER NOT NULL REFERENCES Collection(Id) ON DELETE CASCADE,
+                ImageId      INTEGER NOT NULL REFERENCES CatalogImage(Id) ON DELETE CASCADE,
+                SortOrder    INTEGER NOT NULL DEFAULT 0,
+                AddedAt      TEXT NOT NULL,
+                PRIMARY KEY (CollectionId, ImageId)
+            );
+            CREATE INDEX IF NOT EXISTS IX_CollectionImage_ImageId ON CollectionImage(ImageId);
+            """);
+    }
+
+    public async Task<int> ImportAsync(IEnumerable<string> filePaths, ImportOptions options,
+        IProgress<ImportProgress>? progress = null, CancellationToken ct = default)
+    {
+        var files = filePaths.ToList();
+        int total = files.Count;
+        int completed = 0;
+        var importedPaths = new List<string>();
+
+        await Task.Run(() =>
+        {
+            using var conn = Open();
+            using var tx = conn.BeginTransaction();
+
+            foreach (var file in files)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                string targetPath = file;
+                string? originalPath = null;
+
+                if (options.Mode == ImportMode.CopyToLibrary && !string.IsNullOrEmpty(options.DestinationFolder))
+                {
+                    targetPath = CopyToLibrary(file, options);
+                    originalPath = file;
+                }
+
+                if (conn.ExecuteScalar<int>("SELECT COUNT(1) FROM CatalogImage WHERE FilePath = @targetPath", new { targetPath }, tx) > 0)
+                {
+                    completed++;
+                    progress?.Report(new ImportProgress { Total = total, Completed = completed, CurrentFile = Path.GetFileName(file) });
+                    continue;
+                }
+
+                var meta = ExifReader.ReadMetadata(targetPath);
+                meta.ImportedAt = DateTime.UtcNow;
+                meta.ImportMode = options.Mode;
+                meta.OriginalPath = originalPath;
+
+                conn.Execute("""
+                    INSERT INTO CatalogImage (FilePath, FileName, FolderPath, FileSize, ImportedAt, ImportMode, OriginalPath,
+                        DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation)
+                    VALUES (@FilePath, @FileName, @FolderPath, @FileSize, @ImportedAt, @ImportMode, @OriginalPath,
+                        @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation)
+                    """, meta, tx);
+
+                importedPaths.Add(targetPath);
+                completed++;
+                progress?.Report(new ImportProgress { Total = total, Completed = completed, CurrentFile = Path.GetFileName(file) });
+            }
+
+            tx.Commit();
+        }, ct);
+
+        ImportCompleted?.Invoke(this, new ImportCompletedEventArgs(importedPaths.Count, importedPaths));
+        return importedPaths.Count;
+    }
+
+    private string CopyToLibrary(string sourcePath, ImportOptions options)
+    {
+        var destRoot = options.DestinationFolder!;
+        string subFolder;
+
+        if (options.SubfolderByDate)
+        {
+            var fi = new FileInfo(sourcePath);
+            var date = fi.LastWriteTime;
+            subFolder = Path.Combine(date.ToString("yyyy"), date.ToString("yyyy-MM-dd"));
+        }
+        else
+        {
+            subFolder = "";
+        }
+
+        var destDir = Path.Combine(destRoot, subFolder);
+        Directory.CreateDirectory(destDir);
+
+        var fileName = Path.GetFileName(sourcePath);
+        var destPath = Path.Combine(destDir, fileName);
+
+        if (File.Exists(destPath))
+        {
+            var name = Path.GetFileNameWithoutExtension(fileName);
+            var ext = Path.GetExtension(fileName);
+            destPath = Path.Combine(destDir, $"{name}_{Guid.NewGuid():N[..6]}{ext}");
+        }
+
+        File.Copy(sourcePath, destPath, false);
+        return destPath;
+    }
+
+    public bool IsImported(string filePath)
+    {
+        using var conn = Open();
+        return conn.ExecuteScalar<int>("SELECT COUNT(1) FROM CatalogImage WHERE FilePath = @filePath", new { filePath }) > 0;
+    }
+
+    public bool IsFolderImported(string folderPath)
+    {
+        return CountImportedInFolder(folderPath) > 0;
+    }
+
+    public int CountImportedInFolder(string folderPath)
+    {
+        if (string.IsNullOrEmpty(folderPath)) return 0;
+        using var conn = Open();
+        // FolderPath khớp chính xác hoặc là tiền tố (có thêm separator).
+        var prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var prefixSep = prefix + Path.DirectorySeparatorChar;
+        var prefixSepAlt = prefix + Path.AltDirectorySeparatorChar;
+        return conn.ExecuteScalar<int>(
+            "SELECT COUNT(1) FROM CatalogImage WHERE FolderPath = @prefix OR FolderPath LIKE @likePat OR FolderPath LIKE @likePatAlt",
+            new { prefix, likePat = prefixSep + "%", likePatAlt = prefixSepAlt + "%" });
+    }
+
+    public IReadOnlyList<CatalogImage> GetAllImages()
+    {
+        using var conn = Open();
+        return conn.Query<CatalogImage>("SELECT * FROM CatalogImage ORDER BY ImportedAt DESC").ToList();
+    }
+
+    public IReadOnlyList<CatalogImage> GetImagesByFolder(string folderPath)
+    {
+        using var conn = Open();
+        return conn.Query<CatalogImage>("SELECT * FROM CatalogImage WHERE FolderPath = @folderPath ORDER BY FileName", new { folderPath }).ToList();
+    }
+
+    public IReadOnlyList<CatalogImage> Search(string query)
+    {
+        using var conn = Open();
+        var pattern = $"%{query}%";
+        return conn.Query<CatalogImage>(
+            "SELECT * FROM CatalogImage WHERE FileName LIKE @pattern OR FolderPath LIKE @pattern ORDER BY ImportedAt DESC",
+            new { pattern }).ToList();
+    }
+
+    public CatalogImage? GetImage(string filePath)
+    {
+        using var conn = Open();
+        return conn.QueryFirstOrDefault<CatalogImage>("SELECT * FROM CatalogImage WHERE FilePath = @filePath", new { filePath });
+    }
+
+    public void RemoveFromCatalog(IEnumerable<string> filePaths)
+    {
+        using var conn = Open();
+        foreach (var path in filePaths)
+            conn.Execute("DELETE FROM CatalogImage WHERE FilePath = @path", new { path });
+    }
+
+    public IReadOnlyList<ImageCollection> GetCollections()
+    {
+        using var conn = Open();
+        return conn.Query<ImageCollection>("""
+            SELECT c.*, (SELECT COUNT(*) FROM CollectionImage ci WHERE ci.CollectionId = c.Id) AS ImageCount
+            FROM Collection c ORDER BY c.SortOrder, c.Name
+            """).ToList();
+    }
+
+    public ImageCollection CreateCollection(string name, string? description = null)
+    {
+        using var conn = Open();
+        var now = DateTime.UtcNow;
+        var id = conn.ExecuteScalar<long>(
+            "INSERT INTO Collection (Name, Description, CreatedAt, SortOrder) VALUES (@name, @description, @now, 0); SELECT last_insert_rowid();",
+            new { name, description, now });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+        return new ImageCollection { Id = id, Name = name, Description = description, CreatedAt = now };
+    }
+
+    public void RenameCollection(long collectionId, string newName)
+    {
+        using var conn = Open();
+        conn.Execute("UPDATE Collection SET Name = @newName WHERE Id = @collectionId", new { newName, collectionId });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void DeleteCollection(long collectionId)
+    {
+        using var conn = Open();
+        conn.Execute("DELETE FROM Collection WHERE Id = @collectionId", new { collectionId });
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void AddToCollection(long collectionId, IEnumerable<string> filePaths)
+    {
+        using var conn = Open();
+        foreach (var path in filePaths)
+        {
+            var imageId = conn.ExecuteScalar<long?>("SELECT Id FROM CatalogImage WHERE FilePath = @path", new { path });
+            if (imageId == null) continue;
+            conn.Execute("""
+                INSERT OR IGNORE INTO CollectionImage (CollectionId, ImageId, SortOrder, AddedAt)
+                VALUES (@collectionId, @imageId, 0, @now)
+                """, new { collectionId, imageId, now = DateTime.UtcNow });
+        }
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RemoveFromCollection(long collectionId, IEnumerable<string> filePaths)
+    {
+        using var conn = Open();
+        foreach (var path in filePaths)
+        {
+            var imageId = conn.ExecuteScalar<long?>("SELECT Id FROM CatalogImage WHERE FilePath = @path", new { path });
+            if (imageId == null) continue;
+            conn.Execute("DELETE FROM CollectionImage WHERE CollectionId = @collectionId AND ImageId = @imageId",
+                new { collectionId, imageId });
+        }
+        CollectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public IReadOnlyList<CatalogImage> GetCollectionImages(long collectionId)
+    {
+        using var conn = Open();
+        return conn.Query<CatalogImage>("""
+            SELECT ci.* FROM CatalogImage ci
+            INNER JOIN CollectionImage col ON col.ImageId = ci.Id
+            WHERE col.CollectionId = @collectionId
+            ORDER BY col.SortOrder, ci.FileName
+            """, new { collectionId }).ToList();
+    }
+}

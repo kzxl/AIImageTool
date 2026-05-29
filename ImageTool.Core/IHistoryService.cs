@@ -22,6 +22,20 @@ public interface IHistoryService
     /// <summary>Push 1 op mới sau current pointer; cắt redo phía sau.</summary>
     void Push(string imagePath, EditOperation op);
 
+    /// <summary>
+    /// Cập nhật "live" 1 op: nếu op ngay trước pointer trùng OpType và PluginId thì thay thế
+    /// tại chỗ (giữ Id, không tạo bước history mới) — dùng khi kéo slider. Ngược lại push op mới.
+    /// </summary>
+    void Upsert(string imagePath, EditOperation op);
+
+    /// <summary>
+    /// Quản lý 1 NHÓM op của cùng pluginId như trạng thái nguyên tử (vd panel Develop):
+    /// trong phạm vi đang active, gỡ mọi op có PluginId == pluginId rồi chèn lại <paramref name="ops"/>
+    /// theo đúng thứ tự cho trước (canonical) ở cuối phạm vi active. Cắt redo, đặt pointer = số op mới.
+    /// Tránh nhân đôi op khi user xen kẽ chỉnh nhiều loại (Basic/HSL/Curve).
+    /// </summary>
+    void UpsertGroup(string imagePath, string pluginId, IReadOnlyList<EditOperation> ops);
+
     /// <summary>Undo: lùi pointer 1 bước. Trả op vừa undo (hoặc null nếu không có).</summary>
     EditOperation? Undo(string imagePath);
 

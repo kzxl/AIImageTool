@@ -5,6 +5,7 @@ namespace ImageTool.Core;
 public interface IWorkspaceService
 {
     string? CurrentFolder { get; }
+    string? CurrentViewName { get; }
     ReadOnlyObservableCollection<string> Images { get; }
     ReadOnlyObservableCollection<string> Selection { get; }
     string? ActiveImage { get; }
@@ -13,6 +14,7 @@ public interface IWorkspaceService
     WorkspaceSort Sort { get; set; }
 
     void OpenFolder(string folderPath);
+    void OpenCatalogView(IEnumerable<string> imagePaths, string? viewName = null);
     void SetActiveImage(string? path);
     void SetSelection(IEnumerable<string> paths);
     void AddToSelection(string path);

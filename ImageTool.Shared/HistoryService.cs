@@ -39,6 +39,44 @@ public class HistoryService : IHistoryService
         SaveAndRaise(imagePath, entry);
     }
 
+    public void Upsert(string imagePath, EditOperation op)
+    {
+        var entry = GetEntry(imagePath);
+        // Nếu op ngay trước pointer trùng loại + plugin => thay thế tại chỗ (live slider).
+        if (entry.Pointer > 0)
+        {
+            var prev = entry.Stack[entry.Pointer - 1];
+            if (string.Equals(prev.OpType, op.OpType, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(prev.PluginId, op.PluginId, StringComparison.OrdinalIgnoreCase))
+            {
+                op.Id = prev.Id; // giữ Id để không phá liên kết
+                entry.Stack[entry.Pointer - 1] = op;
+                SaveAndRaise(imagePath, entry);
+                return;
+            }
+        }
+        // Khác loại: hành xử như Push (cắt redo + append).
+        if (entry.Pointer < entry.Stack.Count)
+            entry.Stack.RemoveRange(entry.Pointer, entry.Stack.Count - entry.Pointer);
+        entry.Stack.Add(op);
+        entry.Pointer = entry.Stack.Count;
+        SaveAndRaise(imagePath, entry);
+    }
+
+    public void UpsertGroup(string imagePath, string pluginId, IReadOnlyList<EditOperation> ops)
+    {
+        var entry = GetEntry(imagePath);
+        // Chỉ thao tác trong phạm vi đang active (bỏ redo phía sau).
+        if (entry.Pointer < entry.Stack.Count)
+            entry.Stack.RemoveRange(entry.Pointer, entry.Stack.Count - entry.Pointer);
+        // Gỡ mọi op cùng plugin trong phạm vi active.
+        entry.Stack.RemoveAll(o => string.Equals(o.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+        // Chèn lại nhóm theo thứ tự canonical ở cuối.
+        entry.Stack.AddRange(ops);
+        entry.Pointer = entry.Stack.Count;
+        SaveAndRaise(imagePath, entry);
+    }
+
     public EditOperation? Undo(string imagePath)
     {
         var entry = GetEntry(imagePath);
