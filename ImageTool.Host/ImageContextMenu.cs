@@ -113,6 +113,19 @@ public static class ImageContextMenu
         };
         menu.Items.Add(miCopyPath);
 
+        // --- Batch Rename (13.7) ---
+        var miRename = new MenuItem { Header = "Batch Rename..." };
+        miRename.Click += (_, _) =>
+        {
+            var targets = Targets();
+            var dlg = new BatchRenameDialog(targets)
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+            dlg.ShowDialog();
+        };
+        menu.Items.Add(miRename);
+
         return menu;
     }
 }
