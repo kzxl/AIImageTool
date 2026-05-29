@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ImageTool.Core;
@@ -15,11 +16,26 @@ public partial class DevelopPanel
     private Border? _histHost;
     private Canvas? _histCanvas;
     private TextBlock? _histClipLabel;
+    // Chế độ hiển thị kênh: 0 = RGB chồng, 1 = Luma.
+    private int _histChannelMode;
+    private ToggleButton? _histBtnRgb;
+    private ToggleButton? _histBtnLuma;
 
     /// <summary>Dựng widget histogram (gọi đầu BuildUI, ghim trên cùng panel slider).</summary>
     private FrameworkElement BuildHistogram()
     {
         var outer = new StackPanel { Margin = new Thickness(2, 2, 2, 6) };
+
+        // Hàng nút chọn kênh RGB / Luma (13.8).
+        var toggleRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 0, 2) };
+        _histBtnRgb = new ToggleButton { Content = "RGB", FontSize = 10, Padding = new Thickness(6, 1, 6, 1), IsChecked = true, Margin = new Thickness(0, 0, 4, 0) };
+        _histBtnLuma = new ToggleButton { Content = "Luma", FontSize = 10, Padding = new Thickness(6, 1, 6, 1) };
+        _histBtnRgb.Click += (_, _) => SetHistChannelMode(0);
+        _histBtnLuma.Click += (_, _) => SetHistChannelMode(1);
+        toggleRow.Children.Add(_histBtnRgb);
+        toggleRow.Children.Add(_histBtnLuma);
+        outer.Children.Add(toggleRow);
+
         _histCanvas = new Canvas
         {
             Height = 90,
@@ -37,6 +53,14 @@ public partial class DevelopPanel
         _histClipLabel = new TextBlock { Foreground = Brushes.Gray, FontSize = 10, Margin = new Thickness(2, 2, 0, 0) };
         outer.Children.Add(_histClipLabel);
         return outer;
+    }
+
+    private void SetHistChannelMode(int mode)
+    {
+        _histChannelMode = mode;
+        if (_histBtnRgb != null) _histBtnRgb.IsChecked = mode == 0;
+        if (_histBtnLuma != null) _histBtnLuma.IsChecked = mode == 1;
+        DrawHistogram();
     }
 
     private HistogramData? _lastHist;
@@ -69,10 +93,20 @@ public partial class DevelopPanel
         _histCanvas.Children.Clear();
 
         var hist = _lastHist;
-        int max = hist.MaxBin();
-        DrawChannelPath(hist.R, max, w, h, Color.FromArgb(150, 0xE0, 0x50, 0x50));
-        DrawChannelPath(hist.G, max, w, h, Color.FromArgb(150, 0x50, 0xD0, 0x50));
-        DrawChannelPath(hist.B, max, w, h, Color.FromArgb(150, 0x50, 0x90, 0xF0));
+        if (_histChannelMode == 1)
+        {
+            // Luma: 1 đường xám.
+            int lmax = 1;
+            for (int i = 0; i < 256; i++) if (hist.Luma[i] > lmax) lmax = hist.Luma[i];
+            DrawChannelPath(hist.Luma, lmax, w, h, Color.FromArgb(190, 0xCC, 0xCC, 0xCC));
+        }
+        else
+        {
+            int max = hist.MaxBin();
+            DrawChannelPath(hist.R, max, w, h, Color.FromArgb(150, 0xE0, 0x50, 0x50));
+            DrawChannelPath(hist.G, max, w, h, Color.FromArgb(150, 0x50, 0xD0, 0x50));
+            DrawChannelPath(hist.B, max, w, h, Color.FromArgb(150, 0x50, 0x90, 0xF0));
+        }
 
         // marker clip: tam giác góc trên trái (shadow) / phải (highlight).
         if (hist.ShadowClipWarning)
