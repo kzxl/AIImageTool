@@ -130,13 +130,23 @@ public class WorkspaceService : IWorkspaceService
             || Sort == WorkspaceSort.RatingDesc);
 
         string? search = string.IsNullOrWhiteSpace(Filter.Search) ? null : Filter.Search.Trim();
+        // Search cũng cần meta (để khớp keyword/tags), không chỉ tên file.
+        bool needMetaForSearch = search != null && _meta != null;
 
         foreach (var p in _allImages)
         {
             var name = Path.GetFileName(p);
-            if (search != null && !name.Contains(search, StringComparison.OrdinalIgnoreCase)) continue;
 
-            ImageMeta? m = needMeta ? _meta!.Get(p) : null;
+            ImageMeta? m = (needMeta || needMetaForSearch) ? _meta!.Get(p) : null;
+
+            // Search: khớp tên file HOẶC keyword/tags (phân cấp, không phân biệt hoa thường).
+            if (search != null)
+            {
+                bool nameMatch = name.Contains(search, StringComparison.OrdinalIgnoreCase);
+                bool tagMatch = m != null && m.Tags.Count > 0 && KeywordHelper.Matches(m.Tags, search);
+                if (!nameMatch && !tagMatch) continue;
+            }
+
             if (m != null)
             {
                 if (Filter.MinRating > 0 && m.Rating < Filter.MinRating) continue;
