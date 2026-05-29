@@ -4,7 +4,7 @@
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
 > Cập nhật lần cuối: 2026-05-29 (d) — thêm section 13 (B&W, Auto WB, Invert, crop-ratio, export presets,
-> filename tokenizer, histogram channel toggle, clipping overlay). 178/178 test pass, build 0 warning.
+> filename tokenizer, batch rename, histogram channel toggle, clipping overlay). 183/183 test pass, build 0 warning.
 
 ---
 
@@ -291,8 +291,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **13.9** Clipping overlay trên preview (phím **J**): đỏ = highlight cháy, xanh = shadow crushed,
       đồng bộ zoom/pan, cập nhật theo render.
 - [x] **13.11** Nối B&W / Invert / Auto WB / crop-ratio vào Develop + Crop UI.
-- [ ] **13.7** Batch Rename UI (dialog đổi tên hàng loạt tại chỗ) — engine `FileNameTokenizer.ResolveBatch` đã sẵn,
-      còn thiếu dialog + thao tác File.Move an toàn.
+- [x] **13.7** Batch Rename UI (`BatchRenameDialog` + `BatchRenamer`): dialog xem trước live, đổi tên an toàn
+      2 pha (xử lý hoán đổi/đụng tên), mở từ context menu thumbnail. + test.
 - [ ] **13.10** Histogram tương tác kéo trực tiếp để chỉnh tone (mới có hiển thị + clip warning).
 
 ---
