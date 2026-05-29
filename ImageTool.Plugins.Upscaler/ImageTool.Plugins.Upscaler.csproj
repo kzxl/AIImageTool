@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\ImageTool.Core\ImageTool.Core.csproj" />
+    <ProjectReference Include="..\ImageTool.Core\ImageTool.Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -28,7 +30,7 @@
     <ItemGroup>
       <PluginFiles Include="$(TargetDir)**" />
     </ItemGroup>
-    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(MSBuildProjectDirectory)\..\ImageTool.Host\bin\$(Configuration)\net8.0-windows\win-x64\Plugins\%(RecursiveDir)" />
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(MSBuildProjectDirectory)\..\ImageTool.Host\bin\$(Configuration)\net8.0-windows\win-x64\Plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
   <ItemGroup>

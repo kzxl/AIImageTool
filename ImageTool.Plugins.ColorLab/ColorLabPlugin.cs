@@ -9,8 +9,8 @@ public class ColorLabPlugin : IImagePlugin
     public string Version => "1.0.0";
     public string Description => "Extract dominant color palettes and perform selective color grading (HSL Shift).";
 
-    private IServiceProvider _serviceProvider;
-    private ColorLabControl _uiComponent;
+    private IServiceProvider _serviceProvider = null!;
+    private ColorLabControl _uiComponent = null!;
 
     public void Initialize(IServiceProvider serviceProvider)
     {

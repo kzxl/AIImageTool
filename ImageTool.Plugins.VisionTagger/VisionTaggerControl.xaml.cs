@@ -17,6 +17,7 @@ public partial class VisionTaggerControl : UserControl
 
     private IWorkspaceService? _workspace;
     private IModelDownloader? _downloader;
+    private IImageToolHost? _host;
     private WdTaggerProcessor? _processor;
     private string? _currentPath;
 
@@ -30,45 +31,23 @@ public partial class VisionTaggerControl : UserControl
     {
         _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
         _downloader = sp.GetService(typeof(IModelDownloader)) as IModelDownloader;
-        if (_workspace != null)
+        _host = sp.GetService(typeof(IImageToolHost)) as IImageToolHost;
+
+        if (_host != null)
         {
-            _workspace.ActiveImageChanged += (s, e) => Dispatcher.BeginInvoke(() => LoadImage(e.CurrentPath));
+            _host.ActiveImageChanged += (s, path) => Dispatcher.BeginInvoke(() => OnActiveImageChanged(path));
+            OnActiveImageChanged(_host.ActiveImagePath);
         }
     }
 
-    private void LoadImage(string? path)
+    private void OnActiveImageChanged(string? path)
     {
         _currentPath = path;
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-        {
-            imgPreview.Source = null;
-            tbPlaceholder.Visibility = Visibility.Visible;
-            return;
-        }
-        try
-        {
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.UriSource = new Uri(path);
-            bmp.DecodePixelWidth = 800;
-            bmp.EndInit();
-            bmp.Freeze();
-            imgPreview.Source = bmp;
-            tbPlaceholder.Visibility = Visibility.Collapsed;
-            txtDescription.Text = "";
-            Tags.Clear();
-        }
-        catch { }
-    }
-
-    private void BtnLoadImage_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new OpenFileDialog
-        {
-            Filter = "Image files (*.jpg, *.jpeg, *.png, *.webp)|*.jpg;*.jpeg;*.png;*.webp|All files (*.*)|*.*"
-        };
-        if (dlg.ShowDialog() == true) LoadImage(dlg.FileName);
+        bool has = !string.IsNullOrEmpty(path) && File.Exists(path);
+        txtActiveImage.Text = has ? Path.GetFileName(path) : "(chưa chọn ảnh)";
+        btnAnalyze.IsEnabled = has;
+        txtDescription.Text = "";
+        Tags.Clear();
     }
 
     private async void BtnAnalyze_Click(object sender, RoutedEventArgs e)

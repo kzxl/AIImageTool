@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
+using ImageTool.Core;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 
@@ -11,91 +11,46 @@ namespace ImageTool.Plugins.MetaEditor;
 
 public class ExifItem
 {
-    public string Name { get; set; }
-    public string Value { get; set; }
+    public string Name { get; set; } = "";
+    public string Value { get; set; } = "";
 }
 
 public partial class MetaEditorControl : UserControl
 {
-    private string _currentImagePath;
-    private ObservableCollection<ExifItem> _exifItems = new ObservableCollection<ExifItem>();
+    private IWorkspaceService? _workspace;
+    private IImageToolHost? _host;
+    private string? _currentImagePath;
+    private readonly ObservableCollection<ExifItem> _exifItems = new();
+
+    // Ảnh nguồn = ảnh đang mở ở Center Preview.
+    private string? CurrentImagePath => _host?.ActiveImagePath ?? _workspace?.ActiveImage;
 
     public MetaEditorControl()
     {
         InitializeComponent();
-        this.Loaded += MetaEditorControl_Loaded;
-    }
-
-    private void MetaEditorControl_Loaded(object sender, RoutedEventArgs e)
-    {
         dgMeta.ItemsSource = _exifItems;
     }
 
-    private void Border_Drop(object sender, DragEventArgs e)
+    public void AttachServices(IServiceProvider sp)
     {
-        if (_currentImagePath != null) return;
+        _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
+        _host = sp.GetService(typeof(IImageToolHost)) as IImageToolHost;
 
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        if (_host != null)
         {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files != null && files.Length > 0)
-            {
-                LoadImageFile(files[0]);
-            }
+            _host.ActiveImageChanged += (s, path) => Dispatcher.BeginInvoke(() => OnActiveImageChanged(path));
+            OnActiveImageChanged(_host.ActiveImagePath);
         }
     }
 
-    private void Border_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void OnActiveImageChanged(string? path)
     {
-        if (_currentImagePath != null) return;
-
-        var openFileDialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Chọn ảnh",
-            Filter = "Image files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All files (*.*)|*.*",
-            Multiselect = false
-        };
-
-        if (openFileDialog.ShowDialog() == true)
-        {
-            LoadImageFile(openFileDialog.FileName);
-        }
-    }
-
-    private void LoadImageFile(string file)
-    {
-        var ext = Path.GetExtension(file).ToLower();
-        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
-        {
-            _currentImagePath = file;
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.UriSource = new Uri(file);
-            bmp.CacheOption = BitmapCacheOption.OnLoad; // Mở khoá file
-            bmp.EndInit();
-
-            imgPreview.Source = bmp;
-            txtPrompt.Visibility = Visibility.Collapsed;
-            btnClearImage.Visibility = Visibility.Visible;
-            btnSaveMeta.IsEnabled = true;
-
-            if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Arrow;
-
-            LoadExifData(file);
-        }
-    }
-
-    private void BtnClearImage_Click(object sender, RoutedEventArgs e)
-    {
-        _currentImagePath = null;
-        imgPreview.Source = null;
-        txtPrompt.Visibility = Visibility.Visible;
-        btnClearImage.Visibility = Visibility.Collapsed;
-        btnSaveMeta.IsEnabled = false;
+        _currentImagePath = path;
+        bool has = !string.IsNullOrEmpty(path) && File.Exists(path);
+        txtActiveImage.Text = has ? Path.GetFileName(path) : "(chưa chọn ảnh)";
+        btnSaveMeta.IsEnabled = has;
         _exifItems.Clear();
-        
-        if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
-        e.Handled = true;
+        if (has) LoadExifData(path!);
     }
 
     private void LoadExifData(string file)
@@ -109,7 +64,7 @@ public partial class MetaEditorControl : UserControl
             {
                 foreach (var val in profile.Values)
                 {
-                    _exifItems.Add(new ExifItem { Name = val.Tag.ToString(), Value = val.GetValue()?.ToString() });
+                    _exifItems.Add(new ExifItem { Name = val.Tag.ToString(), Value = val.GetValue()?.ToString() ?? "" });
                 }
             }
             if (_exifItems.Count == 0) _exifItems.Add(new ExifItem { Name = "[Trống]", Value = "Không có thông tin EXIF" });
@@ -124,43 +79,27 @@ public partial class MetaEditorControl : UserControl
             if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath)) return;
             using var image = SixLabors.ImageSharp.Image.Load(_currentImagePath);
             var profile = image.Metadata.ExifProfile ?? new ExifProfile();
-            
+
             bool updated = false;
             foreach (var item in _exifItems)
             {
-                if (item.Name == "Software")
+                switch (item.Name)
                 {
-                    try { profile.SetValue(ExifTag.Software, item.Value); updated = true; } catch { }
-                }
-                else if (item.Name == "ImageDescription")
-                {
-                    try { profile.SetValue(ExifTag.ImageDescription, item.Value); updated = true; } catch { }
-                }
-                else if (item.Name == "Make")
-                {
-                    try { profile.SetValue(ExifTag.Make, item.Value); updated = true; } catch { }
-                }
-                else if (item.Name == "Model")
-                {
-                    try { profile.SetValue(ExifTag.Model, item.Value); updated = true; } catch { }
-                }
-                else if (item.Name == "Artist")
-                {
-                    try { profile.SetValue(ExifTag.Artist, item.Value); updated = true; } catch { }
-                }
-                else if (item.Name == "Copyright")
-                {
-                    try { profile.SetValue(ExifTag.Copyright, item.Value); updated = true; } catch { }
+                    case "Software": try { profile.SetValue(ExifTag.Software, item.Value); updated = true; } catch { } break;
+                    case "ImageDescription": try { profile.SetValue(ExifTag.ImageDescription, item.Value); updated = true; } catch { } break;
+                    case "Make": try { profile.SetValue(ExifTag.Make, item.Value); updated = true; } catch { } break;
+                    case "Model": try { profile.SetValue(ExifTag.Model, item.Value); updated = true; } catch { } break;
+                    case "Artist": try { profile.SetValue(ExifTag.Artist, item.Value); updated = true; } catch { } break;
+                    case "Copyright": try { profile.SetValue(ExifTag.Copyright, item.Value); updated = true; } catch { } break;
                 }
             }
-            // Auto add identifier if not already have
             if (!updated) profile.SetValue(ExifTag.Software, "ImageTool v1.0");
-            
+
             image.Metadata.ExifProfile = profile;
             image.Save(_currentImagePath);
             MessageBox.Show("Đã lưu metadata thành công vào ảnh gốc!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
-            
-            LoadExifData(_currentImagePath); // reload data
+
+            LoadExifData(_currentImagePath);
         }
         catch (Exception ex)
         {

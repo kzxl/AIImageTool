@@ -1,107 +1,58 @@
 <UserControl x:Class="ImageTool.Plugins.Upscaler.UpscalerControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="#1E1E1E" Foreground="White">
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+             Background="#1E1E1E" Foreground="#DDD">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="14">
+            <TextBlock Text="AI Upscaler" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,2"/>
+            <TextBlock x:Name="txtActiveImage" Text="(chưa chọn ảnh)" Foreground="#888" FontSize="11"
+                       Margin="0,0,0,12" TextTrimming="CharacterEllipsis"
+                       ToolTip="Ảnh đang mở ở khung xem trung tâm"/>
 
-        <TextBlock Text="AI Image Upscaler" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+            <TextBlock Text="Thiết bị" Foreground="#888" FontSize="11" Margin="0,0,0,4"/>
+            <ComboBox x:Name="cmbDevice" Margin="0,0,0,8" SelectedIndex="0"
+                      ToolTip="Thiết bị thực thi (GPU/CPU)" DisplayMemberPath="Name"/>
 
-        <!-- Drag Drop Area / Image Preview & Metadata -->
-        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <TextBlock Text="Hiệu năng" Foreground="#888" FontSize="11" Margin="0,0,0,4"/>
+            <ComboBox x:Name="cmbPerformance" Margin="0,0,0,8" SelectedIndex="0"
+                      ToolTip="Mức độ hiệu năng">
+                <ComboBoxItem Content="An toàn (giữ CPU/RAM thấp)" Tag="Safe"/>
+                <ComboBoxItem Content="Bung lụa (ép tối đa CPU/RAM)" Tag="Unleashed"/>
+            </ComboBox>
 
-            <Border x:Name="borderImageArea" BorderBrush="#555" BorderThickness="2" CornerRadius="8" 
-                    Background="#2A2A2A" AllowDrop="True" Drop="Border_Drop" MouseLeftButtonDown="Border_MouseLeftButtonDown" Cursor="Hand" ClipToBounds="True">
-                <Grid>
-                    <Grid x:Name="gridImageContainer" SizeChanged="GridImageContainer_SizeChanged"
-                      Background="Transparent"
-                      MouseLeftButtonDown="GridImageContainer_MouseLeftButtonDown"
-                      MouseMove="GridImageContainer_MouseMove"
-                      MouseLeftButtonUp="GridImageContainer_MouseLeftButtonUp"
-                      MouseLeave="GridImageContainer_MouseLeave"
-                      MouseWheel="GridImageContainer_MouseWheel"
-                      MouseRightButtonDown="GridImageContainer_MouseRightButtonDown"
-                      MouseRightButtonUp="GridImageContainer_MouseRightButtonUp">
-                    <Grid.RenderTransform>
-                        <TransformGroup>
-                            <ScaleTransform x:Name="imgScaleTransform" ScaleX="1.0" ScaleY="1.0" />
-                            <TranslateTransform x:Name="imgTranslateTransform" X="0" Y="0" />
-                        </TransformGroup>
-                    </Grid.RenderTransform>
-                    <TextBlock x:Name="txtPrompt" Text="Nhập chuột hoặc Kéo thả ảnh vào đây" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#888" FontSize="18" Panel.ZIndex="10"/>
-                    
-                    <Image x:Name="imgOriginal" Stretch="Uniform" Margin="10"/>
-                    <Image x:Name="imgPreview" Stretch="Uniform" Margin="10"/>
-                    
-                    <Border x:Name="borderSplitLine" Width="2" Background="White" HorizontalAlignment="Left" Visibility="Collapsed" IsHitTestVisible="False">
-                        <Border.Effect>
-                            <DropShadowEffect Color="Black" BlurRadius="5" ShadowDepth="0" Opacity="0.5"/>
-                        </Border.Effect>
-                    </Border>
-                </Grid>
-                
-                <Button x:Name="btnClearImage" Content="✕ Bỏ chọn ảnh" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="15,5" 
-                        Background="#AA000000" Foreground="White" BorderThickness="0" Cursor="Hand" Visibility="Collapsed" Click="BtnClearImage_Click">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="4"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-            </Grid>
-        </Border>
-    </Grid>
+            <TextBlock Text="Model" Foreground="#888" FontSize="11" Margin="0,0,0,4"/>
+            <ComboBox x:Name="cmbModel" Margin="0,0,0,8" SelectedIndex="0"
+                      SelectionChanged="CmbModel_SelectionChanged">
+                <ComboBoxItem Content="Fast Resize (Lanczos)"/>
+                <ComboBoxItem Content="UltraSharp V2 (Chất lượng)" Tag="4x-UltraSharpV2_fp32_op17.onnx"/>
+                <ComboBoxItem Content="RealESRGAN-x4plus (Tốc độ)" Tag="real_esrgan_x4plus.onnx"/>
+                <ComboBoxItem Content="FSRCNN (Siêu nhẹ)" Tag="fsrcnn_x4.onnx"/>
+                <ComboBoxItem Content="AuraSR (Generative API)"/>
+            </ComboBox>
 
-        <!-- Controls -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBlock x:Name="txtStatus" Text="Sẵn sàng" Foreground="#AAA" FontWeight="Medium"/>
-                    <TextBlock x:Name="txtExecMode" Text="[Nhận diện cấu trúc...]" Foreground="#55C1E7" FontStyle="Italic" Margin="10,0,0,0"/>
+            <TextBlock Text="Tỷ lệ / Mục tiêu" Foreground="#888" FontSize="11" Margin="0,0,0,4"/>
+            <ComboBox x:Name="cmbScale" Margin="0,0,0,12" SelectedIndex="2"/>
+
+            <Border Background="#252526" Padding="8" CornerRadius="3" Margin="0,4,0,8">
+                <StackPanel>
+                    <TextBlock x:Name="txtStatus" Text="Sẵn sàng" Foreground="#AAA" FontSize="11"/>
+                    <TextBlock x:Name="txtExecMode" Text="" Foreground="#55C1E7" FontStyle="Italic" FontSize="10" Margin="0,3,0,0"/>
+                    <ProgressBar x:Name="pbProgress" Height="6" Minimum="0" Maximum="100" Value="0"
+                                 Visibility="Hidden" Margin="0,6,0,0"/>
                 </StackPanel>
-                <ProgressBar x:Name="pbProgress" Height="8" Minimum="0" Maximum="100" Value="0" Visibility="Hidden" Foreground="#007ACC" Background="#444" BorderThickness="0"/>
-            </StackPanel>
+            </Border>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <ComboBox x:Name="cmbDevice" Width="140" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Thiết bị thực thi (GPU/CPU)" DisplayMemberPath="Name" />
-                <ComboBox x:Name="cmbPerformance" Width="90" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" ToolTip="Mức độ hiệu năng hệ thống">
-                    <ComboBoxItem Content="An toàn" Tag="Safe" />
-                    <ComboBoxItem Content="Bung lụa" Tag="Unleashed" />
-                </ComboBox>
-                <ComboBox x:Name="cmbModel" Width="180" Margin="0,0,10,0" SelectedIndex="0" VerticalContentAlignment="Center" SelectionChanged="CmbModel_SelectionChanged">
-                    <ComboBoxItem Content="Fast Resize (Lanczos)"/>
-                    <ComboBoxItem Content="UltraSharp V2 (Chất lượng)" Tag="4x-UltraSharpV2_fp32_op17.onnx"/>
-                    <ComboBoxItem Content="RealESRGAN-x4plus (Tốc độ)" Tag="real_esrgan_x4plus.onnx"/>
-                    <ComboBoxItem Content="FSRCNN (Siêu nhẹ)" Tag="fsrcnn_x4.onnx"/>
-                    <ComboBoxItem Content="AuraSR (Generative API)"/>
-                </ComboBox>
-                <ComboBox x:Name="cmbScale" Width="75" Margin="0,0,10,0" SelectedIndex="1" VerticalContentAlignment="Center" ToolTip="Tỷ lệ/Độ phân giải mục tiêu">
-                    <!-- Sẽ code-behind render -->
-                </ComboBox>
-                <Button x:Name="btnProcess" Content="Upscale" Width="100" Height="35" Background="#007ACC" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnProcess_Click">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="4"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-                <Button x:Name="btnBatch" Content="Batch" Width="80" Height="35" Margin="6,0,0,0"
-                        Background="#7A4FBF" Foreground="White" BorderThickness="0" Cursor="Hand"
-                        Click="BtnBatch_Click" IsEnabled="False" ToolTip="Chạy hàng loạt trên các ảnh đã chọn">
-                    <Button.Resources>
-                        <Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style>
-                    </Button.Resources>
-                </Button>
-            </StackPanel>
-        </Grid>
-    </Grid>
+            <Button x:Name="btnProcess" Content="Upscale ảnh đang chọn" Height="34"
+                    Background="#007ACC" Foreground="White" BorderThickness="0"
+                    FontWeight="SemiBold" Click="BtnProcess_Click" IsEnabled="False"/>
+
+            <Button x:Name="btnBatch" Content="Batch (selection)" Height="30" Margin="0,8,0,0"
+                    Background="#7A4FBF" Foreground="White" BorderThickness="0"
+                    Click="BtnBatch_Click" IsEnabled="False"
+                    ToolTip="Chạy hàng loạt trên các ảnh đã chọn ở Workspace"/>
+
+            <TextBlock Text="Ảnh kết quả sẽ hiển thị tại Center Preview với splitter so sánh trước/sau."
+                       Foreground="#666" FontSize="10" Margin="0,12,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

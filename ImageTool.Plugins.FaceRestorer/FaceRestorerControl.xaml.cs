@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 using ImageTool.Core;
 using SixLabors.ImageSharp;
 
@@ -12,10 +11,13 @@ namespace ImageTool.Plugins.FaceRestorer;
 
 public partial class FaceRestorerControl : UserControl
 {
-    private string _currentImagePath = "";
     private IWorkspaceService? _workspace;
     private IModelDownloader? _downloader;
+    private IImageToolHost? _host;
     private GpenProcessor? _processor;
+
+    // Ảnh nguồn = ảnh đang mở ở Center Preview.
+    private string? CurrentImagePath => _host?.ActiveImagePath ?? _workspace?.ActiveImage;
 
     public FaceRestorerControl()
     {
@@ -26,47 +28,28 @@ public partial class FaceRestorerControl : UserControl
     {
         _workspace = sp.GetService(typeof(IWorkspaceService)) as IWorkspaceService;
         _downloader = sp.GetService(typeof(IModelDownloader)) as IModelDownloader;
-        if (_workspace != null)
+        _host = sp.GetService(typeof(IImageToolHost)) as IImageToolHost;
+
+        if (_host != null)
         {
-            _workspace.ActiveImageChanged += (s, e) => Dispatcher.BeginInvoke(() => LoadImage(e.CurrentPath));
+            _host.ActiveImageChanged += (s, path) => Dispatcher.BeginInvoke(() => OnActiveImageChanged(path));
+            OnActiveImageChanged(_host.ActiveImagePath);
         }
     }
 
-    private void LoadImage(string? path)
+    private void OnActiveImageChanged(string? path)
     {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-        {
-            imgPreview.Source = null;
-            txtPrompt.Visibility = Visibility.Visible;
-            _currentImagePath = "";
-            return;
-        }
-        _currentImagePath = path;
-        var bmp = new BitmapImage();
-        bmp.BeginInit();
-        bmp.CacheOption = BitmapCacheOption.OnLoad;
-        bmp.UriSource = new Uri(path);
-        bmp.DecodePixelWidth = 800;
-        bmp.EndInit();
-        bmp.Freeze();
-        imgPreview.Source = bmp;
-        txtPrompt.Visibility = Visibility.Collapsed;
-    }
-
-    private void Border_Drop(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files != null && files.Length > 0) LoadImage(files[0]);
-        }
+        bool has = !string.IsNullOrEmpty(path) && File.Exists(path);
+        txtActiveImage.Text = has ? Path.GetFileName(path) : "(chưa chọn ảnh)";
+        btnProcess.IsEnabled = has;
     }
 
     private async void BtnProcess_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(_currentImagePath))
+        var capturedPath = CurrentImagePath;
+        if (string.IsNullOrEmpty(capturedPath) || !File.Exists(capturedPath))
         {
-            MessageBox.Show("Hãy chọn ảnh trước.", "Face Restorer", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Hãy chọn ảnh ở khung xem trung tâm trước.", "Face Restorer", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (_downloader == null)
@@ -98,9 +81,9 @@ public partial class FaceRestorerControl : UserControl
             {
                 pbProgress.Value = percent;
                 txtStatus.Text = $"Đang phục hồi khuôn mặt... {percent}%";
+                _host?.ReportProgress(percent, "Face Restore");
             });
 
-            string capturedPath = _currentImagePath;
             var result = await Task.Run(() =>
             {
                 using var src = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(capturedPath);
@@ -115,19 +98,15 @@ public partial class FaceRestorerControl : UserControl
                 return savePath;
             });
 
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.UriSource = new Uri(result);
-            bmp.EndInit();
-            bmp.Freeze();
-            imgPreview.Source = bmp;
+            _host?.ShowResult(result);
+            _host?.ReportProgress(-1);
             txtStatus.Text = $"Hoàn tất, đã lưu: {Path.GetFileName(result)}";
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Lỗi: {ex.Message}", "Face Restorer", MessageBoxButton.OK, MessageBoxImage.Error);
             txtStatus.Text = "Lỗi xử lý!";
+            _host?.ReportProgress(-1);
         }
         finally
         {

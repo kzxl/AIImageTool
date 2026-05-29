@@ -5,9 +5,9 @@ namespace ImageTool.Plugins.ColorLab;
 
 public class LUT3D
 {
-    public string Title { get; set; }
+    public string Title { get; set; } = "";
     public int Size { get; set; }
-    public FloatColor[,,] Table { get; set; }
+    public FloatColor[,,] Table { get; set; } = new FloatColor[0, 0, 0];
 }
 
 public struct FloatColor

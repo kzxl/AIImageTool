@@ -207,7 +207,7 @@ public class OnnxUpscaler
         {
              maxParallel = Math.Max(1, Environment.ProcessorCount / 4);
              ramThreshold = 60.0;
-             ramCheckFreq = 1;
+             ramCheckFreq = 4;
         }
 
         // TỐI ƯU SIÊU CẤP 3: Sử dụng System.Threading.Channels để lập Pipeline Producer-Consumer vắt kiệt RAM
@@ -225,19 +225,25 @@ public class OnnxUpscaler
         );
 
         // --- CONSUMER THREAD: Công nhân Nhặt và Ghép ảnh ---
+        // Ghép bằng copy buffer thẳng (tile lõi không chồng nhau) thay vì DrawImage qua
+        // pipeline alpha-compositing -> nhanh hơn nhiều. GC chỉ chạy khi RAM thực sự cao.
         var mergerTask = Task.Run(async () =>
         {
             await foreach (var pt in mergeChannel.Reader.ReadAllAsync(ct))
             {
-                resultImage.Mutate(ctx => ctx.DrawImage(pt.CoreTile, new Point(pt.X, pt.Y), 1f));
-                pt.CoreTile.Dispose(); // Gỡ cấu trúc đồ thị Pixel khỏi RAM NGAY LẬP TỨC
+                BlitCore(resultImage, pt.CoreTile, pt.X, pt.Y);
+                pt.CoreTile.Dispose(); // Gỡ pixel khỏi RAM ngay
 
                 int count = System.Threading.Interlocked.Increment(ref currentTile);
-                progress?.Report((int)((float)count / totalTiles * 99)); // Chạm mốc 99%
-                
-                if (count % ramCheckFreq == 0) 
+                progress?.Report((int)((float)count / totalTiles * 99));
+
+                // Chỉ ép GC khi RAM vượt ngưỡng (tránh GC.Collect mỗi tile làm chậm).
+                if (count % ramCheckFreq == 0)
                 {
-                    GC.Collect(0, GCCollectionMode.Optimized, false);
+                    var mi = GC.GetGCMemoryInfo();
+                    double load = (double)mi.MemoryLoadBytes / mi.TotalAvailableMemoryBytes * 100.0;
+                    if (load > ramThreshold)
+                        GC.Collect(0, GCCollectionMode.Optimized, false);
                 }
             }
         }, ct);
@@ -315,6 +321,30 @@ public class OnnxUpscaler
     }
 
     private static readonly object _gpuGlobalLock = new object();
+
+    /// <summary>
+    /// Copy trực tiếp 1 tile lõi (không chồng nhau) vào ảnh kết quả tại (destX,destY) — nhanh hơn
+    /// DrawImage vì bỏ qua alpha-compositing/clipping pipeline. Copy theo từng hàng span.
+    /// </summary>
+    private static void BlitCore(Image<Rgba32> dest, Image<Rgba32> tile, int destX, int destY)
+    {
+        int tw = tile.Width, th = tile.Height;
+        int dw = dest.Width, dh = dest.Height;
+        if (destX >= dw || destY >= dh) return;
+        int copyW = Math.Min(tw, dw - destX);
+        int copyH = Math.Min(th, dh - destY);
+        if (copyW <= 0 || copyH <= 0) return;
+
+        tile.ProcessPixelRows(dest, (tileAccessor, destAccessor) =>
+        {
+            for (int y = 0; y < copyH; y++)
+            {
+                var srcRow = tileAccessor.GetRowSpan(y);
+                var dstRow = destAccessor.GetRowSpan(destY + y);
+                srcRow.Slice(0, copyW).CopyTo(dstRow.Slice(destX, copyW));
+            }
+        });
+    }
 
     private Image<Rgba32> ProcessTile(InferenceSession session, Image<Rgba32> tile, int width, int height, int fixedW, int fixedH)
     {

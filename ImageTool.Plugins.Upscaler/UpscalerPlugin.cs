@@ -10,8 +10,8 @@ public class UpscalerPlugin : IImagePlugin
     public string Version => "1.0.0";
     public string Description => "Upscale images using ONNX Real-ESRGAN or similar model.";
 
-    private IServiceProvider _serviceProvider;
-    private UpscalerControl _uiComponent;
+    private IServiceProvider _serviceProvider = null!;
+    private UpscalerControl _uiComponent = null!;
 
     public void Initialize(IServiceProvider serviceProvider)
     {

@@ -18,17 +18,17 @@ namespace ImageTool.Plugins.ColorLab;
 
 public class ColorSwatch
 {
-    public string HexString { get; set; }
-    public SolidColorBrush HexBrush { get; set; }
+    public string HexString { get; set; } = "";
+    public SolidColorBrush HexBrush { get; set; } = new SolidColorBrush();
     public float Percentage { get; set; }
     public string PercentageString => $"{Percentage * 100:0.#}%";
 }
 
 public partial class ColorLabControl : UserControl
 {
-    private string _currentImagePath;
-    private BitmapSource _currentBitmapSource;
-    private SixLabors.ImageSharp.Image<Rgba32> _workingImage;
+    private string? _currentImagePath;
+    private BitmapSource? _currentBitmapSource;
+    private SixLabors.ImageSharp.Image<Rgba32>? _workingImage;
     private IHistoryService? _history;
     private IWorkspaceService? _workspace;
 
@@ -161,7 +161,9 @@ public partial class ColorLabControl : UserControl
 
     private async void ExtractDominantColorsAsync()
     {
-        var dominantInfos = await Task.Run(() => AdvancedColorProcessor.GetKMeansColors(_workingImage, 5, 10));
+        if (_workingImage == null) return;
+        var img = _workingImage;
+        var dominantInfos = await Task.Run(() => AdvancedColorProcessor.GetKMeansColors(img, 5, 10));
 
         var swatches = dominantInfos.Select(info => new ColorSwatch { 
             HexString = info.Hex, 
@@ -346,7 +348,7 @@ public partial class ColorLabControl : UserControl
     }
 
     // --- LUT PROCESSING ---
-    private LUT3D _currentLut;
+    private LUT3D? _currentLut;
 
     private async void BtnLoadLUT_Click(object sender, RoutedEventArgs e)
     {

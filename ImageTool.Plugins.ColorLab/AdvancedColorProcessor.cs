@@ -13,7 +13,7 @@ public static class AdvancedColorProcessor
 {
     public class DominantColorInfo
     {
-        public string Hex { get; set; }
+        public string Hex { get; set; } = "";
         public float Percentage { get; set; }
         public System.Windows.Media.Color WpfColor => (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(Hex);
     }

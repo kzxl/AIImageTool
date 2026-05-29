@@ -20,12 +20,15 @@ namespace ImageTool.Plugins.Upscaler;
 
 public partial class UpscalerControl : UserControl
 {
-    private string _currentImagePath;
     private static readonly HttpClient _sharedHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-    private CancellationTokenSource _cancellationTokenSource;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     private IBatchService? _batch;
     private IWorkspaceService? _workspace;
+    private IImageToolHost? _host;
+
+    // Ảnh nguồn = ảnh đang mở ở Center Preview (workspace), không còn picker riêng.
+    private string? _currentImagePath => _host?.ActiveImagePath ?? _workspace?.ActiveImage;
 
     public UpscalerControl()
     {
@@ -37,6 +40,15 @@ public partial class UpscalerControl : UserControl
     {
         _batch = sp.GetService<IBatchService>();
         _workspace = sp.GetService<IWorkspaceService>();
+        _host = sp.GetService<IImageToolHost>();
+
+        if (_host != null)
+        {
+            _host.ActiveImageChanged += (s, path) =>
+                Dispatcher.BeginInvoke(() => OnActiveImageChanged(path));
+            OnActiveImageChanged(_host.ActiveImagePath);
+        }
+
         if (_workspace != null)
         {
             _workspace.SelectionChanged += (s, e) =>
@@ -49,6 +61,13 @@ public partial class UpscalerControl : UserControl
                 });
             };
         }
+    }
+
+    private void OnActiveImageChanged(string? path)
+    {
+        bool has = !string.IsNullOrEmpty(path) && File.Exists(path);
+        txtActiveImage.Text = has ? Path.GetFileName(path) : "(chưa chọn ảnh)";
+        btnProcess.IsEnabled = has;
     }
 
     private void BtnBatch_Click(object sender, RoutedEventArgs e)
@@ -116,7 +135,7 @@ public partial class UpscalerControl : UserControl
         }
     }
 
-    private void CmbModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void CmbModel_SelectionChanged(object? sender, SelectionChangedEventArgs? e)
     {
         if (cmbScale == null || cmbModel == null) return;
         cmbScale.Items.Clear();
@@ -137,220 +156,6 @@ public partial class UpscalerControl : UserControl
         }
     }
 
-    private bool _isDraggingSplitter = false;
-    private double _splitPercent = 0.5;
-    
-    private System.Windows.Point _lastPanPosition;
-    private bool _isPanning = false;
-
-    private void GridImageContainer_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        UpdateSplitClip();
-    }
-
-    private void GridImageContainer_MouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (imgOriginal.Source == null && imgPreview.Source == null) return;
-        _isPanning = true;
-        _lastPanPosition = e.GetPosition(borderImageArea);
-        gridImageContainer.CaptureMouse();
-    }
-
-    private void GridImageContainer_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (_isPanning)
-        {
-            _isPanning = false;
-            if (!_isDraggingSplitter) gridImageContainer.ReleaseMouseCapture();
-        }
-    }
-
-    private void GridImageContainer_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-    {
-        if (imgOriginal.Source == null && imgPreview.Source == null) return;
-
-        double zoomChange = e.Delta > 0 ? 1.15 : 1 / 1.15;
-        var newScale = Math.Clamp(imgScaleTransform.ScaleX * zoomChange, 1.0, 20.0);
-
-        var mousePos = e.GetPosition(borderImageArea);
-        
-        // Cố định tâm phóng to vào vị trí con trỏ chuột
-        imgTranslateTransform.X = mousePos.X - (mousePos.X - imgTranslateTransform.X) * (newScale / imgScaleTransform.ScaleX);
-        imgTranslateTransform.Y = mousePos.Y - (mousePos.Y - imgTranslateTransform.Y) * (newScale / imgScaleTransform.ScaleY);
-
-        imgScaleTransform.ScaleX = newScale;
-        imgScaleTransform.ScaleY = newScale;
-    }
-
-    private void GridImageContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
-        {
-            if (imgOriginal.Source != null || imgPreview.Source != null)
-            {
-                _isPanning = true;
-                _lastPanPosition = e.GetPosition(borderImageArea);
-                gridImageContainer.CaptureMouse();
-                e.Handled = true;
-                return;
-            }
-        }
-
-        if (imgPreview.Source != null && borderSplitLine.Visibility == Visibility.Visible)
-        {
-            _isDraggingSplitter = true;
-            gridImageContainer.CaptureMouse();
-            UpdateSplitPosition(e.GetPosition(gridImageContainer));
-            e.Handled = true; // Ngăn chặn sự kiện nổi bọt lên viền để không mở Dialog chọn ảnh
-        }
-    }
-
-    private void GridImageContainer_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (_isPanning)
-        {
-            var curPos = e.GetPosition(borderImageArea);
-            imgTranslateTransform.X += curPos.X - _lastPanPosition.X;
-            imgTranslateTransform.Y += curPos.Y - _lastPanPosition.Y;
-            _lastPanPosition = curPos;
-        }
-
-        if (_isDraggingSplitter)
-        {
-            UpdateSplitPosition(e.GetPosition(gridImageContainer));
-        }
-    }
-
-    private void GridImageContainer_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (_isPanning)
-        {
-            _isPanning = false;
-            if (!_isDraggingSplitter) gridImageContainer.ReleaseMouseCapture();
-            return;
-        }
-
-        if (_isDraggingSplitter)
-        {
-            _isDraggingSplitter = false;
-            if (!_isPanning) gridImageContainer.ReleaseMouseCapture();
-        }
-    }
-
-    private void GridImageContainer_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (_isDraggingSplitter || _isPanning)
-        {
-            _isDraggingSplitter = false;
-            _isPanning = false;
-            gridImageContainer.ReleaseMouseCapture();
-        }
-    }
-
-    private void UpdateSplitPosition(System.Windows.Point p)
-    {
-        if (imgPreview.Source == null) return;
-
-        double width = gridImageContainer.ActualWidth;
-        if (width <= 0) return;
-
-        _splitPercent = p.X / width;
-        if (_splitPercent < 0) _splitPercent = 0;
-        if (_splitPercent > 1) _splitPercent = 1;
-
-        UpdateSplitClip();
-    }
-
-    private void UpdateSplitClip()
-    {
-        if (imgPreview.Source == null) return;
-
-        double width = gridImageContainer.ActualWidth;
-        double height = gridImageContainer.ActualHeight;
-
-        if (width <= 0 || height <= 0) return;
-
-        double clipX = width * _splitPercent;
-
-        // Clip the right side of the image
-        imgPreview.Clip = new System.Windows.Media.RectangleGeometry(new Rect(clipX, 0, Math.Max(0, width - clipX), height));
-        
-        borderSplitLine.Margin = new Thickness(clipX, 0, 0, 0);
-    }
-
-    private void BtnClearImage_Click(object sender, RoutedEventArgs e)
-    {
-        _currentImagePath = null;
-        imgOriginal.Source = null;
-        imgPreview.Source = null;
-        imgPreview.Clip = null;
-        borderSplitLine.Visibility = Visibility.Collapsed;
-        txtPrompt.Visibility = Visibility.Visible;
-        btnClearImage.Visibility = Visibility.Collapsed;
-        
-        if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
-        e.Handled = true;
-    }
-
-    private void Border_Drop(object sender, DragEventArgs e)
-    {
-        if (!string.IsNullOrEmpty(_currentImagePath)) return;
-
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files != null && files.Length > 0)
-            {
-                LoadImageFile(files[0]);
-            }
-        }
-    }
-
-    private void Border_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (!string.IsNullOrEmpty(_currentImagePath)) return;
-
-        var openFileDialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Chọn ảnh cần phóng to",
-            Filter = "Image files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All files (*.*)|*.*",
-            Multiselect = false
-        };
-
-        if (openFileDialog.ShowDialog() == true)
-        {
-            LoadImageFile(openFileDialog.FileName);
-        }
-    }
-
-    private void LoadImageFile(string file)
-    {
-        var ext = Path.GetExtension(file).ToLower();
-        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
-        {
-            _currentImagePath = file;
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.UriSource = new Uri(file);
-            bmp.CacheOption = BitmapCacheOption.OnLoad; // Tránh block file ảnh để có thể xoá sau khi scale
-            bmp.EndInit();
-            imgPreview.Source = null;
-            imgPreview.Clip = null;
-            borderSplitLine.Visibility = Visibility.Collapsed;
-
-            imgOriginal.Source = bmp;
-            txtPrompt.Visibility = Visibility.Collapsed;
-            btnClearImage.Visibility = Visibility.Visible;
-            
-            imgScaleTransform.ScaleX = 1.0;
-            imgScaleTransform.ScaleY = 1.0;
-            imgTranslateTransform.X = 0;
-            imgTranslateTransform.Y = 0;
-
-            if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.Hand;
-        }
-    }
-
     private async void BtnProcess_Click(object sender, RoutedEventArgs e)
     {
         // Nếu đang chạy thì huỷ
@@ -364,9 +169,10 @@ public partial class UpscalerControl : UserControl
         {
             if (string.IsNullOrEmpty(_currentImagePath) || !File.Exists(_currentImagePath))
             {
-                MessageBox.Show("Vui lòng chọn một ảnh để Upscale!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Vui lòng chọn một ảnh ở khung xem trung tâm để Upscale!", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            string srcPath = _currentImagePath!;
 
             int targetDeviceId = -1;
             if (cmbDevice.SelectedItem is GpuInfo selectedGpu)
@@ -404,7 +210,7 @@ public partial class UpscalerControl : UserControl
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            (byte[] ImageBytes, string SavedPath) resultData = (null, null);
+            (byte[]? ImageBytes, string? SavedPath) resultData = (null, null);
             
             var selectedItem = cmbModel.SelectedItem as ComboBoxItem;
             string selContent = selectedItem?.Content?.ToString() ?? "";
@@ -412,34 +218,24 @@ public partial class UpscalerControl : UserControl
             if (selContent.Contains("Fast Resize"))
             {
                 // Fast Resize Interpolation (No AI)
-                resultData = await ProcessFastResizeAsync(_currentImagePath, targetMp, progress, ct);
+                resultData = await ProcessFastResizeAsync(srcPath, targetMp, progress, ct);
             }
             else if (selContent.Contains("AuraSR"))
             {
-                resultData = await ProcessAuraSRAsync(_currentImagePath, ct);
+                resultData = await ProcessAuraSRAsync(srcPath, ct);
             }
             else
             {
-                string mdFileName = selectedItem?.Tag?.ToString();
+                string? mdFileName = selectedItem?.Tag?.ToString();
                 if (string.IsNullOrEmpty(mdFileName)) throw new Exception("ComboBox Model chưa cấu hình Tag chứa tên file ONNX!");
                 
-                resultData = await ProcessOnnxAsync(_currentImagePath, targetDeviceId, perfMode, targetMp, mdFileName, progress, ct);
+                resultData = await ProcessOnnxAsync(srcPath, targetDeviceId, perfMode, targetMp, mdFileName, progress, ct);
             }
 
             if (resultData.ImageBytes != null)
             {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.StreamSource = new MemoryStream(resultData.ImageBytes);
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-
-                imgPreview.Source = bmp;
-                _splitPercent = 0.5;
-                borderSplitLine.Visibility = Visibility.Visible;
-                UpdateSplitClip();
-
-                if (this.FindName("borderImageArea") is Border borderArea) borderArea.Cursor = System.Windows.Input.Cursors.SizeWE;
+                // Đẩy kết quả "after" lên Center Preview (splitter so sánh do host quản lý).
+                _host?.ShowResult(resultData.SavedPath, resultData.ImageBytes);
 
                 sw.Stop();
                 txtStatus.Text = $"Hoàn thành lưu tại: {resultData.SavedPath} ({sw.Elapsed.TotalSeconds:F2} giây)";
@@ -487,12 +283,12 @@ public partial class UpscalerControl : UserControl
             throw new Exception($"Lỗi gọi Python ({response.StatusCode}): {initRes}");
         
         using var doc = JsonDocument.Parse(initRes);
-        string jobId = doc.RootElement.GetProperty("job_id").GetString();
+        string? jobId = doc.RootElement.GetProperty("job_id").GetString();
         if (string.IsNullOrEmpty(jobId)) throw new Exception("Không bóc tách được Thẻ Chờ từ Python!");
 
         int pingCount = 1;
         int maxRetries = 60; // Tối đa 60 * 3s = 180s = 3 phút
-        byte[] targetBytes = null;
+        byte[]? targetBytes = null;
         
         while (pingCount <= maxRetries)
         {
