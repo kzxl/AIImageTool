@@ -222,4 +222,26 @@ public sealed class DevelopRenderer
         }
         catch { return null; }
     }
+
+    /// <summary>
+    /// Tính histogram + clip warning cho ảnh đã áp ops (trên proxy, downscale thêm cho nhanh).
+    /// Dùng cho histogram live trong DevelopPanel (11.3). Null nếu không decode được.
+    /// </summary>
+    public HistogramData? ComputeHistogram(string path, IReadOnlyList<EditOperation> ops, int pointer)
+    {
+        try
+        {
+            var proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            // downscale mạnh để histogram tính nhanh (đủ chính xác cho phân phối).
+            int longEdge = Math.Max(proxy.Width, proxy.Height);
+            float histScale = longEdge > 512 ? 512f / longEdge : 1f;
+            var small = histScale < 1f ? Downscale(proxy, histScale) : proxy;
+            int count = Math.Clamp(pointer, 0, ops.Count);
+            // Dùng pipeline thường (không cache) để khỏi thrash cache theo tầng của preview chính.
+            var rendered = _pipeline.RenderScaled(small, ops, _cachedScale * histScale, count);
+            return HistogramData.Compute(rendered);
+        }
+        catch { return null; }
+    }
 }

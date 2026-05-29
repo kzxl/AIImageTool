@@ -99,6 +99,9 @@ public partial class DevelopPanel : UserControl
 
     private void BuildUI()
     {
+        // Histogram + cảnh báo clip (live) trên cùng.
+        panelSliders.Children.Add(BuildHistogram());
+
         // Basic / White Balance
         var gWb = AddGroup("White Balance", true);
         AddSlider(gWb, "kelvin", "Temp (K)", 2000, 12000, 6500, "0");
@@ -473,6 +476,7 @@ public partial class DevelopPanel : UserControl
         LoadMasks(path!);
 
         _loading = false;
+        RefreshHistogram();
     }
 
     private IReadOnlyDictionary<string, string>? FindOp(string path, string opType)
@@ -541,6 +545,7 @@ public partial class DevelopPanel : UserControl
         SyncSlidersToBand();
         var ops = BuildOps();
         _history.UpsertGroup(_currentPath, "Develop", ops);
+        RefreshHistogram();
     }
 
     /// <summary>Dựng danh sách op theo thứ tự xử lý chuẩn (geometry trước, hiệu ứng sau).</summary>
