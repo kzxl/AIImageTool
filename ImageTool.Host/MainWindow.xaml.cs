@@ -245,7 +245,7 @@ public partial class MainWindow : Window
 
     // ===== Copy/Paste Develop settings =====
     private static string OpLabel(EditOperation op)
-        => string.IsNullOrEmpty(op.Title) ? op.OpType : op.Title;
+        => ImageTool.Shared.OpDisplayNames.Get(op.OpType, op.Title);
 
     /// <summary>Chọn tab panel phải theo header (kiểu LR module switch D/M).</summary>
     private void SelectRightTab(string header)

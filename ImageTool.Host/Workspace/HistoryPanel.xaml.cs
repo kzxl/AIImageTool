@@ -58,7 +58,7 @@ public partial class HistoryPanel : UserControl
                 Rows.Add(new HistoryRow
                 {
                     Index = i + 1,
-                    Title = $"{op.PluginId}: {op.Title}",
+                    Title = ImageTool.Shared.OpDisplayNames.Get(op.OpType, op.Title),
                     IsActive = (i + 1) == ptr,
                     IsFuture = future,
                     TimeShort = op.Timestamp.ToLocalTime().ToString("HH:mm"),
