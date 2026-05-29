@@ -21,7 +21,9 @@ public class WorkspaceSearchTests
         public void SetPick(string imagePath, PickFlag pick) { }
         public void SetTags(string imagePath, IEnumerable<string> tags) { }
         public void SetDescription(string imagePath, string? description) { }
+#pragma warning disable CS0067 // event bắt buộc bởi interface, stub không dùng
         public event EventHandler<ImageMetaChangedEventArgs>? MetaChanged;
+#pragma warning restore CS0067
     }
 
     [Fact]

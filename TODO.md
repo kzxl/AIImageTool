@@ -3,8 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-29 (d) — thêm section 13 (B&W, Auto WB, Invert, crop-ratio, export presets,
-> filename tokenizer, batch rename, histogram channel toggle, clipping overlay). 183/183 test pass, build 0 warning.
+> Cập nhật lần cuối: 2026-05-29 (d) — thêm section 13 + catalog 8.2/8.3/8.4/8.7 + keyword search.
+> 191/191 test pass, build 0 warning. Light theme (11.9) hoãn: cần migrate ~51 màu hardcode trước.
 
 ---
 
@@ -200,12 +200,14 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 ## 8. CATALOG / THƯ VIỆN (Lightroom Library module)
 
 - [ ] **8.1** Đồng bộ/khẳng định CatalogService (SQLite) đã hoạt động đầy đủ với UI hiện tại.
-- [ ] **8.2** Keywords / tags phân cấp + tích hợp VisionTagger (auto-keyword).
-- [ ] **8.3** Smart Collections (lọc theo rule: rating, keyword, EXIF, ngày...).
-- [ ] **8.4** Tìm kiếm nâng cao (metadata, keyword, camera, lens, ISO...).
+- [x] **8.2** Keywords / tags phân cấp + tích hợp VisionTagger (`KeywordHelper` phân cấp + VisionTagger
+      "Lưu vào Keywords" + search workspace khớp keyword). + test.
+- [x] **8.3** Smart Collections (lọc theo rule: rating, keyword, EXIF, ngày...) — `SmartCollection` + dialog. + test.
+- [x] **8.4** Tìm kiếm nâng cao (metadata, keyword, camera, lens, ISO...) — `CatalogQuery` + `SearchAdvanced`. + test.
 - [ ] **8.5** Map / GPS view (nếu có GPS EXIF) - tùy chọn.
 - [ ] **8.6** Compare/Survey view (đã có Cull 2x2, mở rộng zoom đồng bộ).
-- [ ] **8.7** Stacking ảnh (gom nhóm bracket/burst).
+- [~] **8.7** Stacking ảnh (`ImageStacker`: StackByTime burst/bracket + StackByBaseName, có test). UI gom nhóm
+      trong grid CHƯA — engine sẵn sàng.
 
 ---
 
