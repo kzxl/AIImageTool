@@ -22,6 +22,16 @@ public class CatalogService : ICatalogService
         EnsureSchema();
     }
 
+    /// <summary>Ctor cho test: chỉ định đường dẫn DB (vd file tạm). Không đụng AppData.</summary>
+    public CatalogService(string dbPath)
+    {
+        _dbPath = dbPath;
+        var dir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        _connectionString = $"Data Source={_dbPath}";
+        EnsureSchema();
+    }
+
     private IDbConnection Open()
     {
         var conn = new SqliteConnection(_connectionString);
@@ -211,6 +221,68 @@ public class CatalogService : ICatalogService
         return conn.Query<CatalogImage>(
             "SELECT * FROM CatalogImage WHERE FileName LIKE @pattern OR FolderPath LIKE @pattern ORDER BY ImportedAt DESC",
             new { pattern }).ToList();
+    }
+
+    /// <summary>
+    /// Tìm kiếm nâng cao (8.4): build câu WHERE động theo các tiêu chí non-null của CatalogQuery,
+    /// kết hợp AND, dùng tham số hoá (chống SQL injection). Sắp theo SortField/SortDescending.
+    /// </summary>
+    public IReadOnlyList<CatalogImage> SearchAdvanced(CatalogQuery query)
+    {
+        using var conn = Open();
+        var (sql, parameters) = BuildAdvancedSql(query);
+        return conn.Query<CatalogImage>(sql, parameters).ToList();
+    }
+
+    /// <summary>Dựng SQL + tham số cho CatalogQuery. Tách riêng (public) để unit test được câu lệnh.</summary>
+    public static (string Sql, DynamicParameters Parameters) BuildAdvancedSql(CatalogQuery q)
+    {
+        var where = new List<string>();
+        var p = new DynamicParameters();
+
+        if (!string.IsNullOrWhiteSpace(q.Text))
+        {
+            where.Add("(FileName LIKE @text OR FolderPath LIKE @text)");
+            p.Add("text", $"%{q.Text.Trim()}%");
+        }
+        if (!string.IsNullOrWhiteSpace(q.CameraMake))
+        {
+            where.Add("CameraMake LIKE @make");
+            p.Add("make", $"%{q.CameraMake.Trim()}%");
+        }
+        if (!string.IsNullOrWhiteSpace(q.CameraModel))
+        {
+            where.Add("CameraModel LIKE @model");
+            p.Add("model", $"%{q.CameraModel.Trim()}%");
+        }
+        if (!string.IsNullOrWhiteSpace(q.LensModel))
+        {
+            where.Add("LensModel LIKE @lens");
+            p.Add("lens", $"%{q.LensModel.Trim()}%");
+        }
+        if (q.IsoMin.HasValue) { where.Add("Iso >= @isoMin"); p.Add("isoMin", q.IsoMin.Value); }
+        if (q.IsoMax.HasValue) { where.Add("Iso <= @isoMax"); p.Add("isoMax", q.IsoMax.Value); }
+        if (q.ApertureMin.HasValue) { where.Add("Aperture >= @apMin"); p.Add("apMin", q.ApertureMin.Value); }
+        if (q.ApertureMax.HasValue) { where.Add("Aperture <= @apMax"); p.Add("apMax", q.ApertureMax.Value); }
+        if (q.FocalMin.HasValue) { where.Add("FocalLength >= @fMin"); p.Add("fMin", q.FocalMin.Value); }
+        if (q.FocalMax.HasValue) { where.Add("FocalLength <= @fMax"); p.Add("fMax", q.FocalMax.Value); }
+        if (q.DateFrom.HasValue) { where.Add("DateTaken >= @dFrom"); p.Add("dFrom", q.DateFrom.Value.ToString("o")); }
+        if (q.DateTo.HasValue) { where.Add("DateTaken <= @dTo"); p.Add("dTo", q.DateTo.Value.ToString("o")); }
+
+        string whereClause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
+        string sortCol = q.SortField switch
+        {
+            CatalogSortField.FileName => "FileName",
+            CatalogSortField.DateTaken => "DateTaken",
+            CatalogSortField.Iso => "Iso",
+            CatalogSortField.FileSize => "FileSize",
+            CatalogSortField.Aperture => "Aperture",
+            CatalogSortField.FocalLength => "FocalLength",
+            _ => "ImportedAt"
+        };
+        string dir = q.SortDescending ? "DESC" : "ASC";
+        string sql = $"SELECT * FROM CatalogImage {whereClause} ORDER BY {sortCol} {dir}";
+        return (sql, p);
     }
 
     public CatalogImage? GetImage(string filePath)

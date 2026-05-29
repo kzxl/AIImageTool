@@ -61,8 +61,33 @@ public class ImportCompletedEventArgs : EventArgs
     }
 }
 
+public enum CatalogSortField { ImportedAt, FileName, DateTaken, Iso, FileSize, Aperture, FocalLength }
+
+/// <summary>
+/// Truy vấn tìm kiếm nâng cao (8.4): lọc theo nhiều tiêu chí metadata. Mọi trường null = không lọc.
+/// Kết hợp bằng AND. Dùng cho cả search nâng cao lẫn nền cho Smart Collections (8.3).
+/// </summary>
+public class CatalogQuery
+{
+    public string? Text { get; set; }            // khớp FileName/FolderPath (LIKE)
+    public string? CameraMake { get; set; }
+    public string? CameraModel { get; set; }
+    public string? LensModel { get; set; }
+    public int? IsoMin { get; set; }
+    public int? IsoMax { get; set; }
+    public double? ApertureMin { get; set; }
+    public double? ApertureMax { get; set; }
+    public double? FocalMin { get; set; }
+    public double? FocalMax { get; set; }
+    public DateTime? DateFrom { get; set; }      // theo DateTaken
+    public DateTime? DateTo { get; set; }
+    public CatalogSortField SortField { get; set; } = CatalogSortField.ImportedAt;
+    public bool SortDescending { get; set; } = true;
+}
+
 public interface ICatalogService
 {
+    IReadOnlyList<CatalogImage> SearchAdvanced(CatalogQuery query);
     Task<int> ImportAsync(IEnumerable<string> filePaths, ImportOptions options,
                           IProgress<ImportProgress>? progress = null, CancellationToken ct = default);
     bool IsImported(string filePath);
