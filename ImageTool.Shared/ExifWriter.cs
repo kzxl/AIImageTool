@@ -58,6 +58,37 @@ public static class ExifWriter
         }
     }
 
+    /// <summary>
+    /// Trả về bản sao profile đã dọn tag không còn đúng sau khi bake/resize. Tách riêng (nhận profile)
+    /// để unit test được mà không cần file. Null nếu nguồn null.
+    /// </summary>
+    public static ExifProfile? SanitizeProfile(ExifProfile? source)
+    {
+        if (source == null) return null;
+        var p = source.DeepClone();
+        // Orientation: ảnh đã được xoay đúng ở mức pixel -> đặt về Normal (1) để viewer không xoay lại.
+        p.SetValue(ExifTag.Orientation, (ushort)1);
+        // Kích thước cũ không còn đúng sau resize/crop -> bỏ để viewer dùng pixel thật.
+        p.RemoveValue(ExifTag.PixelXDimension);
+        p.RemoveValue(ExifTag.PixelYDimension);
+        return p;
+    }
+
+    /// <summary>
+    /// Sao chép EXIF từ file nguồn sang ảnh đích (đã render/bake), dọn tag không còn đúng. Giữ lại
+    /// camera/lens/exposure/ISO/ngày chụp/GPS. No-op nếu nguồn không có EXIF.
+    /// </summary>
+    public static void PreserveExif(string sourcePath, Image target)
+    {
+        try
+        {
+            using var src = Image.Load(sourcePath);
+            var p = SanitizeProfile(src.Metadata.ExifProfile);
+            if (p != null) target.Metadata.ExifProfile = p;
+        }
+        catch (Exception ex) { AppLog.Warn("ExifWriter.PreserveExif", $"{sourcePath}: {ex.Message}"); }
+    }
+
     /// <summary>Đọc giá trị hiện tại của các field hỗ trợ (rỗng nếu chưa có). Dùng để fill form.</summary>
     public static Dictionary<string, string> ReadEditable(string imagePath)
     {

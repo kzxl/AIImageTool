@@ -70,6 +70,69 @@ public class ExifWriterTests
         Assert.Contains("Artist", ExifWriter.EditableFields);
         Assert.Contains("Copyright", ExifWriter.EditableFields);
     }
+
+    [Fact]
+    public void SanitizeProfile_NullSource_ReturnsNull()
+    {
+        Assert.Null(ExifWriter.SanitizeProfile(null));
+    }
+
+    [Fact]
+    public void SanitizeProfile_KeepsCameraData_ResetsOrientation()
+    {
+        var src = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
+        src.SetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Make, "Canon");
+        src.SetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Model, "EOS R5");
+        src.SetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation, (ushort)6); // rotated
+
+        var clean = ExifWriter.SanitizeProfile(src);
+        Assert.NotNull(clean);
+        Assert.True(clean!.TryGetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Make, out var mk));
+        Assert.Equal("Canon", mk!.Value);
+        Assert.True(clean.TryGetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation, out var ori));
+        Assert.Equal((ushort)1, ori!.Value); // reset về Normal
+    }
+
+    [Fact]
+    public void PreserveExif_CopiesCameraDataToTarget()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_exif_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            // Nguồn có camera EXIF.
+            var srcPath = MakeJpeg(dir, "src.jpg");
+            ExifWriter.Write(srcPath, new Dictionary<string, string> { ["Make"] = "Nikon", ["Model"] = "Z9" });
+
+            // Ảnh đích "đã render" không có EXIF.
+            using var target = new Image<Rgba32>(8, 8, new Rgba32(10, 20, 30, 255));
+            Assert.Null(target.Metadata.ExifProfile);
+
+            ExifWriter.PreserveExif(srcPath, target);
+
+            var outPath = Path.Combine(dir, "out.jpg");
+            target.SaveAsJpeg(outPath);
+            var read = ExifWriter.ReadEditable(outPath);
+            Assert.Equal("Nikon", read["Make"]);
+            Assert.Equal("Z9", read["Model"]);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void PreserveExif_NoExifSource_NoThrow()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_exif_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var srcPath = MakeJpeg(dir, "plain.jpg"); // không EXIF
+            using var target = new Image<Rgba32>(8, 8, new Rgba32(1, 2, 3, 255));
+            ExifWriter.PreserveExif(srcPath, target); // không ném
+            // target vẫn không có EXIF (hoặc null) -> không lỗi.
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }
 
 public class DominantColorsTests

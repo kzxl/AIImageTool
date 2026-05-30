@@ -168,7 +168,8 @@ public partial class ExportPanel : UserControl
                 ["maxLongEdge"] = maxLong.ToString(),
                 ["outDir"] = outDir,
                 ["pattern"] = pattern,
-                ["outputSharpen"] = outputSharpen
+                ["outputSharpen"] = outputSharpen,
+                ["copyExif"] = chkCopyExif.IsChecked == true ? "true" : "false"
             }
         });
 

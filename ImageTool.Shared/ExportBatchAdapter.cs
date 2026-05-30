@@ -50,6 +50,8 @@ public class ExportBatchAdapter : IBatchCapable
             bool writeXmp = string.Equals(job.Params.GetValueOrDefault("writeXmp", "false"), "true", StringComparison.OrdinalIgnoreCase);
             // Sharpen-for-output (9.4): "none" | "screen" | "low" | "high". Áp SAU resize.
             string outputSharpen = job.Params.GetValueOrDefault("outputSharpen", "none").ToLowerInvariant();
+            // Bảo toàn EXIF gốc (camera/lens/ISO/ngày/GPS) trên file xuất (mặc định bật).
+            bool copyExif = !string.Equals(job.Params.GetValueOrDefault("copyExif", "true"), "false", StringComparison.OrdinalIgnoreCase);
 
             if (string.IsNullOrEmpty(outDir))
                 outDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
@@ -109,6 +111,10 @@ public class ExportBatchAdapter : IBatchCapable
             fileName = fileName.Replace("{id}", job.Id);
             if (!fileName.EndsWith("." + ext, StringComparison.OrdinalIgnoreCase)) fileName += "." + ext;
             string outPath = Path.Combine(outDir, fileName);
+
+            // Bảo toàn EXIF gốc (đã dọn orientation/kích thước cũ) trên ảnh xuất.
+            if (copyExif)
+                ExifWriter.PreserveExif(job.InputPath, image);
 
             switch (format)
             {

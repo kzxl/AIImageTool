@@ -50,6 +50,9 @@
                 <TextBox x:Name="txtPattern" Text="{}{name}_export.{ext}" Background="#2A2A2A" Foreground="#DDD" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"/>
                 <TextBlock Text="Tokens: {name} {ext} {w} {h} {n:000} {date} {date:yyyyMMdd} {parent}" FontSize="9" Foreground="#666" Margin="0,0,0,12" TextWrapping="Wrap"/>
 
+                <CheckBox x:Name="chkCopyExif" Content="Giữ EXIF gốc (camera/lens/ngày/GPS)" IsChecked="True"
+                          Foreground="#CCC" FontSize="11" Margin="0,0,0,12"/>
+
                 <Button x:Name="btnExportSelection" Content="Export Selection" Height="32" Background="#1E6E43" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnExportSelection_Click"/>
                 <TextBlock x:Name="txtHint" Text="Chọn ảnh trong browser rồi bấm Export." FontSize="10" Foreground="#666" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
