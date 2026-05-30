@@ -290,11 +290,18 @@ public partial class DevelopPanel : UserControl
         AddSlider(gGeo, "persp_v", "Perspective V", -1, 1, 0);
         AddSlider(gGeo, "persp_h", "Perspective H", -1, 1, 0);
         AddSlider(gGeo, "persp_scale", "Persp Scale", 0.5, 2, 1, "0.00");
+        AddSlider(gGeo, "lens_k1", "Lens Distortion", -0.5, 0.5, 0, "0.00");
+        AddSlider(gGeo, "lens_k2", "Lens Distortion 2", -0.5, 0.5, 0, "0.00");
+        AddSlider(gGeo, "lens_vig", "Lens Vignette Fix", 0, 1, 0);
 
         // Local Adjustments / Masking (6.4 brush + 6.7 full slider set)
         var gMask = AddGroup("Local Adjustments", false);
         _maskExpander = gMask.Parent as Expander;
         BuildMaskUI(gMask);
+
+        // Healing / Clone brush (#6)
+        var gHeal = AddGroup("Healing / Clone", false);
+        BuildHealingUI(gHeal);
     }
 
     /// <summary>Tạo 1 nhóm thu gọn được (Expander) và trả về panel con để thêm slider.</summary>
@@ -449,6 +456,10 @@ public partial class DevelopPanel : UserControl
         SetVal("persp_h", Param(path!, PerspectiveOp.Type, "horiz"));
         SetVal("persp_scale", perspP != null ? Param(path!, PerspectiveOp.Type, "scale") : 1);
 
+        SetVal("lens_k1", Param(path!, LensCorrectionOp.Type, "k1"));
+        SetVal("lens_k2", Param(path!, LensCorrectionOp.Type, "k2"));
+        SetVal("lens_vig", Param(path!, LensCorrectionOp.Type, "vig"));
+
         // Color Unify
         SetVal("uni_hue", Param(path!, ColorUnifyOp.Type, "hue"));
         var uniSat = FindOp(path!, ColorUnifyOp.Type);
@@ -529,7 +540,7 @@ public partial class DevelopPanel : UserControl
 
         // Local adjustment masks (6.4/6.7)
         LoadMasks(path!);
-
+        LoadHealing(path!);
         _loading = false;
         RefreshHistogram();
     }
@@ -625,6 +636,17 @@ public partial class DevelopPanel : UserControl
             Scale = (float)GetVal("persp_scale"),
         };
         if (!persp.IsIdentity) ops.Add(Op(PerspectiveOp.Type, "Perspective", persp.ToParams()));
+
+        // 0a2) Lens correction (distortion + vignette) — sau perspective, trước op màu.
+        var lens = new LensCorrectionOp
+        {
+            K1 = (float)GetVal("lens_k1"), K2 = (float)GetVal("lens_k2"),
+            VignetteCorrection = (float)GetVal("lens_vig"),
+        };
+        if (!lens.IsIdentity) ops.Add(Op(LensCorrectionOp.Type, "Lens Correction", lens.ToParams()));
+
+        // 0c) Healing/Clone (sau geometry để toạ độ chấm khớp ảnh đã cắt/sửa méo).
+        AppendHealingOp(ops);
 
         // 0b) White balance Kelvin (trước Basic).
         var wbk = new WhiteBalanceKelvinOp { Kelvin = (float)GetVal("kelvin"), Tint = 0f };
@@ -815,6 +837,7 @@ public partial class DevelopPanel : UserControl
         if (_chkInvert != null) _chkInvert.IsChecked = false;
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
+        ClearHealing();
         _loading = false;
         _history.UpsertGroup(_currentPath, "Develop", Array.Empty<EditOperation>());
     }

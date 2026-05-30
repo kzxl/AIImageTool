@@ -407,6 +407,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
     // ===== Before/After splitter =====
     private void PaneSingle_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (TryHandleHealClick(e)) { e.Handled = true; return; }
         if (TryHandleWbPick(e)) { e.Handled = true; return; }
         if (afterBadge.Visibility != Visibility.Visible) return;
         _isDraggingSplit = true;

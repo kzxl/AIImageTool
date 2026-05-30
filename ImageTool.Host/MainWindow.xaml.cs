@@ -80,6 +80,7 @@ public partial class MainWindow : Window
         centerView.BindCropPanel(developPanel);
         centerView.BindBrushPanel(developPanel);
         centerView.BindWhiteBalancePick(developPanel);
+        centerView.BindHealingPanel(developPanel);
 
         // AI Subject mask: DevelopPanel yêu cầu -> AiMaskService sinh mask PNG -> AddRasterMask.
         developPanel.SubjectMaskRequested += async (s, path) =>
