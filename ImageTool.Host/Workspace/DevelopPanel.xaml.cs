@@ -133,6 +133,25 @@ public partial class DevelopPanel : UserControl
         AddSlider(gTone, "blacks", "Blacks", -1, 1, 0);
         AddSlider(gTone, "filmic", "Filmic", 0, 1, 0);
 
+        // Tone Mapping nâng cao (D1: Sigmoid + Filmic RGB)
+        var gToneMap = AddGroup("Tone Mapping (scene-referred)", false);
+        AddSlider(gToneMap, "sig_amt", "Sigmoid", 0, 1, 0);
+        AddSlider(gToneMap, "sig_contrast", "Sigmoid Contrast", 0.5, 3, 1.5, "0.00");
+        AddSlider(gToneMap, "filmrgb_amt", "Filmic RGB", 0, 1, 0);
+        AddSlider(gToneMap, "filmrgb_white", "  White (EV)", 1, 8, 4, "0.0");
+        AddSlider(gToneMap, "filmrgb_black", "  Black (EV)", -10, -1, -6, "0.0");
+        AddSlider(gToneMap, "filmrgb_contrast", "  Contrast", 0.5, 2.5, 1.2, "0.00");
+        AddSlider(gToneMap, "filmrgb_lat", "  Latitude", 0, 0.9, 0.2, "0.00");
+        AddSlider(gToneMap, "filmrgb_sat", "  HL Saturation", -1, 1, 0);
+
+        // Tone Equalizer (D1.3) — chỉnh sáng theo 5 zone
+        var gToneEq = AddGroup("Tone Equalizer", false);
+        AddSlider(gToneEq, "teq_blacks", "Blacks", -1, 1, 0);
+        AddSlider(gToneEq, "teq_shadows", "Shadows", -1, 1, 0);
+        AddSlider(gToneEq, "teq_mid", "Midtones", -1, 1, 0);
+        AddSlider(gToneEq, "teq_highlights", "Highlights", -1, 1, 0);
+        AddSlider(gToneEq, "teq_whites", "Whites", -1, 1, 0);
+
         // Parametric curve
         var gParam = AddGroup("Parametric Curve", false);
         AddSlider(gParam, "pc_hi", "Highlights", -1, 1, 0);
@@ -416,6 +435,23 @@ public partial class DevelopPanel : UserControl
         SetVal("saturation", b?.Saturation ?? 0);
 
         SetVal("filmic", Param(path!, FilmicOp.Type, "amount"));
+
+        // Tone Mapping nâng cao (D1)
+        SetVal("sig_amt", Param(path!, SigmoidOp.Type, "amount"));
+        var sigP = FindOp(path!, SigmoidOp.Type);
+        SetVal("sig_contrast", sigP != null ? Param(path!, SigmoidOp.Type, "contrast") : 1.5);
+        SetVal("filmrgb_amt", Param(path!, FilmicRgbOp.Type, "amount"));
+        var frgbP = FindOp(path!, FilmicRgbOp.Type);
+        SetVal("filmrgb_white", frgbP != null ? Param(path!, FilmicRgbOp.Type, "white") : 4);
+        SetVal("filmrgb_black", frgbP != null ? Param(path!, FilmicRgbOp.Type, "black") : -6);
+        SetVal("filmrgb_contrast", frgbP != null ? Param(path!, FilmicRgbOp.Type, "contrast") : 1.2);
+        SetVal("filmrgb_lat", frgbP != null ? Param(path!, FilmicRgbOp.Type, "latitude") : 0.2);
+        SetVal("filmrgb_sat", Param(path!, FilmicRgbOp.Type, "sat"));
+        SetVal("teq_blacks", Param(path!, ToneEqualizerOp.Type, "blacks"));
+        SetVal("teq_shadows", Param(path!, ToneEqualizerOp.Type, "shadows"));
+        SetVal("teq_mid", Param(path!, ToneEqualizerOp.Type, "mid"));
+        SetVal("teq_highlights", Param(path!, ToneEqualizerOp.Type, "highlights"));
+        SetVal("teq_whites", Param(path!, ToneEqualizerOp.Type, "whites"));
         SetVal("dehaze", Param(path!, DehazeOp.Type, "amount"));
         SetVal("clarity", Param(path!, ClarityOp.Type, "amount"));
         SetVal("texture", Param(path!, TextureOp.Type, "amount"));
@@ -696,6 +732,26 @@ public partial class DevelopPanel : UserControl
         // 4) Filmic
         var filmic = new FilmicOp { Amount = (float)GetVal("filmic") };
         if (!filmic.IsIdentity) ops.Add(Op(FilmicOp.Type, "Filmic", filmic.ToParams()));
+
+        // 4b) Tone Mapping nâng cao (D1): Tone Equalizer -> Sigmoid -> Filmic RGB.
+        var toneEq = new ToneEqualizerOp
+        {
+            Blacks = (float)GetVal("teq_blacks"), Shadows = (float)GetVal("teq_shadows"),
+            Midtones = (float)GetVal("teq_mid"), Highlights = (float)GetVal("teq_highlights"),
+            Whites = (float)GetVal("teq_whites"),
+        };
+        if (!toneEq.IsIdentity) ops.Add(Op(ToneEqualizerOp.Type, "Tone Equalizer", toneEq.ToParams()));
+
+        var sigmoid = new SigmoidOp { Amount = (float)GetVal("sig_amt"), Contrast = (float)GetVal("sig_contrast") };
+        if (!sigmoid.IsIdentity) ops.Add(Op(SigmoidOp.Type, "Sigmoid", sigmoid.ToParams()));
+
+        var filmRgb = new FilmicRgbOp
+        {
+            Amount = (float)GetVal("filmrgb_amt"), WhiteRelative = (float)GetVal("filmrgb_white"),
+            BlackRelative = (float)GetVal("filmrgb_black"), Contrast = (float)GetVal("filmrgb_contrast"),
+            Latitude = (float)GetVal("filmrgb_lat"), Saturation = (float)GetVal("filmrgb_sat"),
+        };
+        if (!filmRgb.IsIdentity) ops.Add(Op(FilmicRgbOp.Type, "Filmic RGB", filmRgb.ToParams()));
 
         // 5) HSL
         var hsl = new HslMixerOp();

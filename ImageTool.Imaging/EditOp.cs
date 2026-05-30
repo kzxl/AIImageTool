@@ -104,6 +104,9 @@ public sealed class EditOpRegistry
         HealingOp.Register(reg);
         LensCorrectionOp.Register(reg);
         AiUpscaleOp.Register(reg);
+        SigmoidOp.Register(reg);
+        FilmicRgbOp.Register(reg);
+        ToneEqualizerOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;
