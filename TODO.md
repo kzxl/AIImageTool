@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1). 359/359 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2). 369/369 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -337,8 +337,9 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 > D3.4 CA Correct + D3.2 Chroma denoise edge-aware (op + UI Detail + test); D6.1 Selective paste module
 > (`DevelopModules` + context menu "chọn module"); D6.2 Style append (`ApplyToImageMerged` + checkbox Append).
 > **ĐỢT 3 (đang làm):** D3.1 Diffuse-or-sharpen ✅ xong (`DiffuseOp` PDE Perona–Malik: sharpen bám cạnh /
-> denoise giữ cạnh, op + UI Detail + test). Còn lại (nặng/cần native): D2.2 ICC color management,
-> D5.x RAW thật (LibRaw native), D3.5 liquify, D4.4 instance UI, D6.3 virtual copies.
+> denoise giữ cạnh); D2.2 color management 1 phần ✅ (`ColorSpaces` matrix + `InputProfileOp`
+> sRGB/AdobeRGB/Rec2020/P3, UI "Color Management"). Còn lại (nặng/cần native): parse ICC nhúng + output
+> profile, D5.x RAW thật (LibRaw native), D3.5 liquify, D4.4 instance UI, D6.3 virtual copies.
 
 ---
 

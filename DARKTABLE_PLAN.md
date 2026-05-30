@@ -23,6 +23,7 @@ Darktable module -> op của ta đã làm:
 - retouch (1 phần: heal/clone) -> `HealingOp`; drawn+parametric mask -> `MaskedOp` + 7 loại mask
   (gradient/radial/brush/lum-range/color-range/sky/raster) + `ParametricMask` đa kênh (L/C/h/R/G/B) + AI subject/sky
 - raw (preview) -> `RawPreviewDecoder`; export, presets, history, snapshots(before/after) — có
+- input/working color space (matrix, D2.2 1 phần) -> `ColorSpaces` + `InputProfileOp` (sRGB/AdobeRGB/Rec2020/P3)
 - profiled denoise/upscale AI, dominant color, color harmony — có (vượt Darktable)
 
 ## B. PHASE D1 — Scene-referred tone (lõi Darktable hiện đại), test được
@@ -37,8 +38,10 @@ Darktable module -> op của ta đã làm:
 
 - [x] **D2.1** `ColorBalanceRgbOp` mở rộng — 4-way (lift/gamma/gain + offset) + global chroma/contrast/brilliance,
       perceptual (nâng `ColorGradingOp`).
-- [ ] **D2.2** Working color space + input/output profile (`IccProfile`): chuyển sRGB/AdobeRGB/Rec2020 linear,
-      render về output space khi export. Cần đọc ICC (managed) — đối chiếu chính xác màu.
+- [~] **D2.2** Working color space + input/output profile: `ColorSpaces` (ma trận RGB↔XYZ D65 cho
+      sRGB/AdobeRGB/Rec2020/DisplayP3 + invert/mul 3x3) + `InputProfileOp` quy ảnh nguồn gamut rộng về
+      working linear sRGB bằng ma trận 3x3, nối UI "Color Management" + test. Đọc file ICC nhúng (managed
+      parser) + output profile khi export CHƯA (cần parse ICC).
 - [x] **D2.3** `VelviaOp` / saturation thông minh theo độ rực + luminance (giống module velvia).
 - [x] **D2.4** `ColorContrastOp` — chỉnh tương phản trục a*/b* (green-magenta, blue-yellow) trong Lab.
 - [x] **D2.5** `RgbLevelsOp` — levels (black/gray/white point per-channel + auto).
@@ -102,7 +105,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 8. ✅ D6.1 selective paste module + ✅ D6.2 style append.
 
 **Đợt 3 — nặng / cần native / phức tạp (cân nhắc):**
-9. D2.2 ICC color management (chính xác màu, công sức trung bình).
+9. [~] D2.2 ICC color management — matrix gamut (sRGB/AdobeRGB/Rec2020/P3) ✅; parse ICC nhúng + output profile còn lại.
 10. ✅ D3.1 Diffuse-or-sharpen (PDE); D6.3 virtual copies (còn lại).
 11. **D5.x RAW thật qua LibRaw** — bước nhảy lớn nhất; cần bundle native + verify trên máy thật.
 12. D3.5 Liquify, D4.4 instance UI.

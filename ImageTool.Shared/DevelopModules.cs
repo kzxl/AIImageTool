@@ -31,6 +31,7 @@ public static class DevelopModules
     public static readonly string[] PipelineOrder =
     {
         CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LensCorrectionOp.Type, HealingOp.Type,
+        InputProfileOp.Type,
         WhiteBalanceKelvinOp.Type, ChannelGainOp.Type,
         DevelopBasicOp.Type,
         ParametricCurveOp.Type, ToneCurveOp.Type,
@@ -50,6 +51,7 @@ public static class DevelopModules
     {
         new("geometry", "Geometry", CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LensCorrectionOp.Type),
         new("healing", "Healing / Clone", HealingOp.Type),
+        new("input", "Input Profile", InputProfileOp.Type),
         new("wb", "White Balance", WhiteBalanceKelvinOp.Type, ChannelGainOp.Type),
         new("basic", "Basic Tone", DevelopBasicOp.Type),
         new("curve", "Tone Curve", ParametricCurveOp.Type, ToneCurveOp.Type),

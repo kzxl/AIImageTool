@@ -58,6 +58,7 @@ public partial class DevelopPanel : UserControl
     private CheckBox? _chkBw;
     private CheckBox? _chkInvert;
     private CheckBox? _chkAiUpscale;
+    private ComboBox? _cmbInputProfile; // D2.2 working/input color space
 
     // Auto WB gains (áp qua ChannelGainOp). 1,1,1 = không.
     private float _wbGainR = 1f, _wbGainG = 1f, _wbGainB = 1f;
@@ -347,6 +348,19 @@ public partial class DevelopPanel : UserControl
         AddSlider(gGeo, "lens_k2", "Lens Distortion 2", -0.5, 0.5, 0, "0.00");
         AddSlider(gGeo, "lens_vig", "Lens Vignette Fix", 0, 1, 0);
 
+        // Color Management (D2.2): input/working color space.
+        var gCm = AddGroup("Color Management", false);
+        var cmRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        cmRow.Children.Add(new TextBlock { Text = "Input Profile", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        _cmbInputProfile = new ComboBox { Height = 22 };
+        foreach (var n in new[] { "sRGB", "AdobeRGB", "Rec2020", "DisplayP3" })
+            _cmbInputProfile.Items.Add(new ComboBoxItem { Content = n });
+        _cmbInputProfile.SelectedIndex = 0;
+        _cmbInputProfile.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _cmbInputProfile.ToolTip = "Diễn giải ảnh theo gamut này rồi quy về working sRGB (D65). sRGB = không đổi.";
+        cmRow.Children.Add(_cmbInputProfile);
+        gCm.Children.Add(cmRow);
+
         // Local Adjustments / Masking (6.4 brush + 6.7 full slider set)
         var gMask = AddGroup("Local Adjustments", false);
         _maskExpander = gMask.Parent as Expander;
@@ -623,6 +637,14 @@ public partial class DevelopPanel : UserControl
         var invP = FindOp(path!, InvertOp.Type);
         if (_chkInvert != null) _chkInvert.IsChecked = invP != null && invP.TryGetValue("enabled", out var ive) && ive == "true";
 
+        // Input profile (D2.2)
+        if (_cmbInputProfile != null)
+        {
+            var ipP = FindOp(path!, InputProfileOp.Type);
+            ColorSpaces.TryParse(ipP != null && ipP.TryGetValue("space", out var sp) ? sp : "sRGB", out var ipSpace);
+            _cmbInputProfile.SelectedIndex = (int)ipSpace;
+        }
+
         // Auto WB gains (ChannelGain)
         var gainP = FindOp(path!, ChannelGainOp.Type);
         _wbGainR = gainP != null ? (float)Param(path!, ChannelGainOp.Type, "r") : 1f;
@@ -741,6 +763,15 @@ public partial class DevelopPanel : UserControl
 
         // 0c) Healing/Clone (sau geometry để toạ độ chấm khớp ảnh đã cắt/sửa méo).
         AppendHealingOp(ops);
+
+        // 0c2) Input color profile (D2.2) — quy ảnh về working sRGB trước mọi op màu.
+        if (_cmbInputProfile?.SelectedItem is ComboBoxItem ipItem &&
+            ColorSpaces.TryParse(ipItem.Content?.ToString(), out var ipSpace) &&
+            ipSpace != ColorSpaces.Space.Srgb)
+        {
+            var ip = new InputProfileOp { Source = ipSpace };
+            ops.Add(Op(InputProfileOp.Type, "Input Profile", ip.ToParams()));
+        }
 
         // 0b) White balance Kelvin (trước Basic).
         var wbk = new WhiteBalanceKelvinOp { Kelvin = (float)GetVal("kelvin"), Tint = 0f };
@@ -990,6 +1021,7 @@ public partial class DevelopPanel : UserControl
         if (_chkBw != null) _chkBw.IsChecked = false;
         if (_chkInvert != null) _chkInvert.IsChecked = false;
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
+        if (_cmbInputProfile != null) _cmbInputProfile.SelectedIndex = 0;
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         ClearHealing();

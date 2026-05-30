@@ -115,6 +115,7 @@ public sealed class EditOpRegistry
         CaCorrectOp.Register(reg);
         ChromaDenoiseOp.Register(reg);
         DiffuseOp.Register(reg);
+        InputProfileOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;
