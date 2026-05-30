@@ -359,6 +359,7 @@ public class ThumbItem : System.ComponentModel.INotifyPropertyChanged
     private bool _isSelected;
     private bool _isActive;
     private bool _isEdited;
+    private int _stackCount;
 
     public BitmapImage? Thumb { get => _thumb; private set { _thumb = value; Raise(nameof(Thumb)); } }
     public int Rating { get => _rating; set { if (_rating == value) return; _rating = value; Raise(nameof(Rating), nameof(RatingDisplay)); } }
@@ -368,6 +369,10 @@ public class ThumbItem : System.ComponentModel.INotifyPropertyChanged
     public bool IsActive { get => _isActive; set { if (_isActive == value) return; _isActive = value; Raise(nameof(IsActive)); } }
     /// <summary>True nếu ảnh có chỉnh sửa Develop -> hiển thị badge trong grid/filmstrip.</summary>
     public bool IsEdited { get => _isEdited; set { if (_isEdited == value) return; _isEdited = value; Raise(nameof(IsEdited)); } }
+    /// <summary>Số ảnh trong stack khi ảnh này là cover (8.7). 0 = không phải cover stack.</summary>
+    public int StackCount { get => _stackCount; set { if (_stackCount == value) return; _stackCount = value; Raise(nameof(StackCount), nameof(StackBadge), nameof(IsStackCover)); } }
+    public string StackBadge => _stackCount > 1 ? $"⧉ {_stackCount}" : "";
+    public bool IsStackCover => _stackCount > 1;
 
     public string RatingDisplay => _rating > 0 ? new string('★', _rating) : "";
     public string PickDisplay => _pick switch { PickFlag.Pick => "✓", PickFlag.Reject => "✗", _ => "" };

@@ -32,6 +32,9 @@
                     <Button x:Name="btnCompare" Content="◫  Before/After (Y)" Padding="10,4" Margin="4,0,4,0"
                             Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                             Click="BtnCompare_Click" ToolTip="So sánh ảnh gốc và ảnh đã chỉnh cạnh nhau"/>
+                    <Button x:Name="btnStack" Content="⧉  Stack" Padding="10,4" Margin="4,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnStack_Click" ToolTip="Gom ảnh chụp liên tiếp (burst/bracket) thành nhóm trong Grid"/>
                     <ComboBox x:Name="cmbCropRatio" Width="110" Margin="4,0,0,0" Visibility="Collapsed"
                               VerticalAlignment="Center" SelectionChanged="CmbCropRatio_SelectionChanged"
                               ToolTip="Tỉ lệ khung cắt"/>
@@ -154,6 +157,12 @@
                                             Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"
                                             ToolTip="Đã chỉnh sửa">
                                         <TextBlock Text="✎" Foreground="#000" FontSize="10" FontWeight="Bold"/>
+                                    </Border>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="6,6,6,26"
+                                            Background="#CC222222" CornerRadius="3" Padding="5,1"
+                                            Visibility="{Binding IsStackCover, Converter={StaticResource BoolToVis}}"
+                                            ToolTip="Nhóm ảnh chụp liên tiếp">
+                                        <TextBlock Text="{Binding StackBadge}" Foreground="#FFD24E" FontSize="11" FontWeight="Bold"/>
                                     </Border>
                                     <Border VerticalAlignment="Bottom" Background="#AA000000" Padding="4,2">
                                         <DockPanel>

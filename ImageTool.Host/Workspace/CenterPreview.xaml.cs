@@ -96,6 +96,9 @@ public partial class CenterPreview : UserControl, IImageToolHost
             }
             Dispatcher.BeginInvoke(() =>
             {
+                _stacked = false;
+                _allGridBackup = null;
+                btnStack.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
                 GridItems = new ObservableCollection<ThumbItem>(list);
                 icGrid.ItemsSource = GridItems;
             });
