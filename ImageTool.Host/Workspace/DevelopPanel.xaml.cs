@@ -307,6 +307,7 @@ public partial class DevelopPanel : UserControl
         var gFx = AddGroup("Effects", false);
         AddSlider(gFx, "vignette", "Vignette", -1, 1, 0);
         AddSlider(gFx, "grain", "Grain", 0, 1, 0);
+        AddSlider(gFx, "glow", "Glow / Soften", 0, 1, 0);
         _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
         _chkInvert.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkInvert.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
@@ -530,6 +531,7 @@ public partial class DevelopPanel : UserControl
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = FindOp(path!, AiUpscaleOp.Type) != null;
         SetVal("vignette", Param(path!, VignetteOp.Type, "amount"));
         SetVal("grain", Param(path!, GrainOp.Type, "amount"));
+        SetVal("glow", Param(path!, GlowOp.Type, "amount"));
 
         SetVal("pc_hi", Param(path!, ParametricCurveOp.Type, "hi"));
         SetVal("pc_lt", Param(path!, ParametricCurveOp.Type, "lt"));
@@ -933,6 +935,8 @@ public partial class DevelopPanel : UserControl
         if (!vig.IsIdentity) ops.Add(Op(VignetteOp.Type, "Vignette", vig.ToParams()));
         var grain = new GrainOp { Amount = (float)GetVal("grain") };
         if (!grain.IsIdentity) ops.Add(Op(GrainOp.Type, "Grain", grain.ToParams()));
+        var glow = new GlowOp { Amount = (float)GetVal("glow") };
+        if (!glow.IsIdentity) ops.Add(Op(GlowOp.Type, "Glow / Soften", glow.ToParams()));
 
         // 8b) Black & White (sau màu, trước local). Chuyển xám + nhuộm.
         var bw = new BlackWhiteOp

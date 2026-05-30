@@ -16,6 +16,7 @@ Darktable module -> op của ta đã làm:
 - diffuse or sharpen -> `DiffuseOp` (PDE Perona–Malik: sharpen bám cạnh / denoise giữ cạnh)
 - denoise (profiled, 1 phần) -> `ColorNoiseReductionOp` + `LumaNoiseReductionOp` + `ChromaDenoiseOp` (cross-bilateral) + AI denoise (`AiDenoiseOp`)
 - chromatic aberration/defringe -> `DefringeOp` (viền) + `CaCorrectOp` (lateral CA radial); vignette -> `VignetteOp`; grain -> `GrainOp`
+- soften/glow (Orton) -> `GlowOp` (blur + screen blend + bright-pass threshold)
 - hot/dead pixel -> `HotPixelOp`
 - lens correction (thủ công) -> `LensCorrectionOp` (distortion k1/k2 + vignette)
 - crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`
