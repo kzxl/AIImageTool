@@ -1,61 +1,71 @@
 # AIImageTool
 
-AIImageTool là một ứng dụng Desktop (WPF, .NET 8) mã nguồn mở phục vụ cho mục đích xử lý và nâng cấp hình ảnh sử dụng trí tuệ nhân tạo (AI). Dự án được thiết kế với kiến trúc **Plugin mở rộng (Extensible Plugin Architecture)**, mang lại khả năng tích hợp linh hoạt các luồng xử lý AI đa dạng mà không làm thay đổi hệ thống lõi.
+AIImageTool là ứng dụng Desktop (WPF, .NET 8) xử lý & nâng cấp ảnh, kết hợp **chỉnh sửa phi phá hủy
+kiểu Lightroom/Darktable** với các luồng **AI** (upscale, khôi phục khuôn mặt, auto-tag). Kiến trúc gồm
+một **pipeline Develop linear-light** trong lõi và một lớp **Plugin mở rộng** cho các tác vụ AI nặng.
 
-## Các tính năng chính (Plugins)
+## Kiến trúc tổng quan
 
-### 1. AI Upscaler (Nâng cấp độ phân giải)
-- **Model sử dụng:** 4x-UltraSharpV2 (ONNX FP32).
-- **Phóng đại chi tiết:** Hỗ trợ Upscale gấp 4 lần (x4) độ phân giải ảnh gốc với độ sắc nét cực cao.
-- **Tối ưu VRAM (Chunking):** Tích hợp công nghệ Tiled Inference lưới 64x64 kết hợp xử lý đa luồng vòng lặp, giúp máy tính có thể upscale ảnh dung lượng lớn mà không sợ tràn bộ nhớ RAM/VRAM.
-- **Tính năng Hardware Acceleration:**
-  - Hỗ trợ tăng tốc trên mọi loại card đồ hoạ phần cứng nhờ **DirectML** (Tương thích tốt với NVIDIA, AMD, cũng như GPU Intel Onboard).
-  - Tự động dò tìm ID Card Onboard và Fallback an toàn về chế độ nội suy CPU nếu lỗi Driver GPU.
+- **`ImageTool.Core`** — interface & model dùng chung (workspace, history, catalog, meta, style...).
+- **`ImageTool.Imaging`** — pipeline Develop phi phá hủy chạy ở **linear light** (float RGBA):
+  `LinearImage`, `ColorSpace`, `IEditOp`/`EditOpRegistry`, `EditPipeline` + `CachedEditPipeline`
+  (cache theo tầng, replay từ op bị đổi), `ImageDecoderRegistry`. ~40 op chỉnh sửa, đều có unit test.
+- **`ImageTool.Shared`** — dịch vụ nền: workspace, history, catalog SQLite, thumbnail, batch, style,
+  export, EXIF/GPS, keyword, stacking, filename token, logging.
+- **`ImageTool.Host`** — UI WPF: top-bar, browser/filmstrip, CenterPreview (Single/Grid/Cull/Full +
+  crop/brush/compare/clipping overlay) và panel phải dạng tab (Develop / Info / History / Style /
+  Batch / Export / Tools).
+- **Plugins** (`.dll` hot-load từ thư mục `Plugins`): Upscaler, FaceRestorer, VisionTagger.
 
-### 2. Face Restorer (Khôi phục chi tiết khuôn mặt)
-- **Model sử dụng:** GFPGAN (ONNX).
-- Phục hồi lại độ sắc nét tự nhiên cho chân dung và khuôn mặt bị vỡ, nhoè, mờ (thường bị mất chi tiết sau khi upscale bằng các model phong cảnh).
-- Quy trình chạy song song và tương thích tốt với DirectML qua Hardware Acceleration.
+## Tính năng chính
 
-### 3. Color Lab (Hiệu chỉnh màu sắc)
-- Cung cấp giao diện trực quan hỗ trợ xem, chọn và tinh chỉnh màu sắc cho ảnh.
-- **Selective Color Grading:** Thay thế có chọn lọc một dải màu cụ thể sang màu đích với chuyển đổi mềm mại dựa trên không gian màu HSL.
-- **Phân tích Palette tự động (K-Means):** Tự động trích xuất 5 màu chủ đạo và gợi ý bảng phối màu (Analogous, Complementary, Split-Complementary, Triadic).
-- **LUT Processor (.cube):** Tải và áp dụng file 3D LUT chuẩn `.cube` với điều chỉnh cường độ hiệu ứng (intensity slider).
-- **White Balance:**
-  - **Auto (Gray World):** Tự động cân bằng trắng theo thuật toán Gray World.
-  - **Manual (White Point Pick):** Cân bằng trắng thủ công bằng cách chọn màu điểm tham chiếu trên ảnh.
-- **Color Unification:** Đồng nhất tone màu toàn ảnh về một gam màu chỉ định với điều chỉnh cường độ.
-- **Noise Reduction:** Khử nhiễu màu sắc (Color Noise) cho ảnh bằng bộ lọc thích ứng.
-- Cơ chế khóa an toàn, ngăn xung đột khi đang load dữ liệu hình ảnh lớn.
+### Develop — chỉnh sửa phi phá hủy (linear light)
+- **Tone:** Exposure, Contrast, Highlights/Shadows/Whites/Blacks, Tone Curve (kéo điểm), Parametric
+  Curve, Filmic, Dehaze, Auto Tone.
+- **Color:** White Balance (Kelvin + **Auto WB gray-world** + **eyedropper** chấm điểm xám), HSL 8 dải,
+  Color Grading 3-way (color wheel), Split Toning, Channel Mixer, Selective Color, Color Unify,
+  3D LUT (.cube), **Black & White** (channel mix + toning), **Negative/Invert**.
+- **Detail:** Sharpen, Luminance/Color Noise Reduction, Defringe, Texture, Clarity, Grain.
+- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9...), Straighten, Rotate/Flip, **Perspective/Upright**.
+- **Local Adjustments:** mask Gradient / Radial / Brush (vẽ tay) / Luminance Range / Color Range, mỗi
+  mask có đầy đủ slider Light/Color.
+- **Preset/Style:** lưu/áp style, copy-paste settings, **import preset Lightroom (.xmp)**, XMP sidecar.
 
-### 4. Meta Editor (Chỉnh sửa siêu dữ liệu)
-- Đọc, hiển thị và cho phép điều chỉnh trực tiếp thông tin Metadata/EXIF đính kèm của hình ảnh.
-- Tích hợp tính năng khoá luồng (Locking Mechanism) đảm bảo ổn định và an toàn dữ liệu trong suốt quá trình người dùng tinh chỉnh.
+### Thư viện & catalog
+- Workspace browser (cây thư mục + grid thumbnail), filmstrip, rating/flag/color label.
+- Catalog SQLite: import, **smart collections** (lọc theo rule), **tìm kiếm nâng cao** (camera/lens/ISO/
+  khẩu độ/tiêu cự/ngày), **keyword phân cấp** + search theo keyword, **stacking** (gom burst/bracket).
 
-### 5. Vision Tagger — AI Auto Tagger (Phân tích & gán nhãn ảnh)
-- Tự động phân tích nội dung hình ảnh và sinh ra mô tả văn bản (Caption) cùng danh sách Tag từ khóa bằng AI Vision.
-- Giao diện xem trước ảnh tích hợp, hỗ trợ định dạng JPG, JPEG, PNG, WebP.
-- Chức năng **Copy Description** và **Copy Tags** (định dạng `tag1, tag2, tag3`) tiện lợi cho các workflow AI prompt engineering và quản lý thư viện ảnh.
-- Kiến trúc mở: Backend AI có thể tích hợp ONNX Local Model, Python Vision Worker hoặc Cloud API.
+### Panel Info (đã gộp)
+- Histogram RGB/Luma + cảnh báo clip, **dòng tóm tắt chụp** (camera · tiêu cự · f · tốc độ · ISO),
+  **bảng màu chủ đạo K-Means** (click copy hex), **GPS → mở bản đồ**, và **sửa EXIF** trực tiếp
+  (Description/Artist/Copyright/Software/Make/Model).
 
-### Core & Host Architecture
-- Giao diện người dùng Windows Presentation Foundation (WPF) hiện đại, phản hồi kết quả AI theo tiến trình thời gian thực.
-- Khả năng **Hot-load Plugins:** Module lõi tự động dò tìm và nạp thư viện `IImagePlugin` từ các tệp `.dll` đặt trong thư mục `Plugins`.
-- **Kiến trúc Multi-Thread (In-Process Parallel):** Đảm bảo xử lý AI và render hoàn toàn In-Process bằng OnnxRuntime tối ưu, giải quyết triệt để lỗi thắt cổ chai, chia sẻ Native DLLs ngay lập tức và tránh các lỗi LoadLibrary từ hệ điều hành.
+### Export
+- PNG/JPEG/WebP/TIFF (8/16-bit), resize %/cạnh dài, watermark, **sharpen-for-output**,
+  **filename token** (`{name}/{n:000}/{date}/{parent}...`), **export presets**, batch song song.
+
+### AI Plugins
+- **Upscaler:** 4x-UltraSharpV2 (ONNX), Tiled Inference + DirectML (NVIDIA/AMD/Intel), fallback CPU.
+- **Face Restorer:** GFPGAN (ONNX) khôi phục chân dung.
+- **Vision Tagger:** auto caption + tag (WD ViT), lưu thẳng vào keyword của ảnh.
 
 ## Yêu cầu hệ thống
-
-- Hệ điều hành: Windows 10/11 (64-bit).
-- Nếu sử dụng bản *Lite*: Cần cài đặt Microsoft .NET 8 Desktop Runtime.
-- **Bắt buộc:** [Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) để thư viện AI Native khởi tạo thành công.
-- Khuyên dùng Card đồ hoạ bất kỳ tương thích thư viện DirectML (NVIDIA seri 10 trở lên, Intel UHD Graphics, hoặc AMD Radeon).
+- Windows 10/11 (64-bit).
+- Bản *Lite*: cần Microsoft .NET 8 Desktop Runtime.
+- **Bắt buộc:** [Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) cho thư viện AI Native.
+- Khuyên dùng GPU tương thích DirectML (NVIDIA, AMD Radeon, Intel UHD).
 
 ## Cài đặt từ Release
-Đi tới mục [Releases](../../releases) để tải:
-1. `ImageTool_Lite_Win_x64.zip`: Dành cho máy đã cài sẵn .NET 8.
-2. `ImageTool_Full_Win_x64.zip`: Bản đóng gói trọn bộ (Click Run directly, không cần cài đặt), thích hợp đem chạy thử trên mọi máy tính.
+Vào [Releases](../../releases):
+1. `ImageTool_Lite_Win_x64.zip` — máy đã cài .NET 8.
+2. `ImageTool_Full_Win_x64.zip` — trọn bộ, chạy trực tiếp không cần cài đặt.
+
+## Phát triển
+- Build: `dotnet build ImageTool.slnx -c Debug`
+- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (219 test, build 0 warning)
+- Publish: `pwsh ./publish.ps1` (Lite + Full + plugins)
+- Hướng dẫn viết op Develop mới: `ImageTool.Imaging/WRITING_OPS.md`
 
 ## License
-
-Dự án này được cấp phép theo giấy phép **Apache License 2.0**. Xem tệp [LICENSE](LICENSE) để biết danh sách các quyền và giới hạn sử dụng chính. Tóm bộ khung kiến trúc và chia sẻ tự do cho mọi nhu cầu nội bộ, thương mại hoá.
+Apache License 2.0 — xem [LICENSE](LICENSE).
