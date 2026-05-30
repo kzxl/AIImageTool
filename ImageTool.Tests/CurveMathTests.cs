@@ -72,4 +72,72 @@ public class CurveMathTests
         float opResult = ColorSpace.LinearToSrgb(img.Pixels[0]);
         Assert.InRange(opResult, expected - 0.02f, expected + 0.02f);
     }
+
+    // ---- Preserve hue mode (D1.4) ----
+
+    private static LinearImage SolidSrgb(float sr, float sg, float sb)
+    {
+        var img = new LinearImage(2, 2);
+        float r = ColorSpace.SrgbToLinear(sr), g = ColorSpace.SrgbToLinear(sg), b = ColorSpace.SrgbToLinear(sb);
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        { img.Pixels[i] = r; img.Pixels[i + 1] = g; img.Pixels[i + 2] = b; img.Pixels[i + 3] = 1f; }
+        return img;
+    }
+
+    [Fact]
+    public void PreserveHue_RoundTripParams()
+    {
+        var op = new ToneCurveOp(new List<(float, float)> { (0f, 0f), (0.5f, 0.7f), (1f, 1f) }) { PreserveHue = true };
+        var back = ToneCurveOp.FromParams(op.ToParams());
+        Assert.True(back.PreserveHue);
+    }
+
+    [Fact]
+    public void PreserveHue_KeepsHueRatio()
+    {
+        // màu có tỉ lệ R:G:B; sau curve preserve-hue, tỉ lệ giữa các kênh (trong sRGB) gần như giữ nguyên.
+        var pts = new List<(float, float)> { (0f, 0f), (0.5f, 0.75f), (1f, 1f) };
+        var img = SolidSrgb(0.4f, 0.2f, 0.1f);
+        new ToneCurveOp(pts) { PreserveHue = true }.Apply(img, 1f);
+        float sr = ColorSpace.LinearToSrgb(img.Pixels[0]);
+        float sg = ColorSpace.LinearToSrgb(img.Pixels[1]);
+        float sb = ColorSpace.LinearToSrgb(img.Pixels[2]);
+        // tỉ lệ G/R và B/R ban đầu = 0.5 và 0.25.
+        Assert.InRange(sg / sr, 0.45f, 0.55f);
+        Assert.InRange(sb / sr, 0.20f, 0.30f);
+    }
+
+    [Fact]
+    public void NonPreserve_ShiftsHueRatio()
+    {
+        // preserve-hue giữ chính xác tỉ lệ kênh (scale đồng nhất); per-channel cho output KHÁC.
+        var pts = new List<(float, float)> { (0f, 0f), (0.5f, 0.75f), (1f, 1f) };
+
+        var imgP = SolidSrgb(0.4f, 0.2f, 0.1f);
+        new ToneCurveOp(pts) { PreserveHue = true }.Apply(imgP, 1f);
+        float ratioP = ColorSpace.LinearToSrgb(imgP.Pixels[1]) / ColorSpace.LinearToSrgb(imgP.Pixels[0]);
+
+        var imgN = SolidSrgb(0.4f, 0.2f, 0.1f);
+        new ToneCurveOp(pts) { PreserveHue = false }.Apply(imgN, 1f);
+        float ratioN = ColorSpace.LinearToSrgb(imgN.Pixels[1]) / ColorSpace.LinearToSrgb(imgN.Pixels[0]);
+
+        // preserve-hue giữ tỉ lệ ~0.5 chính xác.
+        Assert.InRange(ratioP, 0.49f, 0.51f);
+        // hai chế độ cho kết quả khác nhau (per-channel áp curve riêng từng kênh).
+        float rP = ColorSpace.LinearToSrgb(imgP.Pixels[0]);
+        float rN = ColorSpace.LinearToSrgb(imgN.Pixels[0]);
+        Assert.True(System.MathF.Abs(rP - rN) > 1e-3f || System.MathF.Abs(ratioP - ratioN) > 1e-3f,
+            $"hai chế độ phải khác nhau: rP={rP}, rN={rN}, ratioP={ratioP}, ratioN={ratioN}");
+    }
+
+    [Fact]
+    public void PreserveHue_RaisesLuminance()
+    {
+        var pts = new List<(float, float)> { (0f, 0f), (0.5f, 0.75f), (1f, 1f) };
+        var img = SolidSrgb(0.4f, 0.2f, 0.1f);
+        float lumBefore = ColorSpace.Luminance(img.Pixels[0], img.Pixels[1], img.Pixels[2]);
+        new ToneCurveOp(pts) { PreserveHue = true }.Apply(img, 1f);
+        float lumAfter = ColorSpace.Luminance(img.Pixels[0], img.Pixels[1], img.Pixels[2]);
+        Assert.True(lumAfter > lumBefore);
+    }
 }

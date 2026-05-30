@@ -7,7 +7,7 @@
 
 Darktable module -> op của ta đã làm:
 - exposure / basic adjustments -> `DevelopBasicOp` (exposure/contrast/highlights/shadows/whites/blacks/vibrance/sat)
-- tone curve -> `ToneCurveOp` + UI kéo điểm; tone equalizer (1 phần) -> `ParametricCurveOp`
+- tone curve -> `ToneCurveOp` + UI kéo điểm + chế độ preserve-hue (D1.4); tone equalizer -> `ToneEqualizerOp` + `ParametricCurveOp`
 - color balance rgb (3-way) -> `ColorGradingOp` + color wheel
 - color calibration (channel) -> `ChannelMixerOp`; white balance -> `WhiteBalanceKelvinOp` + Auto WB + eyedropper
 - color zones (HSL) -> `HslMixerOp` (8 dải); color mapping/unify -> `ColorUnifyOp`; selective -> `SelectiveColorOp`
@@ -33,7 +33,9 @@ Darktable module -> op của ta đã làm:
 - [x] **D1.2** `FilmicRgbOp` đầy đủ — white/black relative exposure, latitude, contrast, độ bão hoà vùng sáng
       (nâng cấp `FilmicOp` hiện tại vốn đơn giản).
 - [x] **D1.3** `ToneEqualizerOp` — chỉnh sáng theo 8-9 dải vùng (zone) bằng mask guided, kiểu Ansel/Darktable.
-- [ ] **D1.4** `RgbCurveOp` per-channel nâng cao + chế độ "preserve hue" (đã có ToneCurve, bổ sung chế độ).
+- [x] **D1.4** `RgbCurveOp` per-channel nâng cao + chế độ "preserve hue" — `ToneCurveOp.PreserveHue`:
+      master curve áp lên luminance rồi scale RGB theo tỉ lệ (giữ hue/sat), tránh dịch màu vùng rực;
+      per-channel R/G/B vẫn áp sau. UI checkbox "Preserve hue" + test.
 
 ## C. PHASE D2 — Color science nâng cao, test được
 

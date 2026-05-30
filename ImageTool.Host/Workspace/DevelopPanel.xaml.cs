@@ -44,6 +44,7 @@ public partial class DevelopPanel : UserControl
     // Tone curve editor + channel selector.
     private CurveEditor? _curveEditor;
     private ComboBox? _curveChannel; // 0=RGB,1=R,2=G,3=B
+    private CheckBox? _chkCurvePreserveHue; // D1.4
     private readonly string[] _curveData = { "0,0;1,1", "0,0;1,1", "0,0;1,1", "0,0;1,1" };
 
     // Color grading 3-way wheels + lum sliders. 0=Shadows,1=Midtones,2=Highlights,3=Global.
@@ -180,6 +181,16 @@ public partial class DevelopPanel : UserControl
             Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
         };
         gCurve.Children.Add(curveHint);
+
+        _chkCurvePreserveHue = new CheckBox
+        {
+            Content = "Preserve hue (master theo luminance)", Foreground = Brushes.Gainsboro, FontSize = 11,
+            Margin = new Thickness(0, 4, 0, 2),
+            ToolTip = "Đường master áp lên độ sáng và scale RGB giữ hue — tránh dịch màu ở vùng rực."
+        };
+        _chkCurvePreserveHue.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _chkCurvePreserveHue.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        gCurve.Children.Add(_chkCurvePreserveHue);
 
         var gPres = AddGroup("Presence", true);
         AddSlider(gPres, "vibrance", "Vibrance", -1, 1, 0);
@@ -612,6 +623,8 @@ public partial class DevelopPanel : UserControl
         _curveData[3] = curveP != null && curveP.TryGetValue("b", out var cb) && !string.IsNullOrEmpty(cb) ? cb : "0,0;1,1";
         if (_curveEditor != null && _curveChannel != null)
             _curveEditor.SetPoints(_curveData[_curveChannel.SelectedIndex < 0 ? 0 : _curveChannel.SelectedIndex]);
+        if (_chkCurvePreserveHue != null)
+            _chkCurvePreserveHue.IsChecked = curveP != null && curveP.TryGetValue("preserveHue", out var cph) && cph == "true";
 
         // Color grading 3-way (3.3)
         var grade = FindOp(path!, ColorGradingOp.Type) is { } gp ? ColorGradingOp.FromParams(gp) : null;
@@ -806,6 +819,7 @@ public partial class DevelopPanel : UserControl
         var curveParams = new Dictionary<string, string>
         {
             ["rgb"] = _curveData[0], ["r"] = _curveData[1], ["g"] = _curveData[2], ["b"] = _curveData[3],
+            ["preserveHue"] = _chkCurvePreserveHue?.IsChecked == true ? "true" : "false",
         };
         var curveOp = ToneCurveOp.FromParams(curveParams);
         if (!curveOp.IsIdentity) ops.Add(Op(ToneCurveOp.Type, "Tone Curve", curveParams));
@@ -1019,6 +1033,7 @@ public partial class DevelopPanel : UserControl
         // reset tone curve + color grading
         for (int i = 0; i < 4; i++) _curveData[i] = "0,0;1,1";
         if (_curveEditor != null) _curveEditor.SetPoints("0,0;1,1");
+        if (_chkCurvePreserveHue != null) _chkCurvePreserveHue.IsChecked = false;
         Array.Clear(_gradeHue); Array.Clear(_gradeSat);
         for (int i = 0; i < 4; i++) _gradeWheels[i]?.SetValue(0, 0);
         // reset B&W / Invert / Auto WB

@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton). 376/376 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4). 380/380 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -340,6 +340,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 > denoise giữ cạnh); D2.2 color management 1 phần ✅ (`ColorSpaces` matrix + `InputProfileOp`
 > sRGB/AdobeRGB/Rec2020/P3, UI "Color Management"). Còn lại (nặng/cần native): parse ICC nhúng + output
 > profile, D5.x RAW thật (LibRaw native), D3.5 liquify, D4.4 instance UI, D6.3 virtual copies.
+>
+> **PHASE D1 HOÀN TẤT:** D1.1 Sigmoid + D1.2 Filmic RGB + D1.3 Tone Equalizer + D1.4 ToneCurve preserve-hue.
 >
 > **NGOÀI PLAN (parity bổ sung):** `GlowOp` (soften/Orton glow: blur + screen blend + bright-pass) trong Effects.
 

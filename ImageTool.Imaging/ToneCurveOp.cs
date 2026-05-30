@@ -10,8 +10,12 @@ namespace ImageTool.Imaging;
 /// [0..1] (đúng cách mắt nhìn curve), nội suy bằng spline đơn điệu (monotone cubic) để không
 /// bị overshoot. Biến đổi: linear -> sRGB -> áp curve -> linear.
 ///
+/// <para>Chế độ <see cref="PreserveHue"/> (D1.4): khi bật, đường master KHÔNG áp per-channel
+/// (gây dịch hue ở màu rực) mà áp lên LUMINANCE rồi scale RGB theo tỉ lệ -> giữ nguyên hue và
+/// tỉ lệ bão hoà. Các đường R/G/B riêng vẫn áp per-channel sau đó (như cũ).</para>
+///
 /// Tham số serialize: "rgb" / "r" / "g" / "b" = chuỗi "x0,y0;x1,y1;..." (điểm sắp theo x tăng).
-/// Mặc định (identity) = "0,0;1,1".
+/// Mặc định (identity) = "0,0;1,1". "preserveHue" = "true"/"false".
 /// </summary>
 public sealed class ToneCurveOp : IEditOp
 {
@@ -22,6 +26,9 @@ public sealed class ToneCurveOp : IEditOp
     private readonly Curve _r;
     private readonly Curve _g;
     private readonly Curve _b;
+
+    /// <summary>D1.4: master curve áp theo luminance (giữ hue) thay vì per-channel.</summary>
+    public bool PreserveHue { get; set; }
 
     public ToneCurveOp(IReadOnlyList<(float x, float y)>? rgb = null,
                        IReadOnlyList<(float x, float y)>? r = null,
@@ -40,6 +47,7 @@ public sealed class ToneCurveOp : IEditOp
     {
         if (IsIdentity) return;
         var rgb = _rgb; var rr = _r; var gg = _g; var bb = _b;
+        bool preserve = PreserveHue && !rgb.IsIdentity;
 
         image.ProcessPixels((ref float r, ref float g, ref float b, ref float a) =>
         {
@@ -47,8 +55,31 @@ public sealed class ToneCurveOp : IEditOp
             float sg = ColorSpace.LinearToSrgb(g);
             float sb = ColorSpace.LinearToSrgb(b);
 
-            // master trước, rồi per-channel.
-            sr = rgb.Eval(sr); sg = rgb.Eval(sg); sb = rgb.Eval(sb);
+            if (preserve)
+            {
+                // áp master lên luminance (sRGB perceptual), scale theo tỉ lệ giữ hue.
+                float lin = ColorSpace.LumR * sr + ColorSpace.LumG * sg + ColorSpace.LumB * sb;
+                if (lin > 1e-5f)
+                {
+                    float lout = rgb.Eval(lin);
+                    float ratio = lout / lin;
+                    sr = Math.Clamp(sr * ratio, 0f, 1f);
+                    sg = Math.Clamp(sg * ratio, 0f, 1f);
+                    sb = Math.Clamp(sb * ratio, 0f, 1f);
+                }
+                else
+                {
+                    float lout = rgb.Eval(0f);
+                    sr = sg = sb = lout;
+                }
+            }
+            else
+            {
+                // master per-channel (mặc định, như cũ).
+                sr = rgb.Eval(sr); sg = rgb.Eval(sg); sb = rgb.Eval(sb);
+            }
+
+            // per-channel R/G/B luôn áp sau.
             sr = rr.Eval(sr); sg = gg.Eval(sg); sb = bb.Eval(sb);
 
             r = ColorSpace.SrgbToLinear(sr);
@@ -63,13 +94,17 @@ public sealed class ToneCurveOp : IEditOp
         ["r"] = _r.Serialize(),
         ["g"] = _g.Serialize(),
         ["b"] = _b.Serialize(),
+        ["preserveHue"] = PreserveHue ? "true" : "false",
     };
 
     public static ToneCurveOp FromParams(IReadOnlyDictionary<string, string> p) => new(
         Curve.Parse(EditOpRegistry.S(p, "rgb")),
         Curve.Parse(EditOpRegistry.S(p, "r")),
         Curve.Parse(EditOpRegistry.S(p, "g")),
-        Curve.Parse(EditOpRegistry.S(p, "b")));
+        Curve.Parse(EditOpRegistry.S(p, "b")))
+    {
+        PreserveHue = EditOpRegistry.B(p, "preserveHue"),
+    };
 
     public static void Register(EditOpRegistry reg) => reg.Register(Type, FromParams);
 
