@@ -352,3 +352,81 @@ public sealed class BrushMask : IMaskGenerator
         return list;
     }
 }
+
+/// <summary>
+/// Sky mask heuristic (#1) — chọn vùng bầu trời KHÔNG cần AI: chấm điểm mỗi pixel theo (a) độ "xanh
+/// trời" (B nổi trội + hue lam-lơ) hoặc rất sáng (mây trắng), (b) vị trí dọc (trời thường ở nửa trên).
+/// Đủ tốt cho ảnh phong cảnh phổ biến; ảnh phức tạp dùng AI Subject + invert. Cần pixel ảnh nên
+/// sinh qua GenerateFrom (như LuminanceRange/ColorRange).
+///
+/// Tham số: Strength [0..1] (độ mạnh ưu tiên vị trí trên), Smooth [0..1] (mềm mép).
+/// </summary>
+public sealed class SkyMask : IMaskGenerator
+{
+    public const string Type = "Sky";
+    public string MaskType => Type;
+
+    public float Strength = 0.7f;
+    public float Smooth = 0.15f;
+
+    public float[] Generate(int width, int height) => throw new NotSupportedException("Sky mask cần ảnh; dùng GenerateFrom.");
+
+    public float[] GenerateFrom(LinearImage img)
+    {
+        int w = img.Width, h = img.Height;
+        var m = new float[w * h];
+        float[] px = img.Pixels;
+        float strength = Math.Clamp(Strength, 0f, 1f);
+        float sm = Math.Max(1e-3f, Smooth);
+
+        Parallel.For(0, h, y =>
+        {
+            // ưu tiên vị trí: trên = 1, dưới giảm dần (kết hợp strength).
+            float ny = h <= 1 ? 0f : y / (float)(h - 1);
+            float vert = 1f - Smoothstep(0.45f, 0.45f + 0.4f, ny); // mềm quanh đường chân trời ~giữa
+            int row = y * w;
+            for (int x = 0; x < w; x++)
+            {
+                int p = (row + x) * 4;
+                float r = px[p], g = px[p + 1], b = px[p + 2];
+                float lum = ColorSpace.LinearToSrgb(ColorSpace.Luminance(r, g, b));
+                float sr = ColorSpace.LinearToSrgb(r), sg = ColorSpace.LinearToSrgb(g), sb = ColorSpace.LinearToSrgb(b);
+
+                // điểm "xanh trời": B vượt R, và không quá tối.
+                float blueScore = Math.Clamp((sb - sr) * 2.0f, 0f, 1f) * Smoothstep(0.2f, 0.4f, lum);
+                // điểm "mây/trời sáng": rất sáng + ít bão hoà.
+                float maxc = MathF.Max(sr, MathF.Max(sg, sb)), minc = MathF.Min(sr, MathF.Min(sg, sb));
+                float sat = maxc > 1e-4f ? (maxc - minc) / maxc : 0f;
+                float brightScore = Smoothstep(0.7f, 0.92f, lum) * (1f - Smoothstep(0.25f, 0.5f, sat));
+
+                float colorScore = MathF.Max(blueScore, brightScore);
+                // kết hợp màu × vị trí (strength điều khiển mức phụ thuộc vị trí).
+                float vertW = (1f - strength) + strength * vert;
+                float v = colorScore * vertW;
+                // mềm hoá biên.
+                v = Smoothstep(0f, sm, v) * v;
+                m[row + x] = Math.Clamp(v, 0f, 1f);
+            }
+        });
+        return m;
+    }
+
+    private static float Smoothstep(float e0, float e1, float x)
+    {
+        if (e1 <= e0) return x >= e1 ? 1f : 0f;
+        float t = Math.Clamp((x - e0) / (e1 - e0), 0f, 1f);
+        return t * t * (3f - 2f * t);
+    }
+
+    public Dictionary<string, string> ToParams() => new()
+    {
+        ["mask"] = Type, ["strength"] = F(Strength), ["smooth"] = F(Smooth),
+    };
+    private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    public static SkyMask FromParams(IReadOnlyDictionary<string, string> p) => new()
+    {
+        Strength = EditOpRegistry.F(p, "strength", 0.7f),
+        Smooth = EditOpRegistry.F(p, "smooth", 0.15f),
+    };
+}

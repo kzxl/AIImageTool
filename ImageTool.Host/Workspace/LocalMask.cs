@@ -137,6 +137,10 @@ public sealed class LocalMask
                 m.Name = "Color Range";
                 m.MaskParams = new() { ["hue"] = "0", ["range"] = "30", ["minSat"] = "0.1", ["smooth"] = "0.2" };
                 break;
+            case SkyMask.Type:
+                m.Name = "Sky";
+                m.MaskParams = new() { ["strength"] = "0.7", ["smooth"] = "0.15" };
+                break;
         }
         return m;
     }

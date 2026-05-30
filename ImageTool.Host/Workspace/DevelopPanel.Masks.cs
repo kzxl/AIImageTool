@@ -43,6 +43,7 @@ public partial class DevelopPanel
         var btnSubject = new Button { Content = "✦ AI Subject", Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 4, 4), FontSize = 11, ToolTip = "Tự chọn chủ thể bằng AI (tải model lần đầu)" };
         btnSubject.Click += (_, _) => RequestSubjectMask();
         addRow.Children.Add(btnSubject);
+        AddMaskButton(addRow, "+ Sky", SkyMask.Type);
         host.Children.Add(addRow);
 
         _maskListPanel = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
@@ -191,6 +192,10 @@ public partial class DevelopPanel
             case RasterMask.Type:
                 AddMaskInvertToggle(m); // AI mask: chỉ cho đảo vùng (chủ thể <-> nền)
                 break;
+            case SkyMask.Type:
+                AddMaskGeomSlider(m, "strength", "Ưu tiên vị trí", 0, 1, 0.7);
+                AddMaskGeomSlider(m, "smooth", "Smoothness", 0.001, 0.5, 0.15);
+                break;
         }
 
         // Bộ chỉnh đầy đủ Light/Color (6.7).
@@ -324,6 +329,7 @@ public partial class DevelopPanel
         LuminanceRangeMask.Type => "Luminance Range",
         ColorRangeMask.Type => "Color Range",
         RasterMask.Type => "AI Subject",
+        SkyMask.Type => "Sky",
         _ => "Mask"
     };
 
@@ -338,6 +344,7 @@ public partial class DevelopPanel
             LuminanceRangeMask.Type => new[] { "min", "max", "smooth" },
             ColorRangeMask.Type => new[] { "hue", "range", "minSat", "smooth" },
             RasterMask.Type => new[] { "maskFile", "invert" },
+            SkyMask.Type => new[] { "strength", "smooth" },
             _ => Array.Empty<string>()
         };
         var d = new Dictionary<string, string>();
