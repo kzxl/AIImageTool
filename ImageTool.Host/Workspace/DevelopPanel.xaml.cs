@@ -382,6 +382,10 @@ public partial class DevelopPanel : UserControl
         // Healing / Clone brush (#6)
         var gHeal = AddGroup("Healing / Clone", false);
         BuildHealingUI(gHeal);
+
+        // Liquify / Warp (D3.5)
+        var gLiquify = AddGroup("Liquify / Warp", false);
+        BuildLiquifyUI(gLiquify);
     }
 
     /// <summary>Tạo 1 nhóm thu gọn được (Expander) và trả về panel con để thêm slider.</summary>
@@ -674,6 +678,7 @@ public partial class DevelopPanel : UserControl
         // Local adjustment masks (6.4/6.7)
         LoadMasks(path!);
         LoadHealing(path!);
+        LoadLiquify(path!);
         _loading = false;
         RefreshHistogram();
     }
@@ -769,6 +774,9 @@ public partial class DevelopPanel : UserControl
             Scale = (float)GetVal("persp_scale"),
         };
         if (!persp.IsIdentity) ops.Add(Op(PerspectiveOp.Type, "Perspective", persp.ToParams()));
+
+        // 0a1) Liquify / Warp (sau perspective, trước lens) — khớp DevelopModules.PipelineOrder.
+        AppendLiquifyOp(ops);
 
         // 0a2) Lens correction (distortion + vignette) — sau perspective, trước op màu.
         var lens = new LensCorrectionOp
@@ -1050,6 +1058,7 @@ public partial class DevelopPanel : UserControl
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         ClearHealing();
+        ClearLiquify();
         _loading = false;
         _history.UpsertGroup(_currentPath, "Develop", Array.Empty<EditOperation>());
     }

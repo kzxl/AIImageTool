@@ -63,7 +63,8 @@ Darktable module -> op của ta đã làm:
 - [x] **D3.5** `LiquifyOp` (diffuse/warp cơ bản) — biến dạng cục bộ bằng tập handle đẩy/kéo
       (tâm + vector dịch + bán kính, falloff (1-t²)², trường dịch cộng dồn). `IResizingOp` inverse-map
       lặp điểm-bất-động, toạ độ/bán kính chuẩn hoá (khớp proxy/full-res), kẹp mép không thủng. Đăng ký
-      registry + module Geometry + test. UI kéo handle tương tác trên canvas CHƯA (để sau).
+      registry + module Geometry + test. UI kéo handle tương tác trên canvas (overlay mũi tên + vòng
+      bán kính, nhóm "Liquify / Warp" trong Develop) ĐÃ XONG.
 
 ## E. PHASE D4 — Mask & local nâng cao, test được
 
@@ -121,7 +122,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 9. [~] D2.2 ICC color management — matrix gamut (sRGB/AdobeRGB/Rec2020/P3) ✅; parse ICC nhúng + output profile còn lại.
 10. ✅ D3.1 Diffuse-or-sharpen (PDE); D6.3 virtual copies (còn lại).
 11. **D5.x RAW thật qua LibRaw** — bước nhảy lớn nhất; cần bundle native + verify trên máy thật.
-12. D3.5 Liquify ✅ (engine warp + test; UI kéo handle còn lại), D4.4 instance UI.
+12. D3.5 Liquify ✅ (engine warp + UI kéo handle + test), D4.4 instance UI.
 
 ## I. NGUYÊN TẮC THỰC HIỆN
 - Mỗi op mới: `IEditOp` linear-light, thuần tham số, **có unit test**, đăng ký `EditOpRegistry`, nối DevelopPanel.

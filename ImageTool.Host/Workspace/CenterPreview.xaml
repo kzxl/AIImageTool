@@ -127,6 +127,12 @@
                         MouseLeftButtonDown="BrushOverlay_MouseDown"
                         MouseMove="BrushOverlay_MouseMove"
                         MouseLeftButtonUp="BrushOverlay_MouseUp"/>
+
+                <!-- Liquify overlay: kéo handle đẩy/kéo (warp). Ẩn cho tới khi bật Liquify. -->
+                <Canvas x:Name="liquifyOverlay" Background="#01000000" Visibility="Collapsed" Cursor="SizeAll"
+                        MouseLeftButtonDown="LiquifyOverlay_MouseDown"
+                        MouseMove="LiquifyOverlay_MouseMove"
+                        MouseLeftButtonUp="LiquifyOverlay_MouseUp"/>
             </Grid>
 
             <!-- GRID mode -->
