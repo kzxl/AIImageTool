@@ -537,6 +537,42 @@ public class ColorGradingGrainTests
             if (MathF.Abs(img.Pixels[i] - 0.5f) > 1e-4f) { anyChanged = true; break; }
         Assert.True(anyChanged);
     }
+
+    [Fact]
+    public void Grain_Monochrome_ChannelsEqual()
+    {
+        // Color=0: 3 kênh nhận cùng delta -> giữ trung tính (R==G==B).
+        var img = Solid(0.5f);
+        new GrainOp { Amount = 1f, Seed = 11, Color = 0f }.Apply(img, 1f);
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            Assert.Equal(img.Pixels[i], img.Pixels[i + 1], 5);
+            Assert.Equal(img.Pixels[i + 1], img.Pixels[i + 2], 5);
+        }
+    }
+
+    [Fact]
+    public void Grain_Color_ChannelsDiffer()
+    {
+        // Color=1: mỗi kênh nhiễu riêng -> có pixel mà R != B.
+        var img = Solid(0.5f);
+        new GrainOp { Amount = 1f, Seed = 11, Color = 1f }.Apply(img, 1f);
+        bool anyDiffer = false;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+            if (MathF.Abs(img.Pixels[i] - img.Pixels[i + 2]) > 1e-4f) { anyDiffer = true; break; }
+        Assert.True(anyDiffer, "grain màu phải tạo khác biệt giữa các kênh");
+    }
+
+    [Fact]
+    public void Grain_RoundTrip_AllParams()
+    {
+        var op = new GrainOp { Amount = 0.5f, Size = 2.5f, Roughness = 0.7f, Color = 0.4f };
+        var back = GrainOp.FromParams(op.ToParams());
+        Assert.Equal(0.5f, back.Amount, 4);
+        Assert.Equal(2.5f, back.Size, 4);
+        Assert.Equal(0.7f, back.Roughness, 4);
+        Assert.Equal(0.4f, back.Color, 4);
+    }
 }
 
 public class AutoToneTests

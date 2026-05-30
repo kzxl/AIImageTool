@@ -354,6 +354,9 @@ public partial class DevelopPanel : UserControl
         AddSlider(gFx, "vig_round", "Vignette Roundness", -1, 1, 0, "0.00");
         AddSlider(gFx, "vig_hi", "Vignette Highlights", 0, 1, 0, "0.00");
         AddSlider(gFx, "grain", "Grain", 0, 1, 0);
+        AddSlider(gFx, "grain_size", "Grain Size", 0.5, 5, 1, "0.0");
+        AddSlider(gFx, "grain_rough", "Grain Roughness", 0, 1, 0.5, "0.00");
+        AddSlider(gFx, "grain_color", "Grain Color", 0, 1, 0, "0.00");
         AddSlider(gFx, "glow", "Glow / Soften", 0, 1, 0);
         _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
         _chkInvert.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
@@ -634,6 +637,10 @@ public partial class DevelopPanel : UserControl
         SetVal("vig_round", Param(path!, VignetteOp.Type, "roundness"));
         SetVal("vig_hi", Param(path!, VignetteOp.Type, "highlights"));
         SetVal("grain", Param(path!, GrainOp.Type, "amount"));
+        var grainP = FindOp(path!, GrainOp.Type);
+        SetVal("grain_size", grainP != null ? Param(path!, GrainOp.Type, "size") : 1);
+        SetVal("grain_rough", grainP != null ? Param(path!, GrainOp.Type, "roughness") : 0.5);
+        SetVal("grain_color", Param(path!, GrainOp.Type, "color"));
         SetVal("glow", Param(path!, GlowOp.Type, "amount"));
 
         SetVal("pc_hi", Param(path!, ParametricCurveOp.Type, "hi"));
@@ -1113,7 +1120,11 @@ public partial class DevelopPanel : UserControl
             Highlights = (float)GetVal("vig_hi"),
         };
         if (!vig.IsIdentity) ops.Add(Op(VignetteOp.Type, "Vignette", vig.ToParams()));
-        var grain = new GrainOp { Amount = (float)GetVal("grain") };
+        var grain = new GrainOp
+        {
+            Amount = (float)GetVal("grain"), Size = (float)GetVal("grain_size"),
+            Roughness = (float)GetVal("grain_rough"), Color = (float)GetVal("grain_color"),
+        };
         if (!grain.IsIdentity) ops.Add(Op(GrainOp.Type, "Grain", grain.ToParams()));
         var glow = new GlowOp { Amount = (float)GetVal("glow") };
         if (!glow.IsIdentity) ops.Add(Op(GlowOp.Type, "Glow / Soften", glow.ToParams()));
