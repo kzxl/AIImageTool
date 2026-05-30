@@ -61,6 +61,39 @@ public partial class StylePanel : UserControl
         }
     }
 
+    /// <summary>Import preset Lightroom (.xmp) -> Style (9.3).</summary>
+    private void BtnImportXmp_Click(object sender, RoutedEventArgs e)
+    {
+        if (_styles == null) return;
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import Lightroom preset (.xmp)",
+            Filter = "Lightroom XMP (*.xmp)|*.xmp|All files (*.*)|*.*",
+            Multiselect = false
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            var content = System.IO.File.ReadAllText(dlg.FileName);
+            var ops = LightroomXmpImporter.Parse(content);
+            if (ops.Count == 0)
+            {
+                MessageBox.Show("Không tìm thấy thiết lập Develop nào trong file XMP này.", "Import XMP",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var name = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
+            _styles.SaveFromOperations(name, ops, $"Imported from Lightroom · {ops.Count} ops");
+            MessageBox.Show($"Đã nhập preset '{name}' ({ops.Count} op).", "Import XMP",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (System.Exception ex)
+        {
+            ImageTool.Shared.AppLog.Error("StylePanel.ImportXmp", dlg.FileName, ex);
+            MessageBox.Show($"Lỗi khi nhập XMP: {ex.Message}", "Import XMP", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void BtnApply_Click(object sender, RoutedEventArgs e)
     {
         if (_styles == null || _workspace == null || _batch == null) return;

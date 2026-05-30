@@ -47,6 +47,28 @@ public class StyleService : IStyleService
         return style;
     }
 
+    public Style SaveFromOperations(string name, IEnumerable<EditOperation> operations, string? description = null)
+    {
+        var style = new Style
+        {
+            Name = string.IsNullOrWhiteSpace(name) ? $"Style {_styles.Count + 1}" : name,
+            Description = description,
+            Operations = operations.Select(o => new EditOperation
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                PluginId = o.PluginId,
+                OpType = o.OpType,
+                Title = o.Title,
+                Timestamp = DateTime.UtcNow,
+                Params = new Dictionary<string, string>(o.Params)
+            }).ToList()
+        };
+        _styles.Add(style);
+        Save();
+        StylesChanged?.Invoke(this, EventArgs.Empty);
+        return style;
+    }
+
     public void ApplyToImage(Style style, string imagePath)
     {
         foreach (var op in style.Operations)

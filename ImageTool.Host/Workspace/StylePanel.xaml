@@ -9,6 +9,9 @@
                 <Button x:Name="btnSave" DockPanel.Dock="Right" Content="+ Save" Height="22" Padding="8,2"
                         Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                         Click="BtnSave_Click" ToolTip="Lưu history hiện tại của ảnh đang chọn thành Style"/>
+                <Button x:Name="btnImportXmp" DockPanel.Dock="Right" Content="Import XMP" Height="22" Padding="8,2" Margin="0,0,4,0"
+                        Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                        Click="BtnImportXmp_Click" ToolTip="Nhập preset Lightroom (.xmp) thành Style"/>
             </DockPanel>
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
