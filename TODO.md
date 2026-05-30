@@ -3,8 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-30 — section 13 + catalog 8.2/8.3/8.4/8.5/8.6/8.7 + keyword search + GPS/map
-> + WB eyedropper (3.1) + import Lightroom XMP (9.3) + AppLog cho lỗi nuốt. 211/211 test pass, build 0 warning.
+> Cập nhật lần cuối: 2026-05-30 — gộp MetaEditor + ColorLab vào InfoPanel (gỡ 2 plugin trùng), README mới,
+> test integration đầu-cuối, grid stacking UI. 225/225 test pass, build 0 warning, còn 3 plugin (Upscaler/VisionTagger/FaceRestorer).
 
 ---
 
@@ -208,8 +208,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **8.5** Map / GPS view — `GpsHelper` (DMS->decimal + validate + map URL), `ExifReader.TryReadGps`,
       cột GPS trong catalog, InfoPanel hiện toạ độ + nút "🗺 Bản đồ" mở Google Maps. + test.
 - [x] **8.6** Compare/Survey view: Cull 2x2 + **side-by-side before/after (Y) + zoom đồng bộ 2 khung** (mousewheel).
-- [~] **8.7** Stacking ảnh (`ImageStacker`: StackByTime burst/bracket + StackByBaseName, có test). UI gom nhóm
-      trong grid CHƯA — engine sẵn sàng (cần thao tác UI runtime nên hoãn).
+- [x] **8.7** Stacking ảnh (`ImageStacker`: StackByTime burst/bracket + StackByBaseName, có test) +
+      UI Grid: nút Stack gom theo thời gian -> cover + badge số lượng, mở lại nguyên trạng.
 
 ---
 
