@@ -106,4 +106,38 @@ public class KeywordHelperTests
         Assert.Equal("C", tree[0].Children[0].Children[0].Name);
         Assert.Equal(4, tree[0].Children[0].Children[0].Count);
     }
+
+    [Fact]
+    public void CountTags_CountsPerImageDistinctLeaf()
+    {
+        var sets = new List<IEnumerable<string>>
+        {
+            new[] { "Animal/Dog", "Animal/Dog", "Place/Beach" }, // trùng trong cùng ảnh -> tính 1
+            new[] { "animal/dog" },                              // khác hoa thường -> vẫn cùng key
+            new[] { "Place/Beach" },
+        };
+        var counts = KeywordHelper.CountTags(sets);
+        Assert.Equal(2, counts["Animal/Dog"]);
+        Assert.Equal(2, counts["Place/Beach"]);
+    }
+
+    [Fact]
+    public void CountTags_FeedsBuildTree()
+    {
+        var sets = new List<IEnumerable<string>>
+        {
+            new[] { "Animal/Dog" },
+            new[] { "Animal/Cat" },
+        };
+        var tree = KeywordHelper.BuildTree(KeywordHelper.CountTags(sets));
+        Assert.Single(tree);
+        Assert.Equal("Animal", tree[0].Name);
+        Assert.Equal(2, tree[0].Count); // gộp con
+    }
+
+    [Fact]
+    public void CountTags_NullSafe()
+    {
+        Assert.Empty(KeywordHelper.CountTags(null!));
+    }
 }

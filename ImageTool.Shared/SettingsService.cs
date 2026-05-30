@@ -48,6 +48,30 @@ public class SettingsService : ISettingsService
         Save();
     }
 
+    private const int MaxRecentTags = 30;
+
+    public void AddRecentTags(IEnumerable<string> tags)
+    {
+        var norm = KeywordHelper.NormalizeList(tags);
+        if (norm.Count == 0) return;
+
+        // RecentTags: tag mới dùng đưa lên đầu (giữ thứ tự danh sách vào), bỏ trùng (ignore-case).
+        foreach (var t in norm)
+            _current.RecentTags.RemoveAll(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase));
+        _current.RecentTags.InsertRange(0, norm);
+        if (_current.RecentTags.Count > MaxRecentTags)
+            _current.RecentTags.RemoveRange(MaxRecentTags, _current.RecentTags.Count - MaxRecentTags);
+
+        // TagDictionary: tích luỹ mọi tag từng dùng (+ tổ tiên nhánh) để gợi ý phân cấp.
+        var known = new HashSet<string>(_current.TagDictionary, StringComparer.OrdinalIgnoreCase);
+        foreach (var t in norm)
+            foreach (var anc in KeywordHelper.ExpandAncestors(t))
+                if (known.Add(anc)) _current.TagDictionary.Add(anc);
+        _current.TagDictionary.Sort(StringComparer.OrdinalIgnoreCase);
+
+        Save();
+    }
+
     private AppSettings Load()
     {
         if (!File.Exists(_file)) return new AppSettings();

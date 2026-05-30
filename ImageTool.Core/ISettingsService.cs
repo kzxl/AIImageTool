@@ -26,6 +26,11 @@ public class AppSettings
     public List<ExportPreset> ExportPresets { get; set; } = new();
     /// <summary>Giao diện: "Dark" (mặc định) hoặc "Light".</summary>
     public string Theme { get; set; } = "Dark";
+
+    /// <summary>Từ điển tag do người dùng định nghĩa (phân cấp, chuẩn hoá "A/B/C"). Dùng cho gợi ý/autocomplete.</summary>
+    public List<string> TagDictionary { get; set; } = new();
+    /// <summary>Tag dùng gần đây nhất (mới nhất đứng đầu), giới hạn số lượng.</summary>
+    public List<string> RecentTags { get; set; } = new();
 }
 
 public interface ISettingsService
@@ -33,5 +38,7 @@ public interface ISettingsService
     AppSettings Current { get; }
     void Save();
     void AddRecentFolder(string path);
+    /// <summary>Ghi nhận các tag vừa dùng (chuẩn hoá, đưa lên đầu RecentTags, gộp vào TagDictionary).</summary>
+    void AddRecentTags(IEnumerable<string> tags);
     event EventHandler? Changed;
 }

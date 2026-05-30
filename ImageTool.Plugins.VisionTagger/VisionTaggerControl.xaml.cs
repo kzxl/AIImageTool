@@ -21,6 +21,7 @@ public partial class VisionTaggerControl : UserControl
     private IModelDownloader? _downloader;
     private IImageToolHost? _host;
     private IImageMetaService? _meta;
+    private ISettingsService? _settings;
     private WdTaggerProcessor? _processor;
     private string? _currentPath;
 
@@ -36,6 +37,7 @@ public partial class VisionTaggerControl : UserControl
         _downloader = sp.GetService(typeof(IModelDownloader)) as IModelDownloader;
         _host = sp.GetService(typeof(IImageToolHost)) as IImageToolHost;
         _meta = sp.GetService(typeof(IImageMetaService)) as IImageMetaService;
+        _settings = sp.GetService(typeof(ISettingsService)) as ISettingsService;
 
         if (_host != null)
         {
@@ -146,6 +148,7 @@ public partial class VisionTaggerControl : UserControl
             if (t.Length > 0 && seen.Add(t)) merged.Add(t);
         }
         _meta.SetTags(_currentPath, merged);
+        _settings?.AddRecentTags(merged);
         MessageBox.Show($"Đã lưu {merged.Count} keyword vào ảnh.", "Lưu Keywords", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 

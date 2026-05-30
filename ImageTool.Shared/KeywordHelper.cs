@@ -68,6 +68,23 @@ public static class KeywordHelper
     }
 
     /// <summary>
+    /// Đếm số ảnh gắn mỗi keyword (lá, đã chuẩn hoá) từ danh sách tag-set của nhiều ảnh.
+    /// Mỗi ảnh tính 1 lần cho mỗi keyword phân biệt của nó. Kết quả dùng làm input cho
+    /// <see cref="BuildTree"/> (BuildTree sẽ tự cộng dồn cho nhánh cha).
+    /// </summary>
+    public static Dictionary<string, int> CountTags(IEnumerable<IEnumerable<string>> imageTagSets)
+    {
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (imageTagSets == null) return counts;
+        foreach (var tags in imageTagSets)
+        {
+            foreach (var k in NormalizeList(tags)) // NormalizeList đã bỏ trùng trong 1 ảnh
+                counts[k] = (counts.TryGetValue(k, out var c) ? c : 0) + 1;
+        }
+        return counts;
+    }
+
+    /// <summary>
     /// 1 ảnh có tập <paramref name="imageKeywords"/> có khớp truy vấn <paramref name="query"/> không?
     /// Khớp nếu: query là tiền tố nhánh (ảnh ở dưới nhánh đó), hoặc khớp 1 segment bất kỳ
     /// (không phân biệt hoa thường). Ví dụ ảnh "Animal/Dog" khớp "animal", "dog", "Animal/Dog".

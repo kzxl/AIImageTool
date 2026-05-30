@@ -15,12 +15,16 @@ namespace ImageTool.Host.Workspace;
 public partial class InfoPanel : UserControl
 {
     private IWorkspaceService? _workspace;
+    private IImageMetaService? _meta;
+    private ISettingsService? _settings;
     private CancellationTokenSource? _cts;
     private string? _currentPath;
 
     public ObservableCollection<ExifRow> Exif { get; } = new();
     public ObservableCollection<ColorSwatchVm> Colors { get; } = new();
     public ObservableCollection<ColorSwatchVm> Suggestions { get; } = new();
+    public ObservableCollection<KeywordVm> Keywords { get; } = new();
+    public ObservableCollection<KeywordVm> KeywordSuggestions { get; } = new();
 
     public InfoPanel()
     {
@@ -28,12 +32,27 @@ public partial class InfoPanel : UserControl
         icExif.ItemsSource = Exif;
         icColors.ItemsSource = Colors;
         icSuggest.ItemsSource = Suggestions;
+        icKeywords.ItemsSource = Keywords;
+        icKeywordSuggest.ItemsSource = KeywordSuggestions;
     }
 
     public void Bind(IWorkspaceService ws)
     {
         _workspace = ws;
         _workspace.ActiveImageChanged += (s, e) => Refresh(e.CurrentPath);
+    }
+
+    /// <summary>Bind kèm meta + settings để bật trình sửa Keywords (D6.4).</summary>
+    public void Bind(IWorkspaceService ws, IImageMetaService meta, ISettingsService settings)
+    {
+        _meta = meta;
+        _settings = settings;
+        _meta.MetaChanged += (s, e) =>
+        {
+            if (string.Equals(e.ImagePath, _currentPath, System.StringComparison.OrdinalIgnoreCase))
+                Dispatcher.BeginInvoke(() => LoadKeywords(e.ImagePath));
+        };
+        Bind(ws);
     }
 
     private void Refresh(string? path)
@@ -54,6 +73,7 @@ public partial class InfoPanel : UserControl
             txtContrastAdvice.Visibility = Visibility.Collapsed;
             btnSaveMeta.IsEnabled = false;
             ClearMetaFields();
+            LoadKeywords(path);
         });
 
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
@@ -178,6 +198,7 @@ public partial class InfoPanel : UserControl
                     // Form sửa metadata.
                     LoadMetaFields(path);
                     btnSaveMeta.IsEnabled = true;
+                    LoadKeywords(path);
                 });
             }
             catch (Exception ex) { ImageTool.Shared.AppLog.Error("InfoPanel.Refresh", path, ex); }
@@ -264,6 +285,93 @@ public partial class InfoPanel : UserControl
         MessageBox.Show(ok ? "Đã lưu metadata vào ảnh." : "Không lưu được metadata (xem app.log).",
             "Metadata", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
         if (ok) Refresh(_currentPath);
+    }
+
+    // ===== Keywords / Tags (D6.4) =====
+
+    /// <summary>VM 1 keyword: hiện đoạn lá nhưng giữ full-path để gỡ/thêm chính xác.</summary>
+    public sealed class KeywordVm
+    {
+        public string Full { get; init; } = "";
+        public string Leaf { get; init; } = "";
+        public static KeywordVm From(string full)
+            => new() { Full = full, Leaf = ImageTool.Shared.KeywordHelper.LeafName(full) };
+    }
+
+    private void LoadKeywords(string? path)
+    {
+        Keywords.Clear();
+        KeywordSuggestions.Clear();
+        if (_meta == null || string.IsNullOrEmpty(path)) { UpdateKeywordEmpty(); return; }
+
+        var current = ImageTool.Shared.KeywordHelper.NormalizeList(_meta.Get(path).Tags);
+        foreach (var k in current) Keywords.Add(KeywordVm.From(k));
+        UpdateKeywordEmpty();
+
+        // Gợi ý = (recent + từ điển) trừ tag đã gắn, tối đa 12 mục.
+        if (_settings != null)
+        {
+            var has = new System.Collections.Generic.HashSet<string>(current, System.StringComparer.OrdinalIgnoreCase);
+            var seen = new System.Collections.Generic.HashSet<string>(has, System.StringComparer.OrdinalIgnoreCase);
+            var pool = new System.Collections.Generic.List<string>();
+            pool.AddRange(_settings.Current.RecentTags);
+            pool.AddRange(_settings.Current.TagDictionary);
+            foreach (var t in pool)
+            {
+                var n = ImageTool.Shared.KeywordHelper.Normalize(t);
+                if (n == null || !seen.Add(n)) continue;
+                KeywordSuggestions.Add(KeywordVm.From(n));
+                if (KeywordSuggestions.Count >= 12) break;
+            }
+        }
+    }
+
+    private void UpdateKeywordEmpty()
+    {
+        txtNoKeywords.Visibility = Keywords.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void KeywordInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter) { AddKeywordFromInput(); e.Handled = true; }
+    }
+
+    private void AddKeyword_Click(object sender, RoutedEventArgs e) => AddKeywordFromInput();
+
+    private void AddKeywordFromInput()
+    {
+        var n = ImageTool.Shared.KeywordHelper.Normalize(txtKeywordInput.Text);
+        txtKeywordInput.Text = "";
+        if (n != null) ApplyAddKeyword(n);
+    }
+
+    private void SuggestKeyword_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string full)
+            ApplyAddKeyword(full);
+    }
+
+    private void ApplyAddKeyword(string keyword)
+    {
+        if (_meta == null || string.IsNullOrEmpty(_currentPath)) return;
+        var n = ImageTool.Shared.KeywordHelper.Normalize(keyword);
+        if (n == null) return;
+        var list = ImageTool.Shared.KeywordHelper.NormalizeList(_meta.Get(_currentPath).Tags);
+        if (list.Any(x => string.Equals(x, n, System.StringComparison.OrdinalIgnoreCase))) return;
+        list.Add(n);
+        _meta.SetTags(_currentPath, list);
+        _settings?.AddRecentTags(new[] { n });
+        LoadKeywords(_currentPath);
+    }
+
+    private void RemoveKeyword_Click(object sender, RoutedEventArgs e)
+    {
+        if (_meta == null || string.IsNullOrEmpty(_currentPath)) return;
+        if (sender is not FrameworkElement fe || fe.Tag is not string full) return;
+        var list = ImageTool.Shared.KeywordHelper.NormalizeList(_meta.Get(_currentPath).Tags);
+        list.RemoveAll(x => string.Equals(x, full, System.StringComparison.OrdinalIgnoreCase));
+        _meta.SetTags(_currentPath, list);
+        LoadKeywords(_currentPath);
     }
 
     private static BitmapSource RenderHistogram(int[] r, int[] g, int[] b, int w, int h, bool hiClip = false, bool loClip = false)
