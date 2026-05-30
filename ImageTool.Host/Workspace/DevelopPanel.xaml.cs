@@ -206,6 +206,9 @@ public partial class DevelopPanel : UserControl
         AddSlider(gLevels, "lvl_black", "Black point", 0, 0.5, 0, "0.00");
         AddSlider(gLevels, "lvl_gamma", "Gamma", 0.2, 3, 1, "0.00");
         AddSlider(gLevels, "lvl_white", "White point", 0.5, 1, 1, "0.00");
+        var btnAutoLevels = new Button { Content = "Auto Levels", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left };
+        btnAutoLevels.Click += BtnAutoLevels_Click;
+        gLevels.Children.Add(btnAutoLevels);
 
         // Color Balance RGB 4-way (D2.1)
         var gCbr = AddGroup("Color Balance RGB", false);
@@ -1081,6 +1084,21 @@ public partial class DevelopPanel : UserControl
         SetVal("blacks", v.Blacks);
         SetVal("shadows", v.Shadows);
         SetVal("highlights", v.Highlights);
+        _loading = false;
+        Commit();
+    }
+
+    /// <summary>Auto Levels (D2.5): chọn điểm đen/trắng theo phân vị histogram rồi nạp vào slider Levels.</summary>
+    private void BtnAutoLevels_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var sug = _renderer.AnalyzeAutoLevels(_currentPath);
+        if (sug == null) return;
+        var v = sug.Value;
+        _loading = true;
+        SetVal("lvl_black", v.Black);
+        SetVal("lvl_white", v.White);
+        SetVal("lvl_gamma", v.Gamma);
         _loading = false;
         Commit();
     }

@@ -80,4 +80,41 @@ public static class AutoTone
         }
         return 1f;
     }
+
+    /// <summary>Gợi ý cho Levels: black/white point (sRGB) từ đuôi histogram.</summary>
+    public struct LevelsSuggestion
+    {
+        public float Black;
+        public float White;
+        public float Gamma;
+    }
+
+    /// <summary>
+    /// Auto Levels (D2.5): chọn điểm đen/trắng input theo phân vị (mặc định 0.5% / 99.5%) để kéo
+    /// căng dải động; gamma giữ 1 (không dịch midtone). Trả về điểm trên thang sRGB [0..1].
+    /// </summary>
+    public static LevelsSuggestion AnalyzeLevels(LinearImage img, float lowPct = 0.005f, float highPct = 0.995f)
+    {
+        const int N = 256;
+        var hist = new int[N];
+        float[] px = img.Pixels;
+        int count = 0;
+        for (int o = 0; o < px.Length; o += 4)
+        {
+            float lum = ColorSpace.Luminance(px[o], px[o + 1], px[o + 2]);
+            float p = ColorSpace.LinearToSrgb(lum);
+            int bin = (int)(p * (N - 1) + 0.5f);
+            if (bin < 0) bin = 0; else if (bin >= N) bin = N - 1;
+            hist[bin]++;
+            count++;
+        }
+        if (count == 0) return new LevelsSuggestion { Black = 0f, White = 1f, Gamma = 1f };
+
+        float black = Percentile(hist, count, lowPct);
+        float white = Percentile(hist, count, highPct);
+        // Đảm bảo hợp lệ + không thu hẹp quá mức.
+        black = Math.Clamp(black, 0f, 0.45f);
+        white = Math.Clamp(white, Math.Max(black + 0.05f, 0.55f), 1f);
+        return new LevelsSuggestion { Black = black, White = white, Gamma = 1f };
+    }
 }

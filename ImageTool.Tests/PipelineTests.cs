@@ -537,4 +537,77 @@ public class AutoToneTests
         op.Apply(img, 1f);
         Assert.True(img.Pixels[0] > before); // sáng hơn
     }
+
+    [Fact]
+    public void AutoLevels_LowContrastImage_WidensRange()
+    {
+        // Ảnh dải hẹp (sRGB ~0.3..0.7) -> auto levels nên đặt black>0 và white<1 để kéo căng.
+        var img = new LinearImage(20, 20);
+        int idx = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            // Trải đều giữa 0.3 và 0.7 (sRGB).
+            float s = 0.3f + 0.4f * ((idx % 20) / 19f);
+            float lin = ColorSpace.SrgbToLinear(s);
+            img.Pixels[i] = lin; img.Pixels[i + 1] = lin; img.Pixels[i + 2] = lin; img.Pixels[i + 3] = 1f;
+            idx++;
+        }
+
+        var lv = AutoTone.AnalyzeLevels(img);
+        Assert.True(lv.Black > 0.05f, $"black point phải >0: {lv.Black}");
+        Assert.True(lv.White < 0.95f, $"white point phải <1: {lv.White}");
+        Assert.True(lv.White > lv.Black);
+        Assert.Equal(1f, lv.Gamma, 3);
+    }
+
+    [Fact]
+    public void AutoLevels_FullRangeImage_NearIdentity()
+    {
+        // Ảnh đã phủ full range 0..1 -> black gần 0, white gần 1.
+        var img = new LinearImage(16, 16);
+        int idx = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            float s = (idx % 256) / 255f;
+            float lin = ColorSpace.SrgbToLinear(s);
+            img.Pixels[i] = lin; img.Pixels[i + 1] = lin; img.Pixels[i + 2] = lin; img.Pixels[i + 3] = 1f;
+            idx++;
+        }
+        var lv = AutoTone.AnalyzeLevels(img);
+        Assert.True(lv.Black < 0.15f);
+        Assert.True(lv.White > 0.85f);
+    }
+
+    [Fact]
+    public void AutoLevels_AppliedViaRgbLevels_IncreasesContrast()
+    {
+        var img = new LinearImage(20, 20);
+        int idx = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            float s = 0.35f + 0.3f * ((idx % 20) / 19f); // dải hẹp
+            float lin = ColorSpace.SrgbToLinear(s);
+            img.Pixels[i] = lin; img.Pixels[i + 1] = lin; img.Pixels[i + 2] = lin; img.Pixels[i + 3] = 1f;
+            idx++;
+        }
+        // độ lệch chuẩn trước
+        float meanBefore = Mean(img), sdBefore = Sd(img, meanBefore);
+        var lv = AutoTone.AnalyzeLevels(img);
+        new RgbLevelsOp { Black = lv.Black, White = lv.White, Gamma = lv.Gamma }.Apply(img, 1f);
+        float meanAfter = Mean(img), sdAfter = Sd(img, meanAfter);
+        Assert.True(sdAfter > sdBefore, $"levels phải tăng tương phản: {sdBefore} -> {sdAfter}");
+    }
+
+    private static float Mean(LinearImage img)
+    {
+        double sum = 0; int n = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4) { sum += img.Pixels[i]; n++; }
+        return (float)(sum / n);
+    }
+    private static float Sd(LinearImage img, float mean)
+    {
+        double sum = 0; int n = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4) { float d = img.Pixels[i] - mean; sum += d * d; n++; }
+        return (float)Math.Sqrt(sum / n);
+    }
 }
