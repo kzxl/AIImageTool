@@ -3,8 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-30 — gộp MetaEditor + ColorLab vào InfoPanel (gỡ 2 plugin trùng), README mới,
-> test integration đầu-cuối, grid stacking UI. 225/225 test pass, build 0 warning, còn 3 plugin (Upscaler/VisionTagger/FaceRestorer).
+> Cập nhật lần cuối: 2026-05-30 — RAW preview (7.1) + AI Subject mask (6.6) + AI denoise (4.3) + gộp
+> MetaEditor/ColorLab vào Info. 241/241 test pass, build 0 warning, 3 plugin (Upscaler/VisionTagger/FaceRestorer).
 
 ---
 
@@ -50,11 +50,12 @@
   - **Cache theo tầng** (10.6, `CachedEditPipeline`) — replay từ op bị đổi.
   - **Gỡ `ImageTool.Worker.Upscaler`** dead code (12.2).
 
-**CẦN DEPENDENCY NGOÀI (chưa làm — yêu cầu thư viện/model bên thứ ba):**
-- RAW decode (7.1-7.3): cần LibRaw native + color profile. Decoder point đã sẵn (`ImageDecoderRegistry`).
-- AI mask Subject/Sky (6.6): cần model ONNX segmentation.
+**CẦN DEPENDENCY NGOÀI (một phần đã làm qua model auto-tải/preview):**
+- RAW decode: ĐÃ mở/xem qua JPEG preview nhúng (7.1). Demosaic sensor thật (7.2-7.3) cần LibRaw native.
+- AI mask Subject (6.6) + AI denoise (4.3): ĐÃ có pipeline + UI, cần model ONNX (auto-tải, verify inference trên máy có GPU).
+- Sky/Background mask riêng: cần model phân lớp ngữ nghĩa.
 - Lens correction (5.3): cần database lensfun.
-- Import XMP/.dtstyle của LR/Darktable (9.3): cần mapping crs:* phức tạp.
+- Import .dtstyle Darktable (9.3): khác format (LR .xmp đã xong).
 
 **CÒN LẠI (không chặn, giá trị biên):** zoom/pan loupe nâng cao (một phần đã có);
 histogram tương tác kéo chỉnh tone (11.3); side-by-side before/after (11.4);
@@ -150,7 +151,9 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 - [x] **4.1** Sharpening (`SharpenOp`, unsharp mask: Amount/Radius/Threshold, scale-aware). Detail/Masking nâng cao CHƯA.
 - [x] **4.2** Luminance noise reduction (`LumaNoiseReductionOp`, blur kênh Y giữ chroma + Detail, có UI + test).
-- [ ] **4.3** Tích hợp AI denoise/upscale sẵn có vào pipeline (Upscaler, FaceRestorer) như op cuối chuỗi.
+- [~] **4.3** AI denoise (`AiDenoiseOp` + `AiOpHost` delegate + `OnnxDenoiser` SCUNet) cắm vào pipeline như
+      op cuối chuỗi, chạy full-res khi export, slider "AI Denoise" trong Detail. Cần model ONNX (auto-tải).
+      Tích hợp Upscaler/FaceRestorer như op chuỗi CHƯA.
 - [x] **4.4** Defringe (`DefringeOp`, khử viền tím/lục theo hue, có UI + test).
 
 ---
@@ -181,7 +184,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       UI vẽ tay trên canvas (`CenterPreview.Brush`: bắt nét kéo chuột, chấm phản hồi tức thì, gắn vào brush mask đang chọn).
 - [x] **6.5** Range mask Luminance (`LuminanceRangeMask`) + Range theo màu (`ColorRangeMask`: hue±range +
       ngưỡng sat, mép mượt, qua MaskedOp + test).
-- [ ] **6.6** AI mask: Subject / Sky / Background (tận dụng ONNX - có thể dùng model segment).
+- [~] **6.6** AI mask Subject (`OnnxSegmenter` U²-Net -> `RasterMask` -> MaskedOp), nút "AI Subject" trong
+      Local Adjustments, auto-tải model. Sky/Background riêng CHƯA (cần model phân lớp). Cần model ONNX.
 - [x] **6.7** Mỗi local mask có full bộ slider Light/Color như global (`LocalMask` + DevelopPanel.Masks:
       Exposure/Contrast/Highlights/Shadows/Whites/Blacks/Temp/Tint/Sat/Vibrance/Clarity/Sharpen; mỗi mask sinh
       MaskedOp riêng, gom nhóm theo maskId khi load).
