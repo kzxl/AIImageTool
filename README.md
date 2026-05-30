@@ -20,30 +20,40 @@ một **pipeline Develop linear-light** trong lõi và một lớp **Plugin mở
 ## Tính năng chính
 
 ### Develop — chỉnh sửa phi phá hủy (linear light)
-- **Tone:** Exposure, Contrast, Highlights/Shadows/Whites/Blacks, Tone Curve (kéo điểm), Parametric
-  Curve, Filmic, Dehaze, Auto Tone.
-- **Color:** White Balance (Kelvin + **Auto WB gray-world** + **eyedropper** chấm điểm xám), HSL 8 dải,
-  Color Grading 3-way (color wheel), Split Toning, Channel Mixer, Selective Color, Color Unify,
-  3D LUT (.cube), **Black & White** (channel mix + toning), **Negative/Invert**.
-- **Detail:** Sharpen, Luminance/Color Noise Reduction, Defringe, Texture, Clarity, Grain.
-- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9...), Straighten, Rotate/Flip, **Perspective/Upright**.
-- **Local Adjustments:** mask Gradient / Radial / Brush (vẽ tay) / Luminance Range / Color Range, mỗi
-  mask có đầy đủ slider Light/Color.
-- **Preset/Style:** lưu/áp style, copy-paste settings, **import preset Lightroom (.xmp)**, XMP sidecar.
+- **Tone:** Exposure, Contrast, Highlights/Shadows/Whites/Blacks, Tone Curve (kéo điểm + **preset
+  Linear/Medium/Strong/Faded**), Parametric Curve, Filmic/Filmic RGB/Sigmoid/Tone Equalizer, Dehaze,
+  Levels (per-channel + **Auto Levels** + **Auto Color** khử ám), Highlight Reconstruction, Auto Tone,
+  **kéo trực tiếp trên histogram để chỉnh tone**.
+- **Color:** White Balance (Kelvin + **Auto WB** + **eyedropper** + **preset nguồn sáng**), HSL 8 dải,
+  Color Balance RGB 4-way + Color Grading wheel, Split Toning, Channel Mixer, Selective Color, Color Unify,
+  Velvia, Color Contrast (Lab), 3D LUT (.cube), Input color profile (sRGB/AdobeRGB/Rec2020/P3),
+  **Black & White** (channel mix + **filter màu cổ điển** + toning), **Negative/Invert**, **Film Negative
+  (negadoctor)** cho scan phim âm bản.
+- **Detail:** Sharpen (+ Radius/**Masking** edge-aware), Luminance/Color/Chroma Noise Reduction,
+  Diffuse-or-sharpen (PDE), Hot Pixel, CA Correct, Defringe, Texture, Clarity, **Grain (mono + màu)**.
+- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9...), Straighten, Rotate/Flip + **EXIF
+  auto-orientation**, **Perspective/Upright**, **Liquify/Warp** (kéo handle), Lens Correction.
+- **Effects:** Vignette (+ Roundness/Highlights), Glow/Orton.
+- **Local Adjustments:** mask Gradient / Radial / Brush / Polygon / Luminance & Color Range / Parametric
+  đa kênh / AI Subject / Sky, blend modes + opacity, mask combine, **nhân bản mask**; mỗi mask đầy đủ slider.
+- **Preset/Style:** lưu/áp style (append/replace, chọn module), copy-paste settings (selective module),
+  **import preset Lightroom (.xmp)**, XMP sidecar, **Named Snapshots** (lưu nhiều mốc edit có tên).
 
 ### Thư viện & catalog
-- Workspace browser (cây thư mục + grid thumbnail), filmstrip, rating/flag/color label.
+- Workspace browser (cây thư mục + grid thumbnail), filmstrip, rating/flag/color label (**gắn hàng loạt
+  cho cả selection**), **lọc Pick/Reject/Hide-rejected**.
 - Catalog SQLite: import, **smart collections** (lọc theo rule), **tìm kiếm nâng cao** (camera/lens/ISO/
-  khẩu độ/tiêu cự/ngày), **keyword phân cấp** + search theo keyword, **stacking** (gom burst/bracket).
+  khẩu độ/tiêu cự/ngày), **keyword phân cấp** + editor chip + **từ điển/recently-used tag**, **stacking**.
 
 ### Panel Info (đã gộp)
 - Histogram RGB/Luma + cảnh báo clip, **dòng tóm tắt chụp** (camera · tiêu cự · f · tốc độ · ISO),
-  **bảng màu chủ đạo K-Means** (click copy hex), **GPS → mở bản đồ**, và **sửa EXIF** trực tiếp
-  (Description/Artist/Copyright/Software/Make/Model).
+  **bảng màu chủ đạo K-Means** (click copy hex), **GPS → mở bản đồ**, **sửa EXIF** trực tiếp
+  (Description/Artist/Copyright/Software/Make/Model), và **trình sửa Keywords** (chip thêm/gỡ + gợi ý).
 
 ### Export
 - PNG/JPEG/WebP/TIFF (8/16-bit), resize %/cạnh dài, watermark, **sharpen-for-output**,
-  **filename token** (`{name}/{n:000}/{date}/{parent}...`), **export presets**, batch song song.
+  **filename token** (`{name}/{n:000}/{date}/{parent}...`), **export presets**, batch song song,
+  **giữ EXIF gốc** (camera/lens/ngày/GPS), **không ghi đè im lặng** (tự thêm hậu tố khi trùng tên).
 
 ### AI Plugins
 - **Upscaler:** 4x-UltraSharpV2 (ONNX), Tiled Inference + DirectML (NVIDIA/AMD/Intel), fallback CPU.
@@ -63,7 +73,7 @@ Vào [Releases](../../releases):
 
 ## Phát triển
 - Build: `dotnet build ImageTool.slnx -c Debug`
-- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (219 test, build 0 warning)
+- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (490 test, build 0 warning)
 - Publish: `pwsh ./publish.ps1` (Lite + Full + plugins)
 - Hướng dẫn viết op Develop mới: `ImageTool.Imaging/WRITING_OPS.md`
 
