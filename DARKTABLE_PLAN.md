@@ -66,7 +66,9 @@ Darktable module -> op của ta đã làm:
 - [x] **D4.1** Parametric mask đầy đủ — chọn vùng theo nhiều kênh (L, C, h, R, G, B) với upper/lower + feather,
       kiểu Darktable parametric masking (`ParametricMask`: 6 kênh band-pass giao nhau, hue wrap, invert; nối
       MaskedOp + LocalMask + DevelopPanel "+ Param"; có test).
-- [ ] **D4.2** Mask combine ops — union/intersect/difference giữa nhiều mask trên 1 instance.
+- [x] **D4.2** Mask combine ops — union/intersect/difference giữa nhiều mask trên 1 instance: `MaskCombine`
+      (intersect a*b / union a+b-ab / subtract a*(1-b)) + mask phụ luminance-range trong `MaskedOp` ("Refine"
+      combo + Min/Max/Smooth trong Local Adjustments). Round-trip qua params. + test.
 - [ ] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng (nâng Radial/Gradient hiện có).
 - [ ] **D4.4** Multiple instances 1 module (vd 2 lần exposure khác mask) — pipeline đã hỗ trợ, cần UI quản lý instance.
 - [x] **D4.5** Blend modes (normal/multiply/screen/overlay/...) + opacity cho mỗi op (Darktable "blending").

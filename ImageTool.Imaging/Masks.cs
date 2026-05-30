@@ -17,6 +17,58 @@ public interface IMaskGenerator
     Dictionary<string, string> ToParams();
 }
 
+/// <summary>Cách kết hợp 2 mask (D4.2, kiểu Darktable mask blending operators).</summary>
+public enum MaskCombineMode
+{
+    /// <summary>Chỉ dùng mask chính (bỏ qua mask phụ).</summary>
+    None,
+    /// <summary>Giao: a*b (cả hai cùng chọn).</summary>
+    Intersect,
+    /// <summary>Hợp: a + b - a*b (1 trong 2 chọn).</summary>
+    Union,
+    /// <summary>Trừ: a*(1-b) (mask chính trừ phần mask phụ).</summary>
+    Subtract,
+}
+
+/// <summary>Phép kết hợp 2 mask theo từng pixel (D4.2). Thuần toán -> test được.</summary>
+public static class MaskCombine
+{
+    public static MaskCombineMode Parse(string? s) => (s ?? "").Trim().ToLowerInvariant() switch
+    {
+        "intersect" or "and" => MaskCombineMode.Intersect,
+        "union" or "or" => MaskCombineMode.Union,
+        "subtract" or "minus" or "diff" => MaskCombineMode.Subtract,
+        _ => MaskCombineMode.None,
+    };
+
+    public static string Name(MaskCombineMode m) => m switch
+    {
+        MaskCombineMode.Intersect => "intersect",
+        MaskCombineMode.Union => "union",
+        MaskCombineMode.Subtract => "subtract",
+        _ => "none",
+    };
+
+    /// <summary>Kết hợp mask <paramref name="a"/> (chính) với <paramref name="b"/> (phụ) tại chỗ trên a.</summary>
+    public static void Apply(float[] a, float[] b, MaskCombineMode mode)
+    {
+        if (mode == MaskCombineMode.None || b == null) return;
+        int n = Math.Min(a.Length, b.Length);
+        switch (mode)
+        {
+            case MaskCombineMode.Intersect:
+                for (int i = 0; i < n; i++) a[i] = a[i] * b[i];
+                break;
+            case MaskCombineMode.Union:
+                for (int i = 0; i < n; i++) a[i] = a[i] + b[i] - a[i] * b[i];
+                break;
+            case MaskCombineMode.Subtract:
+                for (int i = 0; i < n; i++) a[i] = a[i] * (1f - b[i]);
+                break;
+        }
+    }
+}
+
 /// <summary>Mask gradient tuyến tính (graduated filter): chuyển 0->1 theo 1 đường thẳng.</summary>
 public sealed class LinearGradientMask : IMaskGenerator
 {

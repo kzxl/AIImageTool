@@ -244,6 +244,28 @@ public partial class DevelopPanel
         _maskEditPanel!.Children.Add(blendRow);
 
         AddMaskAdjSlider("Opacity", () => m.Opacity, v => m.Opacity = v, 0, 1, 1, "0.00");
+
+        // Refine theo luminance range (D4.2): kết hợp mask phụ.
+        var combineRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
+        combineRow.Children.Add(new TextBlock { Text = "Refine", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
+        var cmbCombine = new ComboBox { Height = 22 };
+        string[] combineModes = { "none", "intersect", "union", "subtract" };
+        foreach (var cm in combineModes) cmbCombine.Items.Add(new ComboBoxItem { Content = cm });
+        string curCombine = m.MaskParams.TryGetValue("combine", out var cc) ? cc : "none";
+        cmbCombine.SelectedIndex = System.Math.Max(0, System.Array.IndexOf(combineModes, curCombine));
+        cmbCombine.ToolTip = "Tinh chỉnh mask theo dải độ sáng (Darktable drawn+parametric): giao/hợp/trừ.";
+        cmbCombine.SelectionChanged += (_, _) =>
+        {
+            if (_loading) return;
+            m.MaskParams["combine"] = (cmbCombine.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "none";
+            ScheduleCommit();
+        };
+        combineRow.Children.Add(cmbCombine);
+        _maskEditPanel!.Children.Add(combineRow);
+
+        AddMaskGeomSlider(m, "c_min", "  Refine Min", 0, 1, 0);
+        AddMaskGeomSlider(m, "c_max", "  Refine Max", 0, 1, 1);
+        AddMaskGeomSlider(m, "c_smooth", "  Refine Smooth", 0.001, 0.5, 0.1);
     }
 
     private void AddMaskGeomSlider(LocalMask m, string key, string label, double min, double max, double def, string fmt = "0.00")
@@ -405,6 +427,9 @@ public partial class DevelopPanel
         };
         var d = new Dictionary<string, string>();
         foreach (var k in keys) if (p.TryGetValue(k, out var v)) d[k] = v;
+        // D4.2: tham số combine (mask phụ luminance-range) áp cho mọi loại mask.
+        foreach (var k in new[] { "combine", "c_min", "c_max", "c_smooth" })
+            if (p.TryGetValue(k, out var cv)) d[k] = cv;
         return d;
     }
 

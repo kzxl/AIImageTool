@@ -28,6 +28,9 @@ public sealed class MaskedOp : IEditOp
     private readonly IReadOnlyDictionary<string, string> _params;
     private readonly BlendMode _blend;
     private readonly float _opacity;
+    // D4.2: mask phụ (luminance range) kết hợp với mask chính theo combine mode.
+    private readonly MaskCombineMode _combine;
+    private readonly LuminanceRangeMask? _secondRange;
 
     public MaskedOp(IEditOp inner, IMaskGenerator? mask, LuminanceRangeMask? rangeMask, IReadOnlyDictionary<string, string> rawParams)
         : this(inner, mask, rangeMask, null, rawParams) { }
@@ -50,11 +53,22 @@ public sealed class MaskedOp : IEditOp
         _blend = BlendModes.Parse(EditOpRegistry.S(rawParams, "blend"));
         // opacity mặc định 1; nếu thiếu key thì 1.
         _opacity = rawParams.ContainsKey("opacity") ? Math.Clamp(EditOpRegistry.F(rawParams, "opacity", 1f), 0f, 1f) : 1f;
+        // D4.2: mask phụ luminance-range (nếu có "combine" != none).
+        _combine = MaskCombine.Parse(EditOpRegistry.S(rawParams, "combine"));
+        if (_combine != MaskCombineMode.None)
+        {
+            _secondRange = new LuminanceRangeMask
+            {
+                Min = EditOpRegistry.F(rawParams, "c_min"),
+                Max = EditOpRegistry.F(rawParams, "c_max", 1f),
+                Smooth = EditOpRegistry.F(rawParams, "c_smooth", 0.1f),
+            };
+        }
     }
 
     public void Apply(LinearImage image, float scale)
     {
-        // Sinh mask.
+        // Sinh mask chính.
         float[] m;
         if (_rangeMask != null) m = _rangeMask.GenerateFrom(image);
         else if (_colorMask != null) m = _colorMask.GenerateFrom(image);
@@ -63,7 +77,12 @@ public sealed class MaskedOp : IEditOp
         else if (_mask != null) m = _mask.Generate(image.Width, image.Height);
         else return;
 
-        // Nếu vừa có hình học vừa có range, nhân chúng (đã gộp ở builder nếu cần). Ở đây 1 mask.
+        // D4.2: kết hợp mask phụ (luminance range) theo combine mode.
+        if (_combine != MaskCombineMode.None && _secondRange != null)
+        {
+            float[] b = _secondRange.GenerateFrom(image);
+            MaskCombine.Apply(m, b, _combine);
+        }
 
         // Clone, áp inner op lên bản clone.
         var edited = image.Clone();
