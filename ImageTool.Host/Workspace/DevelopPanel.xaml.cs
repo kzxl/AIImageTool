@@ -186,6 +186,29 @@ public partial class DevelopPanel : UserControl
         AddSlider(gPres, "clarity", "Clarity", -1, 1, 0);
         AddSlider(gPres, "texture", "Texture", -1, 1, 0);
         AddSlider(gPres, "dehaze", "Dehaze", -1, 1, 0);
+        AddSlider(gPres, "velvia", "Velvia", 0, 1, 0);
+
+        // Levels (D2.5)
+        var gLevels = AddGroup("Levels", false);
+        AddSlider(gLevels, "lvl_black", "Black point", 0, 0.5, 0, "0.00");
+        AddSlider(gLevels, "lvl_gamma", "Gamma", 0.2, 3, 1, "0.00");
+        AddSlider(gLevels, "lvl_white", "White point", 0.5, 1, 1, "0.00");
+
+        // Color Balance RGB 4-way (D2.1)
+        var gCbr = AddGroup("Color Balance RGB", false);
+        AddSlider(gCbr, "cbr_liftHue", "Shadow Hue", 0, 360, 0, "0");
+        AddSlider(gCbr, "cbr_liftSat", "Shadow Sat", 0, 1, 0);
+        AddSlider(gCbr, "cbr_gammaHue", "Mid Hue", 0, 360, 0, "0");
+        AddSlider(gCbr, "cbr_gammaSat", "Mid Sat", 0, 1, 0);
+        AddSlider(gCbr, "cbr_gainHue", "Highlight Hue", 0, 360, 0, "0");
+        AddSlider(gCbr, "cbr_gainSat", "Highlight Sat", 0, 1, 0);
+        AddSlider(gCbr, "cbr_chroma", "Global Chroma", -1, 1, 0);
+        AddSlider(gCbr, "cbr_contrast", "Global Contrast", -1, 1, 0);
+
+        // Color Contrast (D2.4)
+        var gCc = AddGroup("Color Contrast (Lab)", false);
+        AddSlider(gCc, "cc_ga", "Green ↔ Magenta", -1, 1, 0);
+        AddSlider(gCc, "cc_by", "Blue ↔ Yellow", -1, 1, 0);
 
         // HSL
         var gHsl = AddGroup("HSL / Color Mixer", false);
@@ -453,6 +476,23 @@ public partial class DevelopPanel : UserControl
         SetVal("teq_highlights", Param(path!, ToneEqualizerOp.Type, "highlights"));
         SetVal("teq_whites", Param(path!, ToneEqualizerOp.Type, "whites"));
         SetVal("dehaze", Param(path!, DehazeOp.Type, "amount"));
+
+        // D2 color science
+        SetVal("velvia", Param(path!, VelviaOp.Type, "amount"));
+        var lvlP = FindOp(path!, RgbLevelsOp.Type);
+        SetVal("lvl_black", Param(path!, RgbLevelsOp.Type, "black"));
+        SetVal("lvl_gamma", lvlP != null ? Param(path!, RgbLevelsOp.Type, "gamma") : 1);
+        SetVal("lvl_white", lvlP != null ? Param(path!, RgbLevelsOp.Type, "white") : 1);
+        SetVal("cbr_liftHue", Param(path!, ColorBalanceRgbOp.Type, "liftHue"));
+        SetVal("cbr_liftSat", Param(path!, ColorBalanceRgbOp.Type, "liftSat"));
+        SetVal("cbr_gammaHue", Param(path!, ColorBalanceRgbOp.Type, "gammaHue"));
+        SetVal("cbr_gammaSat", Param(path!, ColorBalanceRgbOp.Type, "gammaSat"));
+        SetVal("cbr_gainHue", Param(path!, ColorBalanceRgbOp.Type, "gainHue"));
+        SetVal("cbr_gainSat", Param(path!, ColorBalanceRgbOp.Type, "gainSat"));
+        SetVal("cbr_chroma", Param(path!, ColorBalanceRgbOp.Type, "chroma"));
+        SetVal("cbr_contrast", Param(path!, ColorBalanceRgbOp.Type, "contrast"));
+        SetVal("cc_ga", Param(path!, ColorContrastOp.Type, "greenMagenta"));
+        SetVal("cc_by", Param(path!, ColorContrastOp.Type, "blueYellow"));
         SetVal("clarity", Param(path!, ClarityOp.Type, "amount"));
         SetVal("texture", Param(path!, TextureOp.Type, "amount"));
         SetVal("sharpen", Param(path!, SharpenOp.Type, "amount"));
@@ -753,12 +793,34 @@ public partial class DevelopPanel : UserControl
         };
         if (!filmRgb.IsIdentity) ops.Add(Op(FilmicRgbOp.Type, "Filmic RGB", filmRgb.ToParams()));
 
+        // 4c) Levels (D2.5)
+        var levels = new RgbLevelsOp { Black = (float)GetVal("lvl_black"), Gamma = (float)GetVal("lvl_gamma"), White = (float)GetVal("lvl_white") };
+        if (!levels.IsIdentity) ops.Add(Op(RgbLevelsOp.Type, "Levels", levels.ToParams()));
+
         // 5) HSL
         var hsl = new HslMixerOp();
         Array.Copy(_hslHue, hsl.Hue, HslMixerOp.Bands);
         Array.Copy(_hslSat, hsl.Sat, HslMixerOp.Bands);
         Array.Copy(_hslLum, hsl.Lum, HslMixerOp.Bands);
         if (!hsl.IsIdentity) ops.Add(Op(HslMixerOp.Type, "HSL / Color Mixer", hsl.ToParams()));
+
+        // 5b) Color Balance RGB 4-way (D2.1)
+        var cbr = new ColorBalanceRgbOp
+        {
+            LiftHue = (float)GetVal("cbr_liftHue"), LiftSat = (float)GetVal("cbr_liftSat"),
+            GammaHue = (float)GetVal("cbr_gammaHue"), GammaSat = (float)GetVal("cbr_gammaSat"),
+            GainHue = (float)GetVal("cbr_gainHue"), GainSat = (float)GetVal("cbr_gainSat"),
+            GlobalChroma = (float)GetVal("cbr_chroma"), GlobalContrast = (float)GetVal("cbr_contrast"),
+        };
+        if (!cbr.IsIdentity) ops.Add(Op(ColorBalanceRgbOp.Type, "Color Balance RGB", cbr.ToParams()));
+
+        // 5c) Color Contrast Lab (D2.4)
+        var cc = new ColorContrastOp { GreenMagenta = (float)GetVal("cc_ga"), BlueYellow = (float)GetVal("cc_by") };
+        if (!cc.IsIdentity) ops.Add(Op(ColorContrastOp.Type, "Color Contrast", cc.ToParams()));
+
+        // 5d) Velvia (D2.3)
+        var velvia = new VelviaOp { Amount = (float)GetVal("velvia") };
+        if (!velvia.IsIdentity) ops.Add(Op(VelviaOp.Type, "Velvia", velvia.ToParams()));
 
         // 6) Split toning
         var st = new SplitToningOp

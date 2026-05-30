@@ -107,6 +107,10 @@ public sealed class EditOpRegistry
         SigmoidOp.Register(reg);
         FilmicRgbOp.Register(reg);
         ToneEqualizerOp.Register(reg);
+        RgbLevelsOp.Register(reg);
+        VelviaOp.Register(reg);
+        ColorBalanceRgbOp.Register(reg);
+        ColorContrastOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;
