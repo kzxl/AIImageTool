@@ -247,6 +247,7 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
+        AddSlider(gDetail, "aiDenoise", "AI Denoise", 0, 1, 0);
 
         // Effects
         var gFx = AddGroup("Effects", false);
@@ -411,6 +412,7 @@ public partial class DevelopPanel : UserControl
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
+        SetVal("aiDenoise", Param(path!, AiDenoiseOp.Type, "strength"));
         SetVal("vignette", Param(path!, VignetteOp.Type, "amount"));
         SetVal("grain", Param(path!, GrainOp.Type, "amount"));
 
@@ -747,6 +749,10 @@ public partial class DevelopPanel : UserControl
         // 8c) Invert (negative) — cuối cùng trước local.
         var inv = new InvertOp { Enabled = _chkInvert?.IsChecked == true };
         if (!inv.IsIdentity) ops.Add(Op(InvertOp.Type, "Negative / Invert", inv.ToParams()));
+
+        // 8d) AI Denoise (4.3) — op cuối, chỉ chạy full-res (export) qua AiOpHost.
+        var aiDn = new AiDenoiseOp { Strength = (float)GetVal("aiDenoise") };
+        if (!aiDn.IsIdentity) ops.Add(Op(AiDenoiseOp.Type, "AI Denoise", aiDn.ToParams()));
 
         // 9) Local adjustments (masked ops) — sau cùng để áp lên kết quả global.
         AppendMaskOps(ops);

@@ -40,6 +40,9 @@ public partial class DevelopPanel
         AddMaskButton(addRow, "+ Brush", BrushMask.Type);
         AddMaskButton(addRow, "+ Lum", LuminanceRangeMask.Type);
         AddMaskButton(addRow, "+ Color", ColorRangeMask.Type);
+        var btnSubject = new Button { Content = "✦ AI Subject", Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 4, 4), FontSize = 11, ToolTip = "Tự chọn chủ thể bằng AI (tải model lần đầu)" };
+        btnSubject.Click += (_, _) => RequestSubjectMask();
+        addRow.Children.Add(btnSubject);
         host.Children.Add(addRow);
 
         _maskListPanel = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
@@ -67,6 +70,31 @@ public partial class DevelopPanel
     {
         if (_currentPath == null || _history == null) return;
         var m = LocalMask.CreateDefault(maskType);
+        _masks.Add(m);
+        SelectMask(m);
+        RefreshMaskList();
+        Commit();
+    }
+
+    /// <summary>Bắn khi user bấm "AI Subject" — Host (có AiMaskService) lắng nghe, sinh mask rồi gọi AddRasterMask.</summary>
+    public event EventHandler<string>? SubjectMaskRequested;
+
+    private void RequestSubjectMask()
+    {
+        if (string.IsNullOrEmpty(_currentPath)) return;
+        SubjectMaskRequested?.Invoke(this, _currentPath);
+    }
+
+    /// <summary>Host gọi lại sau khi AI sinh xong mask PNG: tạo 1 local mask kiểu Raster trỏ tới file đó.</summary>
+    public void AddRasterMask(string maskFilePath, string name = "AI Subject")
+    {
+        if (_currentPath == null || _history == null) return;
+        var m = new LocalMask
+        {
+            MaskType = RasterMask.Type,
+            Name = name,
+            MaskParams = new Dictionary<string, string> { ["maskFile"] = maskFilePath, ["invert"] = "false" },
+        };
         _masks.Add(m);
         SelectMask(m);
         RefreshMaskList();
@@ -159,6 +187,9 @@ public partial class DevelopPanel
                 AddMaskGeomSlider(m, "hue", "Target Hue", 0, 360, 0, "0");
                 AddMaskGeomSlider(m, "range", "Hue Range", 1, 90, 30, "0");
                 AddMaskGeomSlider(m, "minSat", "Min Sat", 0, 1, 0.1);
+                break;
+            case RasterMask.Type:
+                AddMaskInvertToggle(m); // AI mask: chỉ cho đảo vùng (chủ thể <-> nền)
                 break;
         }
 
@@ -292,6 +323,7 @@ public partial class DevelopPanel
         BrushMask.Type => "Brush",
         LuminanceRangeMask.Type => "Luminance Range",
         ColorRangeMask.Type => "Color Range",
+        RasterMask.Type => "AI Subject",
         _ => "Mask"
     };
 
@@ -305,6 +337,7 @@ public partial class DevelopPanel
             BrushMask.Type => new[] { "radius", "hardness", "pts" },
             LuminanceRangeMask.Type => new[] { "min", "max", "smooth" },
             ColorRangeMask.Type => new[] { "hue", "range", "minSat", "smooth" },
+            RasterMask.Type => new[] { "maskFile", "invert" },
             _ => Array.Empty<string>()
         };
         var d = new Dictionary<string, string>();

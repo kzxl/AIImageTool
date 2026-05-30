@@ -95,6 +95,7 @@ public partial class App : Application
         services.AddSingleton<ICatalogService, CatalogService>();
         services.AddSingleton<PluginLoader>();
         services.AddSingleton<AiWorkerManager>();
+        services.AddSingleton<AiMaskService>();
         services.AddSingleton<ImageToolHostProvider>();
         services.AddSingleton<DevelopClipboard>();
 

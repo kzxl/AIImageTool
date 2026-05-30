@@ -52,5 +52,25 @@ public static class KnownModels
         ExpectedSize = 0,
         Description = "GPEN face restoration 512x512"
     };
+
+    /// <summary>U²-Net (salient object / subject segmentation) — sinh mask Subject. ~168MB.</summary>
+    public static readonly ModelDescriptor U2Net = new()
+    {
+        Id = "u2net",
+        FileName = "u2net.onnx",
+        Url = "https://huggingface.co/tomjackson2023/rembg/resolve/main/u2net.onnx?download=true",
+        ExpectedSize = 0,
+        Description = "U^2-Net salient object segmentation (Subject mask)"
+    };
+
+    /// <summary>SCUNet denoiser (color, real noise). Dùng cho AI Denoise op cuối chuỗi.</summary>
+    public static readonly ModelDescriptor ScuNetColor = new()
+    {
+        Id = "scunet-color",
+        FileName = "scunet_color_real_psnr.onnx",
+        Url = "https://huggingface.co/Phips/SCUNet_onnx/resolve/main/scunet_color_real_psnr.onnx?download=true",
+        ExpectedSize = 0,
+        Description = "SCUNet real-image color denoiser"
+    };
 }
 

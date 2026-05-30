@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IStyleService _styles;
     private readonly ImageToolHostProvider _hostProvider;
     private readonly DevelopClipboard _developClipboard;
+    private readonly AiMaskService _aiMaskService;
     private List<PluginEntry> _pluginEntries = new();
     private ToolsWindow? _toolsWindow;
     private Grid? _toolsHostOriginalParent;
@@ -56,6 +57,7 @@ public partial class MainWindow : Window
         _hostProvider = hostProvider;
         _hostProvider.Host = centerView; // CenterPreview implement IImageToolHost
         _developClipboard = serviceProvider.GetRequiredService<DevelopClipboard>();
+        _aiMaskService = serviceProvider.GetRequiredService<AiMaskService>(); // đăng ký delegate AI denoise + segmentation
 
         // Load saved batch parallel
         _batch.MaxParallel = Math.Max(1, _settings.Current.BatchParallel);
@@ -79,10 +81,32 @@ public partial class MainWindow : Window
         centerView.BindBrushPanel(developPanel);
         centerView.BindWhiteBalancePick(developPanel);
 
+        // AI Subject mask: DevelopPanel yêu cầu -> AiMaskService sinh mask PNG -> AddRasterMask.
+        developPanel.SubjectMaskRequested += async (s, path) =>
+        {
+            txtStatus.Text = "AI: đang phân vùng chủ thể (lần đầu sẽ tải model)...";
+            try
+            {
+                var maskPath = await _aiMaskService.GenerateSubjectMaskAsync(path);
+                if (maskPath != null)
+                {
+                    developPanel.AddRasterMask(maskPath);
+                    txtStatus.Text = "AI: đã tạo mask chủ thể.";
+                }
+                else txtStatus.Text = "AI: không tạo được mask (xem app.log).";
+            }
+            catch (Exception ex)
+            {
+                ImageTool.Shared.AppLog.Error("MainWindow.SubjectMask", path, ex);
+                txtStatus.Text = "AI: lỗi tạo mask.";
+            }
+        };
+
         _aiManager.StartWorker();
         Closed += (s, e) =>
         {
             _aiManager.Dispose();
+            _aiMaskService.Dispose();
             (_thumbs as IDisposable)?.Dispose();
         };
 
