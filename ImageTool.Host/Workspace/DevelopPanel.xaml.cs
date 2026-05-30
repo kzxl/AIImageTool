@@ -177,6 +177,17 @@ public partial class DevelopPanel : UserControl
         _curveEditor = new CurveEditor { Margin = new Thickness(0, 2, 0, 4) };
         _curveEditor.CurveChanged += CurveEditor_Changed;
         gCurve.Children.Add(_curveEditor);
+        // Preset đường cong tương phản (áp cho kênh RGB master).
+        var presetRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        presetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        var cmbCurvePreset = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
+        foreach (var n in new[] { "Linear", "Medium Contrast", "Strong Contrast", "Faded (lifted blacks)" })
+            cmbCurvePreset.Items.Add(new ComboBoxItem { Content = n });
+        cmbCurvePreset.SelectedIndex = 0;
+        cmbCurvePreset.SelectionChanged += (_, _) => { if (!_loading) ApplyCurvePreset(cmbCurvePreset.SelectedIndex); };
+        cmbCurvePreset.ToolTip = "Áp đường cong tương phản dựng sẵn lên kênh RGB master.";
+        presetRow.Children.Add(cmbCurvePreset);
+        gCurve.Children.Add(presetRow);
         var curveHint = new TextBlock
         {
             Text = "Kéo điểm • double-click thêm/xoá • phải-chuột xoá",
@@ -813,6 +824,23 @@ public partial class DevelopPanel : UserControl
         int ch = _curveChannel.SelectedIndex < 0 ? 0 : _curveChannel.SelectedIndex;
         _curveData[ch] = serialized;
         ScheduleCommit();
+    }
+
+    /// <summary>Áp 1 preset đường cong tương phản lên kênh RGB master (index 0). 0 = Linear (reset).</summary>
+    private void ApplyCurvePreset(int index)
+    {
+        if (_currentPath == null) return;
+        string pts = index switch
+        {
+            1 => "0,0;0.25,0.21;0.75,0.79;1,1",       // medium contrast (S nhẹ)
+            2 => "0,0;0.25,0.16;0.5,0.5;0.75,0.84;1,1", // strong contrast (S mạnh)
+            3 => "0,0.06;0.25,0.27;0.75,0.78;1,0.95",  // faded: nâng đen, hạ trắng (film/matte)
+            _ => "0,0;1,1",                            // linear
+        };
+        _curveData[0] = pts;
+        if (_curveEditor != null && _curveChannel != null && _curveChannel.SelectedIndex <= 0)
+            _curveEditor.SetPoints(pts);
+        Commit();
     }
 
     /// <summary>Gom toàn bộ slider thành chuỗi op canonical và đẩy vào history (atomic group).</summary>

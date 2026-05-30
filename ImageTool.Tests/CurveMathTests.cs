@@ -140,4 +140,36 @@ public class CurveMathTests
         float lumAfter = ColorSpace.Luminance(img.Pixels[0], img.Pixels[1], img.Pixels[2]);
         Assert.True(lumAfter > lumBefore);
     }
+
+    [Theory]
+    [InlineData("0,0;0.25,0.21;0.75,0.79;1,1")]            // medium contrast
+    [InlineData("0,0;0.25,0.16;0.5,0.5;0.75,0.84;1,1")]    // strong contrast
+    public void ContrastPreset_ParsesAndIsSCurve(string pts)
+    {
+        var parsed = CurveMath.Parse(pts);
+        Assert.NotNull(parsed);
+        var lut = CurveMath.BuildLut(parsed);
+        // S-curve: vùng tối bị kéo xuống, vùng sáng kéo lên, giữ điểm giữa ~0.5.
+        Assert.True(CurveMath.Eval(lut, 0.25f) < 0.25f, "shadows phải tối hơn");
+        Assert.True(CurveMath.Eval(lut, 0.75f) > 0.75f, "highlights phải sáng hơn");
+        Assert.InRange(CurveMath.Eval(lut, 0.5f), 0.45f, 0.55f);
+    }
+
+    [Fact]
+    public void FadedPreset_LiftsBlacks_LowersWhites()
+    {
+        var parsed = CurveMath.Parse("0,0.06;0.25,0.27;0.75,0.78;1,0.95");
+        Assert.NotNull(parsed);
+        var lut = CurveMath.BuildLut(parsed);
+        Assert.True(CurveMath.Eval(lut, 0f) > 0.03f, "đen được nâng lên");
+        Assert.True(CurveMath.Eval(lut, 1f) < 0.98f, "trắng bị hạ xuống");
+    }
+
+    [Fact]
+    public void LinearPreset_IsIdentity()
+    {
+        var parsed = CurveMath.Parse("0,0;1,1");
+        Assert.NotNull(parsed);
+        Assert.True(CurveMath.IsIdentity(CurveMath.Normalize(parsed)));
+    }
 }
