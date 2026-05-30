@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3). 400/400 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3). Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 419/419 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -344,6 +344,16 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 > **PHASE D1 HOÀN TẤT:** D1.1 Sigmoid + D1.2 Filmic RGB + D1.3 Tone Equalizer + D1.4 ToneCurve preserve-hue.
 >
 > **NGOÀI PLAN (parity bổ sung):** `GlowOp` (soften/Orton glow: blur + screen blend + bright-pass) trong Effects.
+>
+> **DYNAMIC RANGE & FOCUS (2026-05-30):**
+> - **Exposure Fusion (Mertens)** — `ExposureFusion` + `Pyramid` (Laplacian/Gaussian): ghép chùm bracket
+>   tăng dynamic range THẬT (3 trọng số contrast/saturation/well-exposedness, multi-scale blend).
+> - **Focus measure** — `FocusMeasure` (variance-of-Laplacian + Tenengrad + focus map): phát hiện vùng nét /
+>   ảnh out nét (KHÔNG sửa được ảnh đã mờ — thông tin đã mất; chỉ deblur nhẹ qua DiffuseOp).
+> - **Focus Stacking** — `FocusStack`: ghép nhiều ảnh lấy nét khác khoảng cách thành 1 ảnh nét toàn bộ
+>   (softmax theo focus map từng pixel).
+> - **MergeService** + context menu "Merge..." (Merge to HDR / Focus Stack) trên selection, xuất PNG 16-bit.
+>   Đều có test (fusion/focus/stack + decode→merge→save).
 
 ---
 

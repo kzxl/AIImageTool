@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using ImageTool.Core;
+using ImageTool.Imaging;
+using ImageTool.Shared;
 
 namespace ImageTool.Host;
 
@@ -152,6 +155,41 @@ public static class ImageContextMenu
         };
         menu.Items.Add(miRename);
 
+        // --- Merge nhiều ảnh (HDR / Focus Stack) ---
+        var miMerge = new MenuItem { Header = "Merge..." };
+        var miHdr = new MenuItem { Header = "Merge to HDR (Exposure Fusion)" };
+        miHdr.Click += (_, _) => RunMerge(Targets(), MergeService.Mode.Hdr);
+        var miFocus = new MenuItem { Header = "Focus Stack (nét toàn bộ)" };
+        miFocus.Click += (_, _) => RunMerge(Targets(), MergeService.Mode.FocusStack);
+        miMerge.Items.Add(miHdr);
+        miMerge.Items.Add(miFocus);
+        menu.Items.Add(miMerge);
+
         return menu;
+    }
+
+    /// <summary>Decode + ghép các ảnh selection (HDR/Focus) ở thread nền, báo kết quả qua MessageBox.</summary>
+    private static async void RunMerge(List<string> targets, MergeService.Mode mode)
+    {
+        string label = mode == MergeService.Mode.FocusStack ? "Focus Stack" : "Merge to HDR";
+        if (targets.Count < 2)
+        {
+            MessageBox.Show($"Hãy chọn ít nhất 2 ảnh để {label}.", label, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        try
+        {
+            string outPath = await System.Threading.Tasks.Task.Run(() =>
+            {
+                var decoders = ImageDecoderRegistry.CreateDefault();
+                return MergeService.Merge(targets, mode, decoders);
+            });
+            MessageBox.Show($"{label} xong: {Path.GetFileName(outPath)}", label, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("ImageContextMenu.Merge", label, ex);
+            MessageBox.Show($"{label} lỗi: {ex.Message}", label, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }
