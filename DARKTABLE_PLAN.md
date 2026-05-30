@@ -79,7 +79,9 @@ Darktable module -> op của ta đã làm:
 - [~] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng — `PolygonMask` (đa giác nhiều đỉnh,
       ray-casting inside + feather theo khoảng cách tới biên, invert; UI "+ Polygon" click đặt đỉnh trên ảnh,
       có test). Ellipse nhiều node + per-node feather CHƯA (Radial hiện 1 tâm).
-- [ ] **D4.4** Multiple instances 1 module (vd 2 lần exposure khác mask) — pipeline đã hỗ trợ, cần UI quản lý instance.
+- [~] **D4.4** Multiple instances 1 module (vd 2 lần exposure khác mask) — pipeline đã hỗ trợ; Local
+      Adjustments cho phép NHIỀU mask instance cùng/khác loại (theo maskId) + nút **Nhân bản mask** (⧉,
+      `LocalMask.Clone` Id mới, round-trip qua maskId). Multiple instance cho op GLOBAL (vd 2 Curve) vẫn cần UI riêng.
 - [x] **D4.5** Blend modes (normal/multiply/screen/overlay/...) + opacity cho mỗi op (Darktable "blending").
 
 ## F. PHASE D5 — RAW thật (cần native), tách riêng

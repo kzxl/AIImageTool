@@ -117,6 +117,19 @@ public sealed class LocalMask
     private static float F(IReadOnlyDictionary<string, string> p, string key)
         => p.TryGetValue(key, out var s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f;
 
+    /// <summary>Bản sao sâu mask này với Id mới (D4.4: nhiều instance). Sao chép hình học + bộ chỉnh + blend.</summary>
+    public LocalMask Clone() => new()
+    {
+        Id = Guid.NewGuid().ToString("N").Substring(0, 8),
+        Name = Name + " copy",
+        MaskType = MaskType,
+        MaskParams = new Dictionary<string, string>(MaskParams),
+        Exposure = Exposure, Contrast = Contrast, Highlights = Highlights, Shadows = Shadows,
+        Whites = Whites, Blacks = Blacks, Temp = Temp, Tint = Tint,
+        Saturation = Saturation, Vibrance = Vibrance, Clarity = Clarity, Sharpen = Sharpen,
+        BlendMode = BlendMode, Opacity = Opacity,
+    };
+
     /// <summary>Tạo mask mặc định theo loại (hình học hợp lý ở giữa khung).</summary>
     public static LocalMask CreateDefault(string maskType)
     {

@@ -112,6 +112,18 @@ public partial class DevelopPanel
         Commit();
     }
 
+    /// <summary>Nhân bản 1 mask thành instance mới (D4.4) — chèn ngay sau bản gốc, chọn bản mới.</summary>
+    private void DuplicateMask(LocalMask m)
+    {
+        if (_currentPath == null || _history == null) return;
+        var copy = m.Clone();
+        int idx = _masks.IndexOf(m);
+        if (idx < 0) _masks.Add(copy); else _masks.Insert(idx + 1, copy);
+        SelectMask(copy);
+        RefreshMaskList();
+        Commit();
+    }
+
     private void SelectMask(LocalMask? m)
     {
         _activeMask = m;
@@ -132,6 +144,9 @@ public partial class DevelopPanel
             var del = new Button { Content = "✕", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0) };
             del.Click += (_, _) => RemoveMask(mm);
             DockPanel.SetDock(del, Dock.Right);
+            var dup = new Button { Content = "⧉", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0), ToolTip = "Nhân bản mask (instance mới)" };
+            dup.Click += (_, _) => DuplicateMask(mm);
+            DockPanel.SetDock(dup, Dock.Right);
             var sel = new Button
             {
                 Content = $"{m.Name}{(m.MaskType == BrushMask.Type ? "" : "")}",
@@ -142,6 +157,7 @@ public partial class DevelopPanel
             };
             sel.Click += (_, _) => { SelectMask(mm); RefreshMaskList(); };
             row.Children.Add(del);
+            row.Children.Add(dup);
             row.Children.Add(sel);
             _maskListPanel.Children.Add(row);
         }
