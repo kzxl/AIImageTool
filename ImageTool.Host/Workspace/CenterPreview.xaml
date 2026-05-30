@@ -179,20 +179,35 @@
             </Grid>
 
             <!-- COMPARE mode (side-by-side before/after) -->
-            <Grid x:Name="paneCompare" Visibility="Collapsed" Background="#141414">
+            <Grid x:Name="paneCompare" Visibility="Collapsed" Background="#141414"
+                  MouseWheel="PaneCompare_MouseWheel">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid Grid.Column="0" Margin="8">
-                    <Image x:Name="imgCompareBefore" Stretch="Uniform"/>
+                <Grid Grid.Column="0" Margin="8" ClipToBounds="True">
+                    <Image x:Name="imgCompareBefore" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="cmpScaleBefore" ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform x:Name="cmpPanBefore" X="0" Y="0"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
                     <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
                             Background="#AA000000" CornerRadius="2" Padding="6,2">
                         <TextBlock Text="BEFORE" Foreground="#DDD" FontSize="10" FontWeight="SemiBold"/>
                     </Border>
                 </Grid>
-                <Grid Grid.Column="1" Margin="8">
-                    <Image x:Name="imgCompareAfter" Stretch="Uniform"/>
+                <Grid Grid.Column="1" Margin="8" ClipToBounds="True">
+                    <Image x:Name="imgCompareAfter" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="cmpScaleAfter" ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform x:Name="cmpPanAfter" X="0" Y="0"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
                     <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
                             Background="#CC55C1E7" CornerRadius="2" Padding="6,2">
                         <TextBlock Text="AFTER" Foreground="#000" FontSize="10" FontWeight="SemiBold"/>

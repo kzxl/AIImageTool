@@ -11,8 +11,29 @@ namespace ImageTool.Host.Workspace;
 public partial class CenterPreview
 {
     private bool _compareMode;
+    private double _cmpZoom = 1.0;
 
     private void BtnCompare_Click(object sender, RoutedEventArgs e) => ToggleCompareMode();
+
+    /// <summary>Zoom đồng bộ 2 khung compare (8.6) — cuộn chuột phóng cả before lẫn after cùng mức.</summary>
+    private void PaneCompare_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (!_compareMode) return;
+        double factor = e.Delta > 0 ? 1.25 : 1 / 1.25;
+        _cmpZoom = Math.Clamp(_cmpZoom * factor, 1.0, 8.0);
+        cmpScaleBefore.ScaleX = cmpScaleBefore.ScaleY = _cmpZoom;
+        cmpScaleAfter.ScaleX = cmpScaleAfter.ScaleY = _cmpZoom;
+        e.Handled = true;
+    }
+
+    private void ResetCompareZoom()
+    {
+        _cmpZoom = 1.0;
+        cmpScaleBefore.ScaleX = cmpScaleBefore.ScaleY = 1.0;
+        cmpScaleAfter.ScaleX = cmpScaleAfter.ScaleY = 1.0;
+        cmpPanBefore.X = cmpPanBefore.Y = 0;
+        cmpPanAfter.X = cmpPanAfter.Y = 0;
+    }
 
     private void ToggleCompareMode()
     {
@@ -30,6 +51,7 @@ public partial class CenterPreview
             paneFull.Visibility = Visibility.Collapsed;
             paneCompare.Visibility = Visibility.Visible;
             btnCompare.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x7E, 0xFF));
+            ResetCompareZoom();
             _ = LoadCompareAsync(path);
         }
         else
