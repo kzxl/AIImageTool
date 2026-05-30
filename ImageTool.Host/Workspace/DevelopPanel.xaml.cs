@@ -209,6 +209,20 @@ public partial class DevelopPanel : UserControl
         var btnAutoLevels = new Button { Content = "Auto Levels", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left };
         btnAutoLevels.Click += BtnAutoLevels_Click;
         gLevels.Children.Add(btnAutoLevels);
+        // Per-channel (D2.5): black/white/gamma riêng cho R/G/B (color grading kiểu film).
+        var expLvlCh = new Expander { Header = "Per-channel R/G/B", Foreground = Brushes.Gainsboro, FontSize = 11, Margin = new Thickness(0, 2, 0, 2) };
+        var gLvlCh = new StackPanel();
+        AddSlider(gLvlCh, "lvl_blackR", "R Black", 0, 0.5, 0, "0.00");
+        AddSlider(gLvlCh, "lvl_whiteR", "R White", 0.5, 1, 1, "0.00");
+        AddSlider(gLvlCh, "lvl_gammaR", "R Gamma", 0.2, 3, 1, "0.00");
+        AddSlider(gLvlCh, "lvl_blackG", "G Black", 0, 0.5, 0, "0.00");
+        AddSlider(gLvlCh, "lvl_whiteG", "G White", 0.5, 1, 1, "0.00");
+        AddSlider(gLvlCh, "lvl_gammaG", "G Gamma", 0.2, 3, 1, "0.00");
+        AddSlider(gLvlCh, "lvl_blackB", "B Black", 0, 0.5, 0, "0.00");
+        AddSlider(gLvlCh, "lvl_whiteB", "B White", 0.5, 1, 1, "0.00");
+        AddSlider(gLvlCh, "lvl_gammaB", "B Gamma", 0.2, 3, 1, "0.00");
+        expLvlCh.Content = gLvlCh;
+        gLevels.Children.Add(expLvlCh);
 
         // Color Balance RGB 4-way (D2.1)
         var gCbr = AddGroup("Color Balance RGB", false);
@@ -479,6 +493,18 @@ public partial class DevelopPanel : UserControl
     private void SetVal(string key, double v) { if (_sliders.TryGetValue(key, out var s) ) s.Value = v; }
     private double GetVal(string key) => _sliders.TryGetValue(key, out var s) ? s.Value : 0;
 
+    /// <summary>Giá trị slider per-channel; trả NaN nếu đang ở mặc định (kênh "kế thừa" master).</summary>
+    private float ChVal(string key, double identity)
+    {
+        double v = GetVal(key);
+        return Math.Abs(v - identity) < 1e-4 ? float.NaN : (float)v;
+    }
+
+    /// <summary>Đọc param per-channel của Levels từ history; trả identity nếu key không có.</summary>
+    private static double LvlCh(IReadOnlyDictionary<string, string>? p, string key, double identity)
+        => p != null && p.TryGetValue(key, out var s) &&
+           double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : identity;
+
     private void LoadFor(string? path)
     {
         _currentPath = path;
@@ -525,6 +551,10 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_black", Param(path!, RgbLevelsOp.Type, "black"));
         SetVal("lvl_gamma", lvlP != null ? Param(path!, RgbLevelsOp.Type, "gamma") : 1);
         SetVal("lvl_white", lvlP != null ? Param(path!, RgbLevelsOp.Type, "white") : 1);
+        // Per-channel: lấy từ params nếu có, ngược lại về mặc định identity (0/1/1).
+        SetVal("lvl_blackR", LvlCh(lvlP, "blackR", 0)); SetVal("lvl_whiteR", LvlCh(lvlP, "whiteR", 1)); SetVal("lvl_gammaR", LvlCh(lvlP, "gammaR", 1));
+        SetVal("lvl_blackG", LvlCh(lvlP, "blackG", 0)); SetVal("lvl_whiteG", LvlCh(lvlP, "whiteG", 1)); SetVal("lvl_gammaG", LvlCh(lvlP, "gammaG", 1));
+        SetVal("lvl_blackB", LvlCh(lvlP, "blackB", 0)); SetVal("lvl_whiteB", LvlCh(lvlP, "whiteB", 1)); SetVal("lvl_gammaB", LvlCh(lvlP, "gammaB", 1));
         SetVal("hlrecon", Param(path!, HighlightReconstructionOp.Type, "amount"));
         SetVal("cbr_liftHue", Param(path!, ColorBalanceRgbOp.Type, "liftHue"));
         SetVal("cbr_liftSat", Param(path!, ColorBalanceRgbOp.Type, "liftSat"));
@@ -870,8 +900,14 @@ public partial class DevelopPanel : UserControl
         };
         if (!filmRgb.IsIdentity) ops.Add(Op(FilmicRgbOp.Type, "Filmic RGB", filmRgb.ToParams()));
 
-        // 4c) Levels (D2.5)
-        var levels = new RgbLevelsOp { Black = (float)GetVal("lvl_black"), Gamma = (float)GetVal("lvl_gamma"), White = (float)GetVal("lvl_white") };
+        // 4c) Levels (D2.5) — master + per-channel R/G/B (chỉ ghi kênh khác identity).
+        var levels = new RgbLevelsOp
+        {
+            Black = (float)GetVal("lvl_black"), Gamma = (float)GetVal("lvl_gamma"), White = (float)GetVal("lvl_white"),
+            BlackR = ChVal("lvl_blackR", 0), WhiteR = ChVal("lvl_whiteR", 1), GammaR = ChVal("lvl_gammaR", 1),
+            BlackG = ChVal("lvl_blackG", 0), WhiteG = ChVal("lvl_whiteG", 1), GammaG = ChVal("lvl_gammaG", 1),
+            BlackB = ChVal("lvl_blackB", 0), WhiteB = ChVal("lvl_whiteB", 1), GammaB = ChVal("lvl_gammaB", 1),
+        };
         if (!levels.IsIdentity) ops.Add(Op(RgbLevelsOp.Type, "Levels", levels.ToParams()));
 
         // 4d) Highlight reconstruction (D5.3)

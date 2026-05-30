@@ -49,7 +49,8 @@ Darktable module -> op của ta đã làm:
 - [x] **D2.3** `VelviaOp` / saturation thông minh theo độ rực + luminance (giống module velvia).
 - [x] **D2.4** `ColorContrastOp` — chỉnh tương phản trục a*/b* (green-magenta, blue-yellow) trong Lab.
 - [x] **D2.5** `RgbLevelsOp` — levels (black/gray/white point per-channel + auto). Auto Levels:
-      `AutoTone.AnalyzeLevels` (điểm đen/trắng theo phân vị 0.5%/99.5%) + nút "Auto Levels" trong UI. + test.
+      `AutoTone.AnalyzeLevels` (điểm đen/trắng theo phân vị 0.5%/99.5%) + nút "Auto Levels" trong UI.
+      Per-channel R/G/B black/white/gamma (kế thừa master khi NaN, color grading kiểu film) + UI Expander. + test.
 
 ## D. PHASE D3 — Detail & correction, test được
 

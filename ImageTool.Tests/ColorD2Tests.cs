@@ -39,6 +39,66 @@ public class ColorD2Tests
         Assert.True(ColorSpace.LinearToSrgb(img.Pixels[0]) > 0.5f);
     }
 
+    [Fact]
+    public void Levels_PerChannel_OnlyAffectsThatChannel()
+    {
+        // Nâng black kênh Blue -> chỉ B thay đổi, R/G giữ nguyên.
+        float v = ColorSpace.SrgbToLinear(0.3f);
+        var img = Solid(v, v, v);
+        new RgbLevelsOp { BlackB = 0.15f }.Apply(img, 1f);
+        Assert.Equal(v, img.Pixels[0], 4);       // R nguyên
+        Assert.Equal(v, img.Pixels[1], 4);       // G nguyên
+        Assert.True(ColorSpace.LinearToSrgb(img.Pixels[2]) < 0.3f); // B tối hơn
+    }
+
+    [Fact]
+    public void Levels_PerChannel_InheritsMasterWhenNaN()
+    {
+        // Master gamma=2 áp cho mọi kênh khi per-channel = NaN.
+        float v = ColorSpace.SrgbToLinear(0.5f);
+        var img = Solid(v, v, v);
+        new RgbLevelsOp { Gamma = 2f }.Apply(img, 1f);
+        Assert.True(ColorSpace.LinearToSrgb(img.Pixels[0]) > 0.5f);
+        Assert.True(ColorSpace.LinearToSrgb(img.Pixels[1]) > 0.5f);
+        Assert.True(ColorSpace.LinearToSrgb(img.Pixels[2]) > 0.5f);
+    }
+
+    [Fact]
+    public void Levels_PerChannel_OverridesMaster()
+    {
+        // Master gamma=2 nhưng kênh R chỉ định gamma=1 -> R không sáng lên.
+        float v = ColorSpace.SrgbToLinear(0.5f);
+        var img = Solid(v, v, v);
+        new RgbLevelsOp { Gamma = 2f, GammaR = 1f }.Apply(img, 1f);
+        Assert.Equal(0.5f, ColorSpace.LinearToSrgb(img.Pixels[0]), 2); // R giữ ~0.5
+        Assert.True(ColorSpace.LinearToSrgb(img.Pixels[1]) > 0.5f);    // G sáng theo master
+    }
+
+    [Fact]
+    public void Levels_PerChannel_RoundTrip()
+    {
+        var op = new RgbLevelsOp
+        {
+            Black = 0.05f, White = 0.95f, Gamma = 1.2f,
+            BlackB = 0.1f, GammaR = 0.8f,
+        };
+        var back = RgbLevelsOp.FromParams(op.ToParams());
+        Assert.Equal(0.05f, back.Black, 4);
+        Assert.Equal(0.1f, back.BlackB, 4);
+        Assert.Equal(0.8f, back.GammaR, 4);
+        // Kênh không set vẫn là NaN (kế thừa master).
+        Assert.True(float.IsNaN(back.WhiteR));
+        Assert.True(float.IsNaN(back.BlackG));
+    }
+
+    [Fact]
+    public void Levels_PerChannelIdentity_IsIdentity()
+    {
+        // Master identity + per-channel ở giá trị identity -> toàn bộ identity.
+        var op = new RgbLevelsOp { BlackR = 0f, WhiteR = 1f, GammaR = 1f };
+        Assert.True(op.IsIdentity);
+    }
+
     // ---- Velvia (D2.3) ----
 
     [Fact]
