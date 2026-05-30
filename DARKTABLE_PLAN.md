@@ -80,7 +80,9 @@ Darktable module -> op của ta đã làm:
 
 - [ ] **D5.1** Plugin LibRaw (P/Invoke) đăng ký đè `ImageDecoderRegistry` -> demosaic sensor 12-14 bit thật.
 - [ ] **D5.2** Demosaic chọn được (PPG/AMaZE/RCD) + WB as-shot từ metadata RAW.
-- [ ] **D5.3** Highlight reconstruction (phục hồi vùng cháy từ kênh chưa bão hoà).
+- [~] **D5.3** Highlight reconstruction — `HighlightReconstructionOp` khử ám màu vùng cháy (kéo kênh đã clip
+      về trung tính theo độ sáng đỉnh, giữ brightness), chạy trên ảnh thường + RAW preview. UI Tone Mapping +
+      test. Phục hồi từ kênh RAW chưa bão hoà thật (cần dữ liệu sensor) CHƯA.
 - [ ] **D5.4** Input color profile (DCP/camera matrix) -> working space.
 - [ ] **D5.5** Hỗ trợ đa định dạng RAW rộng (rawspeed-like) — phụ thuộc LibRaw.
 

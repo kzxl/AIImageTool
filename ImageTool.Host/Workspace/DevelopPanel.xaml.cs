@@ -145,6 +145,7 @@ public partial class DevelopPanel : UserControl
         AddSlider(gToneMap, "filmrgb_contrast", "  Contrast", 0.5, 2.5, 1.2, "0.00");
         AddSlider(gToneMap, "filmrgb_lat", "  Latitude", 0, 0.9, 0.2, "0.00");
         AddSlider(gToneMap, "filmrgb_sat", "  HL Saturation", -1, 1, 0);
+        AddSlider(gToneMap, "hlrecon", "Highlight Recon", 0, 1, 0);
 
         // Tone Equalizer (D1.3) — chỉnh sáng theo 5 zone
         var gToneEq = AddGroup("Tone Equalizer", false);
@@ -515,6 +516,7 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_black", Param(path!, RgbLevelsOp.Type, "black"));
         SetVal("lvl_gamma", lvlP != null ? Param(path!, RgbLevelsOp.Type, "gamma") : 1);
         SetVal("lvl_white", lvlP != null ? Param(path!, RgbLevelsOp.Type, "white") : 1);
+        SetVal("hlrecon", Param(path!, HighlightReconstructionOp.Type, "amount"));
         SetVal("cbr_liftHue", Param(path!, ColorBalanceRgbOp.Type, "liftHue"));
         SetVal("cbr_liftSat", Param(path!, ColorBalanceRgbOp.Type, "liftSat"));
         SetVal("cbr_gammaHue", Param(path!, ColorBalanceRgbOp.Type, "gammaHue"));
@@ -855,6 +857,10 @@ public partial class DevelopPanel : UserControl
         // 4c) Levels (D2.5)
         var levels = new RgbLevelsOp { Black = (float)GetVal("lvl_black"), Gamma = (float)GetVal("lvl_gamma"), White = (float)GetVal("lvl_white") };
         if (!levels.IsIdentity) ops.Add(Op(RgbLevelsOp.Type, "Levels", levels.ToParams()));
+
+        // 4d) Highlight reconstruction (D5.3)
+        var hlr = new HighlightReconstructionOp { Amount = (float)GetVal("hlrecon") };
+        if (!hlr.IsIdentity) ops.Add(Op(HighlightReconstructionOp.Type, "Highlight Recon", hlr.ToParams()));
 
         // 5) HSL
         var hsl = new HslMixerOp();
