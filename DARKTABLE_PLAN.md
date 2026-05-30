@@ -21,8 +21,9 @@ Darktable module -> op của ta đã làm:
 - lens correction (thủ công) -> `LensCorrectionOp` (distortion k1/k2 + vignette)
 - crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`
 - lut 3D -> `LutCubeOp`; monochrome -> `BlackWhiteOp`; invert -> `InvertOp`
-- retouch (1 phần: heal/clone) -> `HealingOp`; drawn+parametric mask -> `MaskedOp` + 7 loại mask
-  (gradient/radial/brush/lum-range/color-range/sky/raster) + `ParametricMask` đa kênh (L/C/h/R/G/B) + AI subject/sky
+- retouch (1 phần: heal/clone) -> `HealingOp`; drawn+parametric mask -> `MaskedOp` + 8 loại mask
+  (gradient/radial/brush/polygon/lum-range/color-range/sky/raster) + `ParametricMask` đa kênh (L/C/h/R/G/B)
+  + mask combine (intersect/union/subtract) + AI subject/sky
 - raw (preview) -> `RawPreviewDecoder`; export, presets, history, snapshots(before/after) — có
 - input/working color space (matrix, D2.2 1 phần) -> `ColorSpaces` + `InputProfileOp` (sRGB/AdobeRGB/Rec2020/P3)
 - profiled denoise/upscale AI, dominant color, color harmony — có (vượt Darktable)
@@ -69,7 +70,9 @@ Darktable module -> op của ta đã làm:
 - [x] **D4.2** Mask combine ops — union/intersect/difference giữa nhiều mask trên 1 instance: `MaskCombine`
       (intersect a*b / union a+b-ab / subtract a*(1-b)) + mask phụ luminance-range trong `MaskedOp` ("Refine"
       combo + Min/Max/Smooth trong Local Adjustments). Round-trip qua params. + test.
-- [ ] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng (nâng Radial/Gradient hiện có).
+- [~] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng — `PolygonMask` (đa giác nhiều đỉnh,
+      ray-casting inside + feather theo khoảng cách tới biên, invert; UI "+ Polygon" click đặt đỉnh trên ảnh,
+      có test). Ellipse nhiều node + per-node feather CHƯA (Radial hiện 1 tâm).
 - [ ] **D4.4** Multiple instances 1 module (vd 2 lần exposure khác mask) — pipeline đã hỗ trợ, cần UI quản lý instance.
 - [x] **D4.5** Blend modes (normal/multiply/screen/overlay/...) + opacity cho mỗi op (Darktable "blending").
 

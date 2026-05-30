@@ -156,6 +156,7 @@ public sealed class MaskedOp : IEditOp
             case RasterMask.Type: mask = RasterMask.FromParams(p); break;
             case SkyMask.Type: sky = SkyMask.FromParams(p); break;
             case ParametricMask.Type: param = ParametricMask.FromParams(p); break;
+            case PolygonMask.Type: mask = PolygonMask.FromParams(p); break;
         }
         return new MaskedOp(inner, mask, range, colorRange, sky, param, p);
     }

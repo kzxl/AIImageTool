@@ -38,6 +38,7 @@ public partial class DevelopPanel
         AddMaskButton(addRow, "+ Gradient", LinearGradientMask.Type);
         AddMaskButton(addRow, "+ Radial", RadialMask.Type);
         AddMaskButton(addRow, "+ Brush", BrushMask.Type);
+        AddMaskButton(addRow, "+ Polygon", PolygonMask.Type);
         AddMaskButton(addRow, "+ Lum", LuminanceRangeMask.Type);
         AddMaskButton(addRow, "+ Color", ColorRangeMask.Type);
         AddMaskButton(addRow, "+ Param", ParametricMask.Type);
@@ -115,8 +116,9 @@ public partial class DevelopPanel
     {
         _activeMask = m;
         BuildMaskEditor();
-        // Brush mask đang chọn -> báo CenterPreview cho phép vẽ.
-        BrushMaskActivated?.Invoke(this, (m != null && m.MaskType == BrushMask.Type) ? m : null);
+        // Brush/Polygon mask đang chọn -> báo CenterPreview cho phép vẽ/đặt điểm.
+        bool drawable = m != null && (m.MaskType == BrushMask.Type || m.MaskType == PolygonMask.Type);
+        BrushMaskActivated?.Invoke(this, drawable ? m : null);
     }
 
     private void RefreshMaskList()
@@ -170,6 +172,15 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Vẽ trực tiếp trên ảnh (giữ chuột kéo). Chuột phải = xoá nét.",
+                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+                });
+                break;
+            case PolygonMask.Type:
+                AddMaskGeomSlider(m, "feather", "Feather", 0, 0.5, 0.05);
+                AddMaskInvertToggle(m);
+                _maskEditPanel.Children.Add(new TextBlock
+                {
+                    Text = "Click trên ảnh để đặt các đỉnh đa giác (≥3 điểm). Vùng trong đa giác được chọn.",
                     Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
                 });
                 break;
@@ -398,6 +409,7 @@ public partial class DevelopPanel
         LinearGradientMask.Type => "Gradient",
         RadialMask.Type => "Radial",
         BrushMask.Type => "Brush",
+        PolygonMask.Type => "Polygon",
         LuminanceRangeMask.Type => "Luminance Range",
         ColorRangeMask.Type => "Color Range",
         RasterMask.Type => "AI Subject",
@@ -414,6 +426,7 @@ public partial class DevelopPanel
             LinearGradientMask.Type => new[] { "x0", "y0", "x1", "y1", "invert" },
             RadialMask.Type => new[] { "cx", "cy", "rx", "ry", "feather", "invert" },
             BrushMask.Type => new[] { "radius", "hardness", "pts" },
+            PolygonMask.Type => new[] { "pts", "feather", "invert" },
             LuminanceRangeMask.Type => new[] { "min", "max", "smooth" },
             ColorRangeMask.Type => new[] { "hue", "range", "minSat", "smooth" },
             RasterMask.Type => new[] { "maskFile", "invert" },
@@ -433,10 +446,11 @@ public partial class DevelopPanel
         return d;
     }
 
-    /// <summary>Thêm 1 điểm vào brush mask đang active (toạ độ chuẩn hoá) rồi commit (debounce).</summary>
+    /// <summary>Thêm 1 điểm vào brush/polygon mask đang active (toạ độ chuẩn hoá) rồi commit (debounce).</summary>
     public void AppendBrushPoint(float nx, float ny)
     {
-        if (_activeMask == null || _activeMask.MaskType != BrushMask.Type) return;
+        if (_activeMask == null) return;
+        if (_activeMask.MaskType != BrushMask.Type && _activeMask.MaskType != PolygonMask.Type) return;
         string cur = _activeMask.MaskParams.TryGetValue("pts", out var s) ? s : "";
         string pt = $"{nx.ToString("R", System.Globalization.CultureInfo.InvariantCulture)},{ny.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}";
         _activeMask.MaskParams["pts"] = string.IsNullOrEmpty(cur) ? pt : cur + ";" + pt;

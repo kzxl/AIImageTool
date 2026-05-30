@@ -406,6 +406,113 @@ public sealed class BrushMask : IMaskGenerator
 }
 
 /// <summary>
+/// Polygon / Path mask (D4.3, kiểu Darktable "path" mask): vùng được định nghĩa bằng 1 đa giác nhiều
+/// node (toạ độ chuẩn hoá [0..1]). Bên trong đa giác = 1, ngoài = 0, mép mượt theo Feather (giảm dần
+/// theo khoảng cách tới biên đa giác). Cho phép tạo vùng tuỳ ý nhiều đỉnh (hơn radial/gradient).
+///
+/// Thuật toán: inside test bằng ray-casting (even-odd); feather bằng khoảng cách (chuẩn hoá) tới cạnh
+/// gần nhất, smoothstep. Cần ≥3 điểm; &lt;3 -> mask rỗng. Serialize: "pts"="x0,y0;...", "feather", "invert".
+/// </summary>
+public sealed class PolygonMask : IMaskGenerator
+{
+    public const string Type = "Polygon";
+    public string MaskType => Type;
+
+    public List<(float X, float Y)> Points = new();
+    public float Feather = 0.05f; // [0..0.5] chuẩn hoá theo cạnh dài
+    public bool Invert;
+
+    public float[] Generate(int width, int height)
+    {
+        var m = new float[width * height];
+        if (Points.Count < 3) return m;
+
+        int n = Points.Count;
+        // toạ độ pixel.
+        var px = new float[n];
+        var py = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            px[i] = Points[i].X * (width - 1);
+            py[i] = Points[i].Y * (height - 1);
+        }
+        float feather = Math.Clamp(Feather, 0f, 0.5f);
+        float featherPx = MathF.Max(1f, feather * MathF.Max(width, height));
+        bool invert = Invert;
+
+        Parallel.For(0, height, y =>
+        {
+            int row = y * width;
+            for (int x = 0; x < width; x++)
+            {
+                bool inside = PointInPolygon(x, y, px, py, n);
+                float dist = DistanceToEdges(x, y, px, py, n); // khoảng cách tới biên (px)
+                float v;
+                if (featherPx <= 1f)
+                {
+                    v = inside ? 1f : 0f;
+                }
+                else
+                {
+                    // trong: 1 ở lõi, giảm dần khi tới sát biên; ngoài: 0 sau feather.
+                    float t = Math.Clamp(dist / featherPx, 0f, 1f);
+                    float s = t * t * (3f - 2f * t);
+                    v = inside ? s : 0f;
+                }
+                m[row + x] = invert ? 1f - v : v;
+            }
+        });
+        return m;
+    }
+
+    private static bool PointInPolygon(float x, float y, float[] px, float[] py, int n)
+    {
+        bool inside = false;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            if (((py[i] > y) != (py[j] > y)) &&
+                (x < (px[j] - px[i]) * (y - py[i]) / (py[j] - py[i] + 1e-9f) + px[i]))
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    private static float DistanceToEdges(float x, float y, float[] px, float[] py, int n)
+    {
+        float best = float.MaxValue;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            float d = DistToSegment(x, y, px[j], py[j], px[i], py[i]);
+            if (d < best) best = d;
+        }
+        return best;
+    }
+
+    private static float DistToSegment(float px, float py, float ax, float ay, float bx, float by)
+    {
+        float dx = bx - ax, dy = by - ay;
+        float len2 = dx * dx + dy * dy;
+        float t = len2 < 1e-9f ? 0f : Math.Clamp(((px - ax) * dx + (py - ay) * dy) / len2, 0f, 1f);
+        float cx = ax + t * dx, cy = ay + t * dy;
+        float ex = px - cx, ey = py - cy;
+        return MathF.Sqrt(ex * ex + ey * ey);
+    }
+
+    public Dictionary<string, string> ToParams() => new()
+    {
+        ["mask"] = Type, ["pts"] = BrushMask.PackPoints(Points), ["feather"] = F(Feather), ["invert"] = Invert ? "true" : "false",
+    };
+    private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    public static PolygonMask FromParams(IReadOnlyDictionary<string, string> p) => new()
+    {
+        Points = BrushMask.UnpackPoints(EditOpRegistry.S(p, "pts")),
+        Feather = EditOpRegistry.F(p, "feather", 0.05f),
+        Invert = EditOpRegistry.B(p, "invert"),
+    };
+}
+
+/// <summary>
 /// Parametric mask đa kênh (D4.1, kiểu Darktable "parametric masking"): chọn vùng theo NHIỀU kênh
 /// cùng lúc — L (lightness), C (chroma), H (hue) trong Lab/HSV và R, G, B (sRGB). Mỗi kênh là 1
 /// band-pass [Min..Max] (giá trị chuẩn hoá [0..1], hue cũng [0..1] = độ/360) với mép mượt theo Feather.

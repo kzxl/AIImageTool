@@ -135,6 +135,10 @@ public sealed class LocalMask
                 m.Name = "Brush";
                 m.MaskParams = new() { ["radius"] = "0.05", ["hardness"] = "0.5", ["pts"] = "" };
                 break;
+            case PolygonMask.Type:
+                m.Name = "Polygon";
+                m.MaskParams = new() { ["pts"] = "", ["feather"] = "0.05", ["invert"] = "false" };
+                break;
             case LuminanceRangeMask.Type:
                 m.Name = "Luminance Range";
                 m.MaskParams = new() { ["min"] = "0", ["max"] = "1", ["smooth"] = "0.1" };
