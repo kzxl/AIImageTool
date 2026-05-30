@@ -64,6 +64,7 @@ public partial class ExportPanel : UserControl
         if (!string.IsNullOrEmpty(p.OutDir)) txtOutDir.Text = p.OutDir;
         txtPattern.Text = p.Pattern;
         SelectByTag(cmbSharpen, p.OutputSharpen);
+        chkCopyExif.IsChecked = p.CopyExif;
     }
 
     private static void SelectByTag(ComboBox combo, string tag)
@@ -87,6 +88,7 @@ public partial class ExportPanel : UserControl
             Pattern = string.IsNullOrWhiteSpace(txtPattern.Text) ? "{name}.{ext}" : txtPattern.Text,
             OutputSharpen = (cmbSharpen.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none",
             OutDir = txtOutDir.Text,
+            CopyExif = chkCopyExif.IsChecked == true,
         };
         // thay nếu trùng tên.
         _settings.Current.ExportPresets.RemoveAll(x => string.Equals(x.Name, preset.Name, StringComparison.OrdinalIgnoreCase));

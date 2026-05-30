@@ -13,6 +13,8 @@ public class ExportPreset
     public string? OutDir { get; set; }
     public string Watermark { get; set; } = "";
     public bool WriteXmp { get; set; }
+    /// <summary>Giữ EXIF gốc (camera/lens/ngày/GPS) trên file xuất. Mặc định true.</summary>
+    public bool CopyExif { get; set; } = true;
 }
 
 public class AppSettings
