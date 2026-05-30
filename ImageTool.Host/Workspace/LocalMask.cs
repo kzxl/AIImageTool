@@ -147,6 +147,20 @@ public sealed class LocalMask
                 m.Name = "Sky";
                 m.MaskParams = new() { ["strength"] = "0.7", ["smooth"] = "0.15" };
                 break;
+            case ParametricMask.Type:
+                m.Name = "Parametric";
+                // mặc định: không kênh nào giới hạn (mask = toàn ảnh) cho tới khi user kéo.
+                m.MaskParams = new()
+                {
+                    ["lMin"] = "0", ["lMax"] = "1", ["lFeather"] = "0.1",
+                    ["cMin"] = "0", ["cMax"] = "1", ["cFeather"] = "0.1",
+                    ["hMin"] = "0", ["hMax"] = "1", ["hFeather"] = "0.1",
+                    ["rMin"] = "0", ["rMax"] = "1", ["rFeather"] = "0.1",
+                    ["gMin"] = "0", ["gMax"] = "1", ["gFeather"] = "0.1",
+                    ["bMin"] = "0", ["bMax"] = "1", ["bFeather"] = "0.1",
+                    ["invert"] = "false",
+                };
+                break;
         }
         return m;
     }

@@ -24,6 +24,7 @@ public sealed class MaskedOp : IEditOp
     private readonly LuminanceRangeMask? _rangeMask; // range mask cần pixel
     private readonly ColorRangeMask? _colorMask;     // color range mask cần pixel
     private readonly SkyMask? _skyMask;              // sky mask cần pixel
+    private readonly ParametricMask? _paramMask;     // parametric mask đa kênh cần pixel
     private readonly IReadOnlyDictionary<string, string> _params;
     private readonly BlendMode _blend;
     private readonly float _opacity;
@@ -35,12 +36,16 @@ public sealed class MaskedOp : IEditOp
         : this(inner, mask, rangeMask, colorMask, null, rawParams) { }
 
     public MaskedOp(IEditOp inner, IMaskGenerator? mask, LuminanceRangeMask? rangeMask, ColorRangeMask? colorMask, SkyMask? skyMask, IReadOnlyDictionary<string, string> rawParams)
+        : this(inner, mask, rangeMask, colorMask, skyMask, null, rawParams) { }
+
+    public MaskedOp(IEditOp inner, IMaskGenerator? mask, LuminanceRangeMask? rangeMask, ColorRangeMask? colorMask, SkyMask? skyMask, ParametricMask? paramMask, IReadOnlyDictionary<string, string> rawParams)
     {
         _inner = inner;
         _mask = mask;
         _rangeMask = rangeMask;
         _colorMask = colorMask;
         _skyMask = skyMask;
+        _paramMask = paramMask;
         _params = rawParams;
         _blend = BlendModes.Parse(EditOpRegistry.S(rawParams, "blend"));
         // opacity mặc định 1; nếu thiếu key thì 1.
@@ -54,6 +59,7 @@ public sealed class MaskedOp : IEditOp
         if (_rangeMask != null) m = _rangeMask.GenerateFrom(image);
         else if (_colorMask != null) m = _colorMask.GenerateFrom(image);
         else if (_skyMask != null) m = _skyMask.GenerateFrom(image);
+        else if (_paramMask != null) m = _paramMask.GenerateFrom(image);
         else if (_mask != null) m = _mask.Generate(image.Width, image.Height);
         else return;
 
@@ -120,6 +126,7 @@ public sealed class MaskedOp : IEditOp
         LuminanceRangeMask? range = null;
         ColorRangeMask? colorRange = null;
         SkyMask? sky = null;
+        ParametricMask? param = null;
         switch (maskType)
         {
             case LinearGradientMask.Type: mask = LinearGradientMask.FromParams(p); break;
@@ -129,8 +136,9 @@ public sealed class MaskedOp : IEditOp
             case BrushMask.Type: mask = BrushMask.FromParams(p); break;
             case RasterMask.Type: mask = RasterMask.FromParams(p); break;
             case SkyMask.Type: sky = SkyMask.FromParams(p); break;
+            case ParametricMask.Type: param = ParametricMask.FromParams(p); break;
         }
-        return new MaskedOp(inner, mask, range, colorRange, sky, p);
+        return new MaskedOp(inner, mask, range, colorRange, sky, param, p);
     }
 
     private sealed class NoopOp : IEditOp

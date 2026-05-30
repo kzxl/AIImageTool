@@ -40,6 +40,7 @@ public partial class DevelopPanel
         AddMaskButton(addRow, "+ Brush", BrushMask.Type);
         AddMaskButton(addRow, "+ Lum", LuminanceRangeMask.Type);
         AddMaskButton(addRow, "+ Color", ColorRangeMask.Type);
+        AddMaskButton(addRow, "+ Param", ParametricMask.Type);
         var btnSubject = new Button { Content = "✦ AI Subject", Padding = new Thickness(6, 2, 6, 2), Margin = new Thickness(0, 0, 4, 4), FontSize = 11, ToolTip = "Tự chọn chủ thể bằng AI (tải model lần đầu)" };
         btnSubject.Click += (_, _) => RequestSubjectMask();
         addRow.Children.Add(btnSubject);
@@ -196,6 +197,20 @@ public partial class DevelopPanel
                 AddMaskGeomSlider(m, "strength", "Ưu tiên vị trí", 0, 1, 0.7);
                 AddMaskGeomSlider(m, "smooth", "Smoothness", 0.001, 0.5, 0.15);
                 break;
+            case ParametricMask.Type:
+                _maskEditPanel.Children.Add(new TextBlock
+                {
+                    Text = "Chọn vùng theo nhiều kênh (giao điều kiện). Để Min=0, Max=1 nếu không dùng kênh.",
+                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 2)
+                });
+                AddParamChannel(m, "l", "Lightness");
+                AddParamChannel(m, "c", "Chroma");
+                AddParamChannel(m, "h", "Hue");
+                AddParamChannel(m, "r", "Red");
+                AddParamChannel(m, "g", "Green");
+                AddParamChannel(m, "b", "Blue");
+                AddMaskInvertToggle(m);
+                break;
         }
 
         // Bộ chỉnh đầy đủ Light/Color (6.7).
@@ -243,6 +258,19 @@ public partial class DevelopPanel
             ScheduleCommit();
         };
         _maskEditPanel!.Children.Add(row);
+    }
+
+    /// <summary>1 hàng parametric: 3 slider gọn Min/Max/Feather cho 1 kênh (prefix l/c/h/r/g/b).</summary>
+    private void AddParamChannel(LocalMask m, string prefix, string label)
+    {
+        _maskEditPanel!.Children.Add(new TextBlock
+        {
+            Text = label, Foreground = Brushes.Gainsboro, FontSize = 11, FontWeight = System.Windows.FontWeights.SemiBold,
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        AddMaskGeomSlider(m, prefix + "Min", "  Min", 0, 1, 0);
+        AddMaskGeomSlider(m, prefix + "Max", "  Max", 0, 1, 1);
+        AddMaskGeomSlider(m, prefix + "Feather", "  Feather", 0.001, 0.5, 0.1);
     }
 
     private void AddMaskInvertToggle(LocalMask m)
@@ -352,6 +380,7 @@ public partial class DevelopPanel
         ColorRangeMask.Type => "Color Range",
         RasterMask.Type => "AI Subject",
         SkyMask.Type => "Sky",
+        ParametricMask.Type => "Parametric",
         _ => "Mask"
     };
 
@@ -367,6 +396,11 @@ public partial class DevelopPanel
             ColorRangeMask.Type => new[] { "hue", "range", "minSat", "smooth" },
             RasterMask.Type => new[] { "maskFile", "invert" },
             SkyMask.Type => new[] { "strength", "smooth" },
+            ParametricMask.Type => new[]
+            {
+                "lMin", "lMax", "lFeather", "cMin", "cMax", "cFeather", "hMin", "hMax", "hFeather",
+                "rMin", "rMax", "rFeather", "gMin", "gMax", "gFeather", "bMin", "bMax", "bFeather", "invert"
+            },
             _ => Array.Empty<string>()
         };
         var d = new Dictionary<string, string>();

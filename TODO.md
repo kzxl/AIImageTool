@@ -4,7 +4,9 @@
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
 > Cập nhật lần cuối: 2026-05-30 — Healing brush, Lens correction, Sky mask, AI batch tag, AI Upscale op chuỗi,
-> Space-to-pan, Light theme, PipelineProfiler. 271/271 test pass, build 0 warning, 3 plugin.
+> Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1 HOÀN TẤT: blend modes (D4.5), Sigmoid +
+> Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
+> mask đa kênh (D4.1). 324/324 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -318,8 +320,21 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 > Xem `DARKTABLE_PLAN.md` — đối chiếu module Darktable với op đã có; phần còn thiếu chia 6 phase
 > (D1 scene-referred tone, D2 color science, D3 detail/correction, D4 mask/local nâng cao,
-> D5 RAW thật/LibRaw, D6 lighttable). Khuyến nghị làm trước: blend modes + opacity (D4.5),
-> Sigmoid/Filmic RGB đầy đủ (D1.1/D1.2), parametric mask đa kênh (D4.1).
+> D5 RAW thật/LibRaw, D6 lighttable).
+>
+> **ĐỢT 1 HOÀN TẤT (2026-05-30):**
+> - **D4.5** Blend modes (12 chế độ) + opacity cho mỗi local op (`BlendModes`).
+> - **D1.1** `SigmoidOp` — sigmoid tone mapping mượt vùng rực.
+> - **D1.2** `FilmicRgbOp` đầy đủ — white/black relative exposure, latitude, contrast, sat highlight.
+> - **D1.3** `ToneEqualizerOp` — chỉnh sáng theo dải vùng (zone-based).
+> - **D2.1** `ColorBalanceRgbOp` 4-way (lift/gamma/gain + offset) + global chroma/contrast.
+> - **D2.3** `VelviaOp`, **D2.4** `ColorContrastOp` (Lab a*/b*), **D2.5** `RgbLevelsOp`.
+> - **D4.1** `ParametricMask` — chọn vùng theo 6 kênh (L/C/h/R/G/B) band-pass giao nhau, hue wrap, invert;
+>   nối MaskedOp + LocalMask + DevelopPanel ("+ Param"). + test.
+>
+> **ĐỢT 2 (tiếp theo):** D2.4/D2.5/D2.3 ✅ xong; còn D3.3 hot pixel, D3.4 CA correct, D3.2 chroma denoise nâng,
+> D6.1 selective paste module, D6.2 style append. **ĐỢT 3:** D2.2 ICC, D3.1 diffuse, D5.x RAW thật (LibRaw),
+> D3.5 liquify, D4.4 instance UI.
 
 ---
 
