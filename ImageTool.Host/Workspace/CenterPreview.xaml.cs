@@ -321,12 +321,28 @@ public partial class CenterPreview : UserControl, IImageToolHost
                 if (_zoom > 1.0) { ResetZoom(); e.Handled = true; }
                 else if (_mode == LighttableMode.Full) { SetMode(LighttableMode.Single); e.Handled = true; }
                 break;
+            case Key.Space: // giữ Space để pan (kéo chuột trái), kiểu Photoshop
+                if (!_spaceHeld)
+                {
+                    _spaceHeld = true;
+                    if (_zoom > 1.0) paneSingle.Cursor = System.Windows.Input.Cursors.Hand;
+                }
+                e.Handled = true;
+                break;
         }
     }
+
+    private bool _spaceHeld;
 
     private void UserControl_KeyUp(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Oem5 && _showingBefore) { ShowBefore(false); e.Handled = true; }
+        if (e.Key == Key.Space)
+        {
+            _spaceHeld = false;
+            if (!_isPanning) paneSingle.Cursor = System.Windows.Input.Cursors.Arrow;
+            e.Handled = true;
+        }
     }
 
     private bool _showingBefore;
@@ -409,6 +425,18 @@ public partial class CenterPreview : UserControl, IImageToolHost
     {
         if (TryHandleHealClick(e)) { e.Handled = true; return; }
         if (TryHandleWbPick(e)) { e.Handled = true; return; }
+        // Space + kéo trái = pan (khi đang zoom).
+        if (_spaceHeld && _zoom > 1.0 && imgPreview.Source != null)
+        {
+            _isPanning = true;
+            _panStartMouse = e.GetPosition(paneSingle);
+            _panStartX = zoomPan.X;
+            _panStartY = zoomPan.Y;
+            paneSingle.CaptureMouse();
+            paneSingle.Cursor = System.Windows.Input.Cursors.ScrollAll;
+            e.Handled = true;
+            return;
+        }
         if (afterBadge.Visibility != Visibility.Visible) return;
         _isDraggingSplit = true;
         paneSingle.CaptureMouse();
@@ -433,6 +461,15 @@ public partial class CenterPreview : UserControl, IImageToolHost
 
     private void PaneSingle_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        // kết thúc Space-pan (left button).
+        if (_isPanning)
+        {
+            _isPanning = false;
+            paneSingle.ReleaseMouseCapture();
+            paneSingle.Cursor = _spaceHeld ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
+            e.Handled = true;
+            return;
+        }
         if (!_isDraggingSplit) return;
         _isDraggingSplit = false;
         paneSingle.ReleaseMouseCapture();
