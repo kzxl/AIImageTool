@@ -31,6 +31,10 @@ public sealed class LocalMask
     public float Temp, Tint, Saturation, Vibrance;
     public float Clarity, Sharpen;
 
+    // --- Blend (D4.5) ---
+    public string BlendMode = "normal";
+    public float Opacity = 1f;
+
     public bool HasAdjustments =>
         !Z(Exposure) || !Z(Contrast) || !Z(Highlights) || !Z(Shadows) || !Z(Whites) || !Z(Blacks) ||
         !Z(Temp) || !Z(Tint) || !Z(Saturation) || !Z(Vibrance) || !Z(Clarity) || !Z(Sharpen);
@@ -88,6 +92,8 @@ public sealed class LocalMask
         foreach (var kv in innerParams) p[kv.Key] = kv.Value;
         p["inner"] = innerType;
         p["maskId"] = Id; // giúp gom nhóm chính xác khi load
+        p["blend"] = BlendMode;
+        p["opacity"] = Opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
         return new EditOperation { PluginId = "Develop", OpType = MaskedOp.Type, Title = $"Local: {Name}", Params = p };
     }
 

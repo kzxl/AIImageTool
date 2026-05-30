@@ -25,6 +25,8 @@ public sealed class MaskedOp : IEditOp
     private readonly ColorRangeMask? _colorMask;     // color range mask cần pixel
     private readonly SkyMask? _skyMask;              // sky mask cần pixel
     private readonly IReadOnlyDictionary<string, string> _params;
+    private readonly BlendMode _blend;
+    private readonly float _opacity;
 
     public MaskedOp(IEditOp inner, IMaskGenerator? mask, LuminanceRangeMask? rangeMask, IReadOnlyDictionary<string, string> rawParams)
         : this(inner, mask, rangeMask, null, rawParams) { }
@@ -40,6 +42,9 @@ public sealed class MaskedOp : IEditOp
         _colorMask = colorMask;
         _skyMask = skyMask;
         _params = rawParams;
+        _blend = BlendModes.Parse(EditOpRegistry.S(rawParams, "blend"));
+        // opacity mặc định 1; nếu thiếu key thì 1.
+        _opacity = rawParams.ContainsKey("opacity") ? Math.Clamp(EditOpRegistry.F(rawParams, "opacity", 1f), 0f, 1f) : 1f;
     }
 
     public void Apply(LinearImage image, float scale)
@@ -58,18 +63,36 @@ public sealed class MaskedOp : IEditOp
         var edited = image.Clone();
         _inner.Apply(edited, scale);
 
-        // Blend theo mask.
+        // Blend theo mask × opacity, theo chế độ blend.
         float[] o = image.Pixels;
         float[] e = edited.Pixels;
         int n = image.PixelCount;
+        var blend = _blend;
+        float opacity = _opacity;
         Parallel.For(0, n, i =>
         {
-            float w = m[i];
+            float w = m[i] * opacity;
             if (w <= 0f) return;
             int p = i * 4;
-            o[p] = o[p] + (e[p] - o[p]) * w;
-            o[p + 1] = o[p + 1] + (e[p + 1] - o[p + 1]) * w;
-            o[p + 2] = o[p + 2] + (e[p + 2] - o[p + 2]) * w;
+            if (blend == BlendMode.Normal)
+            {
+                // nhanh: nội suy thẳng trong linear.
+                o[p] = o[p] + (e[p] - o[p]) * w;
+                o[p + 1] = o[p + 1] + (e[p + 1] - o[p + 1]) * w;
+                o[p + 2] = o[p + 2] + (e[p + 2] - o[p + 2]) * w;
+            }
+            else
+            {
+                // blend trong sRGB rồi nội suy về gốc theo w.
+                for (int c = 0; c < 3; c++)
+                {
+                    float baseS = ColorSpace.LinearToSrgb(o[p + c]);
+                    float topS = ColorSpace.LinearToSrgb(e[p + c]);
+                    float blended = BlendModes.Apply(blend, baseS, topS);
+                    float outS = baseS + (blended - baseS) * w;
+                    o[p + c] = ColorSpace.SrgbToLinear(outS);
+                }
+            }
             // alpha giữ nguyên
         });
     }

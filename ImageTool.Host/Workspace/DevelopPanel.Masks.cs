@@ -211,6 +211,24 @@ public partial class DevelopPanel
         AddMaskAdjSlider("Vibrance", () => m.Vibrance, v => m.Vibrance = v, -1, 1, 0);
         AddMaskAdjSlider("Clarity", () => m.Clarity, v => m.Clarity = v, -1, 1, 0);
         AddMaskAdjSlider("Sharpen", () => m.Sharpen, v => m.Sharpen = v, 0, 1, 0);
+
+        // Blend mode + opacity (D4.5).
+        var blendRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
+        blendRow.Children.Add(new TextBlock { Text = "Blend", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
+        var cmbBlend = new ComboBox { Height = 22 };
+        string[] modes = { "normal", "multiply", "screen", "overlay", "softlight", "hardlight", "lighten", "darken", "addition", "subtract", "difference", "linearlight" };
+        foreach (var mode in modes) cmbBlend.Items.Add(new ComboBoxItem { Content = mode });
+        cmbBlend.SelectedIndex = System.Math.Max(0, System.Array.IndexOf(modes, m.BlendMode));
+        cmbBlend.SelectionChanged += (_, _) =>
+        {
+            if (_loading) return;
+            m.BlendMode = (cmbBlend.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "normal";
+            ScheduleCommit();
+        };
+        blendRow.Children.Add(cmbBlend);
+        _maskEditPanel!.Children.Add(blendRow);
+
+        AddMaskAdjSlider("Opacity", () => m.Opacity, v => m.Opacity = v, 0, 1, 1, "0.00");
     }
 
     private void AddMaskGeomSlider(LocalMask m, string key, string label, double min, double max, double def, string fmt = "0.00")
@@ -309,6 +327,10 @@ public partial class DevelopPanel
                     mask = new LocalMask { Id = id, MaskType = maskType };
                     mask.Name = MaskDisplayName(maskType);
                     mask.MaskParams = ExtractMaskParams(maskType, p);
+                    if (p.TryGetValue("blend", out var bl)) mask.BlendMode = bl;
+                    if (p.TryGetValue("opacity", out var opStr) &&
+                        float.TryParse(opStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var opv))
+                        mask.Opacity = opv;
                     byId[id] = mask;
                     _masks.Add(mask);
                     order++;
