@@ -244,15 +244,17 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 - [x] **11.1** Develop module: tab Develop nhóm thu gọn được (Expander): WB/Tone/ParametricCurve/Presence/HSL/SplitToning/Detail/Effects/Geometry.
 - [x] **11.2** Slider: double-click reset + ô nhập số trực tiếp (Enter/blur) + hiển thị giá trị.
-- [ ] **11.3** Histogram tương tác (kéo trực tiếp trên histogram để chỉnh tone; cảnh báo clip highlight/shadow).
-- [~] **11.4** Before/After: splitter (cũ) + giữ phím `\` xem ảnh gốc. Side-by-side CHƯA.
+- [x] **11.3** Histogram trực quan + cảnh báo clip (live trong DevelopPanel: RGB/Luma toggle, marker
+      shadow/highlight + %). Kéo trực tiếp trên histogram để chỉnh tone CHƯA (13.10, giá trị biên).
+- [x] **11.4** Before/After: splitter (cũ) + giữ phím `\` xem ảnh gốc + **side-by-side (phím Y)** 2 khung.
 - [ ] **11.5** Zoom/Pan loupe mượt (fit/100%/zoom level), space để pan.
-- [x] **11.6** Phím tắt kiểu LR: có rating/flag/label + **Ctrl+Shift+C/V copy-paste settings**, Ctrl+Z/Y. Thêm D/R/M CHƯA.
+- [x] **11.6** Phím tắt kiểu LR: rating/flag/label + Ctrl+Shift+C/V + Ctrl+Z/Y + **D/M module switch** + R crop + J clip + Y compare.
 - [x] **11.7** Hiển thị tiến trình render/AI rõ ràng ở status bar (ReportProgress hiện ghi vào txtMeta - TODO trong code).
 - [x] **11.8** Tooltip cho nút Develop (Copy/Paste/Auto/Reset) + trạng thái rỗng "Chọn ảnh để bắt đầu". Onboarding đầy đủ CHƯA.
 - [ ] **11.9** Theme: rà soát DarkTheme cho nhất quán; cân nhắc light theme tùy chọn.
 - [ ] **11.10** Responsive panel: kéo rộng/hẹp, nhớ layout; pop-out tools (đã có) ổn định đa màn hình.
-- [ ] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure"); history panel hiển thị thumbnail từng bước (tùy chọn).
+- [x] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure" qua `OpDisplayNames`) + history panel nhãn thân thiện.
+      Thumbnail từng bước (tùy chọn) CHƯA.
 - [x] **11.12** Badge "đã chỉnh sửa" (✎) trong grid + filmstrip, cập nhật theo history.
 - [x] **11.13** Toast không chặn ở đáy cửa sổ (báo batch/export xong/lỗi, tự ẩn 3s).
 - [x] **11.14** Fix nhảy tab panel phải: header TabControl luôn 1 hàng, cuộn ngang (template tùy biến).

@@ -137,7 +137,7 @@ public class ExportBatchAdapter : IBatchCapable
                     var stack = _history.GetStack(job.InputPath);
                     XmpSidecar.Write(job.InputPath, stack, _history.GetPointer(job.InputPath));
                 }
-                catch { }
+                catch (Exception ex) { AppLog.Warn("Export.Xmp", $"không ghi được sidecar: {ex.Message}"); }
             }
 
             job.OutputPath = outPath;
@@ -180,7 +180,7 @@ public class ExportBatchAdapter : IBatchCapable
             image.Mutate(ctx => ctx.DrawText(text, font,
                 Color.FromRgba(255, 255, 255, 180), new PointF(x, y)));
         }
-        catch { }
+        catch (Exception ex) { AppLog.Warn("Export.Watermark", $"bỏ qua watermark: {ex.Message}"); }
     }
 
     /// <summary>Load ảnh; nếu có history active và decode được -> bake edits ở full-res.</summary>
@@ -201,7 +201,8 @@ public class ExportBatchAdapter : IBatchCapable
                 }
             }
         }
-        catch { /* fallback xuống load gốc */ }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) { AppLog.Error("Export.LoadBaked", $"không bake được {inputPath}, dùng ảnh gốc", ex); }
         return Image.Load(inputPath);
     }
 }

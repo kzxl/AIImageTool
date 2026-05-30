@@ -85,7 +85,7 @@ public sealed class DevelopRenderer
             }, token);
         }
         catch (OperationCanceledException) { return null; }
-        catch { return null; }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.RenderPreview", path, ex); return null; }
     }
 
     /// <summary>Render full-res cho export (đồng bộ, không cache proxy). Trả LinearImage kết quả.</summary>
@@ -220,7 +220,7 @@ public sealed class DevelopRenderer
             if (proxy == null) return null;
             return AutoTone.Analyze(proxy);
         }
-        catch { return null; }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AnalyzeAuto", path, ex); return null; }
     }
 
     /// <summary>Phân tích Auto White Balance trên proxy. Trả gain per-channel; null nếu lỗi.</summary>
@@ -232,7 +232,7 @@ public sealed class DevelopRenderer
             if (proxy == null) return null;
             return AutoWhiteBalance.Analyze(proxy, AutoWhiteBalance.Strategy.GrayWorld);
         }
-        catch { return null; }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoWB", path, ex); return null; }
     }
 
     /// <summary>
@@ -254,6 +254,6 @@ public sealed class DevelopRenderer
             var rendered = _pipeline.RenderScaled(small, ops, _cachedScale * histScale, count);
             return HistogramData.Compute(rendered);
         }
-        catch { return null; }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.Histogram", path, ex); return null; }
     }
 }
