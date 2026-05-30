@@ -357,11 +357,64 @@ public class SpatialOpsTests
     [Fact]
     public void Sharpen_ParamsRoundTrip()
     {
-        var op = new SharpenOp { Amount = 0.5f, Radius = 1.5f, Threshold = 0.2f };
+        var op = new SharpenOp { Amount = 0.5f, Radius = 1.5f, Threshold = 0.2f, Masking = 0.4f };
         var back = SharpenOp.FromParams(op.ToParams());
         Assert.Equal(0.5f, back.Amount, 4);
         Assert.Equal(1.5f, back.Radius, 4);
         Assert.Equal(0.2f, back.Threshold, 4);
+        Assert.Equal(0.4f, back.Masking, 4);
+    }
+
+    // Ảnh nửa trái phẳng (0.5), nửa phải có 1 cạnh dọc mạnh giữa cột giữa.
+    private static LinearImage HalfFlatHalfEdge(int w = 32, int h = 16)
+    {
+        var img = new LinearImage(w, h);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                int o = (y * w + x) * 4;
+                float v;
+                if (x < w / 2) v = 0.5f;                  // nửa trái: phẳng
+                else v = (x < 3 * w / 4) ? 0.2f : 0.8f;   // nửa phải: cạnh bậc thang
+                img.Pixels[o] = v; img.Pixels[o + 1] = v; img.Pixels[o + 2] = v; img.Pixels[o + 3] = 1f;
+            }
+        return img;
+    }
+
+    [Fact]
+    public void Sharpen_Masking_ProtectsFlatRegions()
+    {
+        // Thêm 1 chấm nhiễu nhỏ ở vùng phẳng để xem masking có ghìm sharpen không.
+        var img = HalfFlatHalfEdge();
+        int w = img.Width, h = img.Height;
+        int flatX = 8, flatY = 8;
+        int o = (flatY * w + flatX) * 4;
+        img.Pixels[o] = 0.55f; img.Pixels[o + 1] = 0.55f; img.Pixels[o + 2] = 0.55f; // nhiễu nhẹ
+
+        var noMask = img.Clone();
+        var withMask = img.Clone();
+        new SharpenOp { Amount = 0.9f, Radius = 1f, Masking = 0f }.Apply(noMask, 1f);
+        new SharpenOp { Amount = 0.9f, Radius = 1f, Masking = 1f }.Apply(withMask, 1f);
+
+        // Tại vùng phẳng, masking=1 phải ít thay đổi hơn masking=0 (gần giá trị gốc hơn).
+        float orig = 0.55f;
+        float devNo = MathF.Abs(noMask.Pixels[o] - orig);
+        float devMask = MathF.Abs(withMask.Pixels[o] - orig);
+        Assert.True(devMask < devNo, $"masking phải ghìm sharpen ở vùng phẳng: devMask={devMask} devNo={devNo}");
+    }
+
+    [Fact]
+    public void Sharpen_Masking_StillSharpensStrongEdges()
+    {
+        var img = HalfFlatHalfEdge();
+        int w = img.Width;
+        // pixel ngay sát cạnh mạnh (cột 3w/4) ở vùng tối.
+        int ex = 3 * w / 4 - 1, ey = 8;
+        int o = (ey * w + ex) * 4;
+        float before = img.Pixels[o];
+        new SharpenOp { Amount = 0.9f, Radius = 1f, Masking = 0.8f }.Apply(img, 1f);
+        // cạnh mạnh vẫn được sharpen -> pixel tối sát cạnh bị kéo tối hơn (xa trung bình).
+        Assert.NotEqual(before, img.Pixels[o], 3);
     }
 }
 

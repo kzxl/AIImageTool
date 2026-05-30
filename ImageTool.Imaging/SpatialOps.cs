@@ -106,6 +106,10 @@ public sealed class TextureOp : IEditOp
 /// <summary>
 /// Sharpening kiểu unsharp mask: detail = lum - blur(bán kính nhỏ); lum += amount*detail.
 /// Có ngưỡng (threshold) bỏ qua nhiễu nhỏ. Bán kính nhân scale.
+///
+/// Masking (kiểu Lightroom Detail/Masking): khi &gt;0, chỉ sharpen ở vùng có cạnh (gradient lớn),
+/// bảo vệ vùng phẳng (bầu trời, da) khỏi bị khuếch đại nhiễu. Mask = smoothstep theo độ lớn
+/// gradient luminance; Masking càng cao thì ngưỡng cạnh càng cao (chỉ cạnh mạnh mới được sharpen).
 /// </summary>
 public sealed class SharpenOp : IEditOp
 {
@@ -114,6 +118,7 @@ public sealed class SharpenOp : IEditOp
     public float Amount;        // [0..1] (thường), map ra hệ số mạnh
     public float Radius = 1.0f; // px ở full-res
     public float Threshold;     // [0..1] bỏ qua chi tiết nhỏ hơn ngưỡng
+    public float Masking;       // [0..1] 0 = sharpen toàn ảnh; 1 = chỉ cạnh mạnh
 
     public bool IsIdentity => MathF.Abs(Amount) < 1e-4f;
 
@@ -126,6 +131,8 @@ public sealed class SharpenOp : IEditOp
         float[] px = image.Pixels;
         float amt = Math.Clamp(Amount, 0f, 1f) * 3f;
         float thr = Math.Clamp(Threshold, 0f, 1f) * 0.1f;
+        float mask = Math.Clamp(Masking, 0f, 1f);
+        bool useMask = mask > 1e-4f;
 
         Parallel.For(0, h, y =>
         {
@@ -137,7 +144,24 @@ public sealed class SharpenOp : IEditOp
                 if (lum < 1e-5f) continue;
                 float detail = lum - blur[row + x];
                 if (MathF.Abs(detail) < thr) continue;
-                float newLum = lum + detail * amt;
+
+                float edgeFactor = 1f;
+                if (useMask)
+                {
+                    // Gradient luminance từ bản blur (ổn định, ít nhiễu) — sai phân trung tâm.
+                    int xm = x > 0 ? x - 1 : x, xp = x < w - 1 ? x + 1 : x;
+                    int ym = y > 0 ? y - 1 : y, yp = y < h - 1 ? y + 1 : y;
+                    float gx = blur[row + xp] - blur[row + xm];
+                    float gy = blur[yp * w + x] - blur[ym * w + x];
+                    float grad = MathF.Sqrt(gx * gx + gy * gy);
+                    // Ngưỡng cạnh tăng theo Masking; smoothstep quanh ngưỡng cho mép mượt.
+                    float edgeThr = mask * 0.15f;
+                    float t = edgeThr > 1e-6f ? grad / edgeThr : 1f;
+                    if (t > 1f) t = 1f;
+                    edgeFactor = t * t * (3f - 2f * t);
+                }
+
+                float newLum = lum + detail * amt * edgeFactor;
                 if (newLum < 0f) newLum = 0f;
                 float gain = newLum / lum;
                 px[p] *= gain; px[p + 1] *= gain; px[p + 2] *= gain;
@@ -147,7 +171,7 @@ public sealed class SharpenOp : IEditOp
 
     public Dictionary<string, string> ToParams() => new()
     {
-        ["amount"] = F(Amount), ["radius"] = F(Radius), ["threshold"] = F(Threshold),
+        ["amount"] = F(Amount), ["radius"] = F(Radius), ["threshold"] = F(Threshold), ["masking"] = F(Masking),
     };
     private static string F(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
     public static SharpenOp FromParams(IReadOnlyDictionary<string, string> p)
@@ -156,6 +180,7 @@ public sealed class SharpenOp : IEditOp
             Amount = EditOpRegistry.F(p, "amount"),
             Radius = EditOpRegistry.F(p, "radius", 1f),
             Threshold = EditOpRegistry.F(p, "threshold"),
+            Masking = EditOpRegistry.F(p, "masking"),
         };
     public static void Register(EditOpRegistry reg) => reg.Register(Type, FromParams);
 }

@@ -152,7 +152,9 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 ## 4. TÍNH NĂNG DEVELOP - Detail (Sharpen + Noise)
 
-- [x] **4.1** Sharpening (`SharpenOp`, unsharp mask: Amount/Radius/Threshold, scale-aware). Detail/Masking nâng cao CHƯA.
+- [x] **4.1** Sharpening (`SharpenOp`, unsharp mask: Amount/Radius/Threshold, scale-aware). **Detail/Masking
+      nâng cao ĐÃ XONG:** slider Sharpen Radius + Sharpen Masking (mask theo độ lớn gradient — chỉ sharpen cạnh
+      mạnh, bảo vệ vùng phẳng khỏi khuếch đại nhiễu, kiểu Lightroom). + test.
 - [x] **4.2** Luminance noise reduction (`LumaNoiseReductionOp`, blur kênh Y giữ chroma + Detail, có UI + test).
 - [~] **4.3** AI denoise (`AiDenoiseOp` + `AiOpHost` delegate + `OnnxDenoiser` SCUNet) cắm vào pipeline như
       op cuối chuỗi, chạy full-res khi export, slider "AI Denoise" trong Detail. Cần model ONNX (auto-tải).

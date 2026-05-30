@@ -299,6 +299,8 @@ public partial class DevelopPanel : UserControl
         // Detail
         var gDetail = AddGroup("Detail", false);
         AddSlider(gDetail, "sharpen", "Sharpen", 0, 1, 0);
+        AddSlider(gDetail, "sharpenRadius", "Sharpen Radius", 0.5, 3, 1, "0.0");
+        AddSlider(gDetail, "sharpenMask", "Sharpen Masking", 0, 1, 0);
         AddSlider(gDetail, "lumaNR", "Luminance NR", 0, 1, 0);
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
         AddSlider(gDetail, "chromaNR", "Chroma NR (edge)", 0, 1, 0);
@@ -534,6 +536,9 @@ public partial class DevelopPanel : UserControl
         SetVal("clarity", Param(path!, ClarityOp.Type, "amount"));
         SetVal("texture", Param(path!, TextureOp.Type, "amount"));
         SetVal("sharpen", Param(path!, SharpenOp.Type, "amount"));
+        var sharpP = FindOp(path!, SharpenOp.Type);
+        SetVal("sharpenRadius", sharpP != null ? Param(path!, SharpenOp.Type, "radius") : 1.0);
+        SetVal("sharpenMask", Param(path!, SharpenOp.Type, "masking"));
         SetVal("lumaNR", Param(path!, LumaNoiseReductionOp.Type, "amount"));
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
         SetVal("chromaNR", Param(path!, ChromaDenoiseOp.Type, "amount"));
@@ -953,7 +958,7 @@ public partial class DevelopPanel : UserControl
         if (!clarity.IsIdentity) ops.Add(Op(ClarityOp.Type, "Clarity", clarity.ToParams()));
         var texture = new TextureOp { Amount = (float)GetVal("texture") };
         if (!texture.IsIdentity) ops.Add(Op(TextureOp.Type, "Texture", texture.ToParams()));
-        var sharpen = new SharpenOp { Amount = (float)GetVal("sharpen") };
+        var sharpen = new SharpenOp { Amount = (float)GetVal("sharpen"), Radius = (float)GetVal("sharpenRadius"), Masking = (float)GetVal("sharpenMask") };
         if (!sharpen.IsIdentity) ops.Add(Op(SharpenOp.Type, "Sharpen", sharpen.ToParams()));
         var diffuse = new DiffuseOp { Amount = (float)GetVal("diffuse") };
         if (!diffuse.IsIdentity) ops.Add(Op(DiffuseOp.Type, "Diffuse/Sharpen", diffuse.ToParams()));
