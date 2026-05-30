@@ -72,7 +72,9 @@ Darktable module -> op của ta đã làm:
 
 ## G. PHASE D6 — Lighttable/quản lý kiểu Darktable
 
-- [ ] **D6.1** History stack có thể copy/paste TỪNG module giữa ảnh (selective paste) — hiện copy cả cụm.
+- [x] **D6.1** History stack có thể copy/paste TỪNG module giữa ảnh (selective paste) — `DevelopModules`
+      (gom OpType -> 15 module + thứ tự pipeline chuẩn) + `DevelopClipboard.PasteModulesTo` + context menu
+      "Paste Settings (chọn module)" checkable. Merge giữ module không chọn, sắp xếp lại canonical. + test.
 - [ ] **D6.2** Styles có thể append (không thay thế) + chọn module khi áp.
 - [ ] **D6.3** Duplicate / virtual copies (nhiều phiên bản edit của 1 ảnh) — cần model history per-version.
 - [ ] **D6.4** Tagging phân cấp + recently used + tag từ điển (đã có keyword phẳng phân cấp; bổ sung từ điển/tag tree UI).
@@ -92,7 +94,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 **Đợt 2 — bổ sung detail/correction:**
 6. ✅ D2.4 Color Contrast (Lab a/b), D2.5 Levels, D2.3 Velvia.
 7. ✅ D3.3 Hot pixel, ✅ D3.4 CA correct, D3.2 chroma denoise nâng (còn lại).
-8. D6.1 selective paste module + D6.2 style append.
+8. ✅ D6.1 selective paste module + D6.2 style append (còn D6.2).
 
 **Đợt 3 — nặng / cần native / phức tạp (cân nhắc):**
 9. D2.2 ICC color management (chính xác màu, công sức trung bình).

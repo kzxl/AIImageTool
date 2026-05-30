@@ -41,6 +41,32 @@ public static class ImageContextMenu
         miPaste.Click += (_, _) => clipboard.PasteToMany(history, Targets());
         menu.Items.Add(miPaste);
 
+        // --- Selective paste theo module (D6.1) ---
+        var available = clipboard.ModulesAvailable();
+        var miPasteSel = new MenuItem { Header = "Paste Settings (chọn module)", IsEnabled = clipboard.HasCopied && available.Count > 0 };
+        if (available.Count > 0)
+        {
+            var picked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var mod in available)
+            {
+                var modKey = mod.Key;
+                var item = new MenuItem { Header = mod.Label, IsCheckable = true, StaysOpenOnClick = true };
+                item.Checked += (_, _) => picked.Add(modKey);
+                item.Unchecked += (_, _) => picked.Remove(modKey);
+                miPasteSel.Items.Add(item);
+            }
+            miPasteSel.Items.Add(new Separator());
+            var apply = new MenuItem { Header = "Áp module đã chọn" };
+            apply.Click += (_, _) =>
+            {
+                if (picked.Count == 0) return;
+                foreach (var t in Targets())
+                    clipboard.PasteModulesTo(history, t, picked);
+            };
+            miPasteSel.Items.Add(apply);
+        }
+        menu.Items.Add(miPasteSel);
+
         var miReset = new MenuItem { Header = "Reset Develop" };
         miReset.Click += (_, _) =>
         {
