@@ -6,7 +6,7 @@
 > Cập nhật lần cuối: 2026-05-30 — Healing brush, Lens correction, Sky mask, AI batch tag, AI Upscale op chuỗi,
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
-> mask đa kênh (D4.1). 324/324 test pass, build 0 warning, 3 plugin.
+> mask đa kênh (D4.1). Đợt 2: Hot Pixel (D3.3) + CA Correct (D3.4). 334/334 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -332,9 +332,9 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 > - **D4.1** `ParametricMask` — chọn vùng theo 6 kênh (L/C/h/R/G/B) band-pass giao nhau, hue wrap, invert;
 >   nối MaskedOp + LocalMask + DevelopPanel ("+ Param"). + test.
 >
-> **ĐỢT 2 (tiếp theo):** D2.4/D2.5/D2.3 ✅ xong; còn D3.3 hot pixel, D3.4 CA correct, D3.2 chroma denoise nâng,
-> D6.1 selective paste module, D6.2 style append. **ĐỢT 3:** D2.2 ICC, D3.1 diffuse, D5.x RAW thật (LibRaw),
-> D3.5 liquify, D4.4 instance UI.
+> **ĐỢT 2 (tiếp theo):** D2.4/D2.5/D2.3 ✅ xong; D3.3 Hot Pixel + D3.4 CA Correct ✅ xong (op + UI Detail +
+> test). Còn D3.2 chroma denoise nâng, D6.1 selective paste module, D6.2 style append. **ĐỢT 3:** D2.2 ICC,
+> D3.1 diffuse, D5.x RAW thật (LibRaw), D3.5 liquify, D4.4 instance UI.
 
 ---
 

@@ -290,6 +290,10 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
+        AddSlider(gDetail, "hotpix", "Hot Pixel", 0, 1, 0);
+        AddSlider(gDetail, "hotpixThr", "Hot Pixel Thr", 0, 1, 0.5);
+        AddSlider(gDetail, "caRed", "CA Red/Cyan", -1, 1, 0);
+        AddSlider(gDetail, "caBlue", "CA Blue/Yellow", -1, 1, 0);
         AddSlider(gDetail, "aiDenoise", "AI Denoise", 0, 1, 0);
         _chkAiUpscale = new CheckBox { Content = "AI Upscale 4x (khi export)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2), ToolTip = "Phóng to 4x bằng AI lúc export (cần model Upscaler)" };
         _chkAiUpscale.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
@@ -500,6 +504,10 @@ public partial class DevelopPanel : UserControl
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
+        SetVal("hotpix", Param(path!, HotPixelOp.Type, "strength"));
+        SetVal("hotpixThr", FindOp(path!, HotPixelOp.Type) != null ? Param(path!, HotPixelOp.Type, "threshold") : 0.5);
+        SetVal("caRed", Param(path!, CaCorrectOp.Type, "red"));
+        SetVal("caBlue", Param(path!, CaCorrectOp.Type, "blue"));
         SetVal("aiDenoise", Param(path!, AiDenoiseOp.Type, "strength"));
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = FindOp(path!, AiUpscaleOp.Type) != null;
         SetVal("vignette", Param(path!, VignetteOp.Type, "amount"));
@@ -868,6 +876,10 @@ public partial class DevelopPanel : UserControl
         if (!colorNR.IsIdentity) ops.Add(Op(ColorNoiseReductionOp.Type, "Color NR", colorNR.ToParams()));
         var lumaNR = new LumaNoiseReductionOp { Amount = (float)GetVal("lumaNR") };
         if (!lumaNR.IsIdentity) ops.Add(Op(LumaNoiseReductionOp.Type, "Luminance NR", lumaNR.ToParams()));
+        var hotpix = new HotPixelOp { Strength = (float)GetVal("hotpix"), Threshold = (float)GetVal("hotpixThr") };
+        if (!hotpix.IsIdentity) ops.Add(Op(HotPixelOp.Type, "Hot Pixel", hotpix.ToParams()));
+        var ca = new CaCorrectOp { Red = (float)GetVal("caRed"), Blue = (float)GetVal("caBlue") };
+        if (!ca.IsIdentity) ops.Add(Op(CaCorrectOp.Type, "CA Correct", ca.ToParams()));
         var defr = new DefringeOp { Purple = (float)GetVal("defrPurple"), Green = (float)GetVal("defrGreen") };
         if (!defr.IsIdentity) ops.Add(Op(DefringeOp.Type, "Defringe", defr.ToParams()));
         var clarity = new ClarityOp { Amount = (float)GetVal("clarity") };

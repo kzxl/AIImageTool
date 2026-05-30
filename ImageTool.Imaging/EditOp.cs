@@ -111,6 +111,8 @@ public sealed class EditOpRegistry
         VelviaOp.Register(reg);
         ColorBalanceRgbOp.Register(reg);
         ColorContrastOp.Register(reg);
+        HotPixelOp.Register(reg);
+        CaCorrectOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;

@@ -14,7 +14,8 @@ Darktable module -> op của ta đã làm:
 - filmic rgb -> `FilmicRgbOp` (đầy đủ: white/black relative, latitude, contrast); sigmoid -> `SigmoidOp`
 - haze removal -> `DehazeOp`; local contrast/clarity -> `ClarityOp`; sharpen -> `SharpenOp`; texture -> `TextureOp`
 - denoise (profiled, 1 phần) -> `ColorNoiseReductionOp` + `LumaNoiseReductionOp` + AI denoise (`AiDenoiseOp`)
-- chromatic aberration/defringe -> `DefringeOp`; vignette -> `VignetteOp`; grain -> `GrainOp`
+- chromatic aberration/defringe -> `DefringeOp` (viền) + `CaCorrectOp` (lateral CA radial); vignette -> `VignetteOp`; grain -> `GrainOp`
+- hot/dead pixel -> `HotPixelOp`
 - lens correction (thủ công) -> `LensCorrectionOp` (distortion k1/k2 + vignette)
 - crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`
 - lut 3D -> `LutCubeOp`; monochrome -> `BlackWhiteOp`; invert -> `InvertOp`
@@ -46,8 +47,9 @@ Darktable module -> op của ta đã làm:
 - [ ] **D3.1** `DiffuseOp` (diffuse or sharpen) — khuếch tán dẫn hướng: sharpen/denoise/khử mờ theo preset
       (sharpen demosaic, lens deblur, dehaze tinh). Bộ lọc PDE đơn giản hoá.
 - [ ] **D3.2** `RawDenoiseOp` / chroma denoise nâng (bilateral/non-local means xấp xỉ) — bổ sung NR hiện có.
-- [ ] **D3.3** `HotPixelOp` — khử điểm chết/nóng (median có ngưỡng).
-- [ ] **D3.4** `CaCorrectOp` — khử quang sai màu trục (lateral CA) theo dịch kênh R/B (đã có defringe viền).
+- [x] **D3.3** `HotPixelOp` — khử điểm chết/nóng (so 4 lân cận theo ngưỡng -> thay trung bình, có test).
+- [x] **D3.4** `CaCorrectOp` — khử quang sai màu trục (lateral CA) theo co/giãn radial kênh R/B quanh tâm
+      (bilinear, có test). Khác defringe (viền cục bộ).
 - [ ] **D3.5** `LiquifyOp` (cơ bản) — kéo/đẩy điểm (warp) — phức tạp, để cuối.
 
 ## E. PHASE D4 — Mask & local nâng cao, test được
@@ -88,8 +90,8 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 5. ✅ D1.3 Tone Equalizer (zone-based).
 
 **Đợt 2 — bổ sung detail/correction:**
-6. D2.4 Color Contrast (Lab a/b), D2.5 Levels, D2.3 Velvia.
-7. D3.3 Hot pixel, D3.4 CA correct, D3.2 chroma denoise nâng.
+6. ✅ D2.4 Color Contrast (Lab a/b), D2.5 Levels, D2.3 Velvia.
+7. ✅ D3.3 Hot pixel, ✅ D3.4 CA correct, D3.2 chroma denoise nâng (còn lại).
 8. D6.1 selective paste module + D6.2 style append.
 
 **Đợt 3 — nặng / cần native / phức tạp (cân nhắc):**
