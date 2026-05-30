@@ -289,6 +289,7 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "lumaNR", "Luminance NR", 0, 1, 0);
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
         AddSlider(gDetail, "chromaNR", "Chroma NR (edge)", 0, 1, 0);
+        AddSlider(gDetail, "diffuse", "Diffuse/Sharpen", -1, 1, 0);
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
         AddSlider(gDetail, "hotpix", "Hot Pixel", 0, 1, 0);
@@ -504,6 +505,7 @@ public partial class DevelopPanel : UserControl
         SetVal("lumaNR", Param(path!, LumaNoiseReductionOp.Type, "amount"));
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
         SetVal("chromaNR", Param(path!, ChromaDenoiseOp.Type, "amount"));
+        SetVal("diffuse", Param(path!, DiffuseOp.Type, "amount"));
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
         SetVal("hotpix", Param(path!, HotPixelOp.Type, "strength"));
@@ -892,6 +894,8 @@ public partial class DevelopPanel : UserControl
         if (!texture.IsIdentity) ops.Add(Op(TextureOp.Type, "Texture", texture.ToParams()));
         var sharpen = new SharpenOp { Amount = (float)GetVal("sharpen") };
         if (!sharpen.IsIdentity) ops.Add(Op(SharpenOp.Type, "Sharpen", sharpen.ToParams()));
+        var diffuse = new DiffuseOp { Amount = (float)GetVal("diffuse") };
+        if (!diffuse.IsIdentity) ops.Add(Op(DiffuseOp.Type, "Diffuse/Sharpen", diffuse.ToParams()));
 
         // 8) Effects
         var vig = new VignetteOp { Amount = (float)GetVal("vignette") };

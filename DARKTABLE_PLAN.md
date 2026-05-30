@@ -13,6 +13,7 @@ Darktable module -> op của ta đã làm:
 - color zones (HSL) -> `HslMixerOp` (8 dải); color mapping/unify -> `ColorUnifyOp`; selective -> `SelectiveColorOp`
 - filmic rgb -> `FilmicRgbOp` (đầy đủ: white/black relative, latitude, contrast); sigmoid -> `SigmoidOp`
 - haze removal -> `DehazeOp`; local contrast/clarity -> `ClarityOp`; sharpen -> `SharpenOp`; texture -> `TextureOp`
+- diffuse or sharpen -> `DiffuseOp` (PDE Perona–Malik: sharpen bám cạnh / denoise giữ cạnh)
 - denoise (profiled, 1 phần) -> `ColorNoiseReductionOp` + `LumaNoiseReductionOp` + `ChromaDenoiseOp` (cross-bilateral) + AI denoise (`AiDenoiseOp`)
 - chromatic aberration/defringe -> `DefringeOp` (viền) + `CaCorrectOp` (lateral CA radial); vignette -> `VignetteOp`; grain -> `GrainOp`
 - hot/dead pixel -> `HotPixelOp`
@@ -44,8 +45,9 @@ Darktable module -> op của ta đã làm:
 
 ## D. PHASE D3 — Detail & correction, test được
 
-- [ ] **D3.1** `DiffuseOp` (diffuse or sharpen) — khuếch tán dẫn hướng: sharpen/denoise/khử mờ theo preset
-      (sharpen demosaic, lens deblur, dehaze tinh). Bộ lọc PDE đơn giản hoá.
+- [x] **D3.1** `DiffuseOp` (diffuse or sharpen) — khuếch tán dẫn hướng Perona–Malik trên luminance:
+      Amount dương = sharpen bám cạnh (không khuếch đại nhiễu), âm = denoise/làm mịn giữ cạnh; Iterations
+      + EdgeSensitivity, vòng lặp theo scale. Nối UI Detail + DevelopModules + test.
 - [x] **D3.2** `RawDenoiseOp` / chroma denoise nâng — `ChromaDenoiseOp` cross-bilateral (guide luminance,
       giữ cạnh, mượt chroma mạnh hơn ColorNR), bán kính theo scale, EdgeSensitivity. Nối UI Detail + test.
 - [x] **D3.3** `HotPixelOp` — khử điểm chết/nóng (so 4 lân cận theo ngưỡng -> thay trung bình, có test).
@@ -101,7 +103,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 
 **Đợt 3 — nặng / cần native / phức tạp (cân nhắc):**
 9. D2.2 ICC color management (chính xác màu, công sức trung bình).
-10. D3.1 Diffuse-or-sharpen (PDE), D6.3 virtual copies.
+10. ✅ D3.1 Diffuse-or-sharpen (PDE); D6.3 virtual copies (còn lại).
 11. **D5.x RAW thật qua LibRaw** — bước nhảy lớn nhất; cần bundle native + verify trên máy thật.
 12. D3.5 Liquify, D4.4 instance UI.
 
