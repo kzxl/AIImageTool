@@ -232,6 +232,9 @@ public partial class DevelopPanel : UserControl
         var btnAutoLevels = new Button { Content = "Auto Levels", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left };
         btnAutoLevels.Click += BtnAutoLevels_Click;
         gLevels.Children.Add(btnAutoLevels);
+        var btnAutoColor = new Button { Content = "Auto Color (khử ám màu)", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Căng dải động riêng từng kênh R/G/B để triệt ám màu (per-channel levels)." };
+        btnAutoColor.Click += BtnAutoColor_Click;
+        gLevels.Children.Add(btnAutoColor);
         // Per-channel (D2.5): black/white/gamma riêng cho R/G/B (color grading kiểu film).
         var expLvlCh = new Expander { Header = "Per-channel R/G/B", Foreground = Brushes.Gainsboro, FontSize = 11, Margin = new Thickness(0, 2, 0, 2) };
         var gLvlCh = new StackPanel();
@@ -1266,6 +1269,21 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_black", v.Black);
         SetVal("lvl_white", v.White);
         SetVal("lvl_gamma", v.Gamma);
+        _loading = false;
+        Commit();
+    }
+
+    /// <summary>Auto Color: căng dải động riêng từng kênh R/G/B (khử ám màu) -> nạp per-channel Levels.</summary>
+    private void BtnAutoColor_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var sug = _renderer.AnalyzeAutoColor(_currentPath);
+        if (sug == null) return;
+        var v = sug.Value;
+        _loading = true;
+        SetVal("lvl_blackR", v.BlackR); SetVal("lvl_whiteR", v.WhiteR);
+        SetVal("lvl_blackG", v.BlackG); SetVal("lvl_whiteG", v.WhiteG);
+        SetVal("lvl_blackB", v.BlackB); SetVal("lvl_whiteB", v.WhiteB);
         _loading = false;
         Commit();
     }

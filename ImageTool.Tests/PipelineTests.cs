@@ -662,6 +662,58 @@ public class AutoToneTests
     }
 
     [Fact]
+    public void AutoColor_RemovesCast_ByPerChannelLevels()
+    {
+        // Ảnh ngả vàng: kênh B nén ở dải thấp (0..0.5), R/G full (0..1). Auto Color phải kéo white point
+        // kênh B xuống ~0.5 (căng riêng) để khử ám, trong khi R/G giữ ~1.
+        var img = new LinearImage(16, 16);
+        int idx = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            float t = (idx % 256) / 255f;
+            img.Pixels[i] = ColorSpace.SrgbToLinear(t);            // R full
+            img.Pixels[i + 1] = ColorSpace.SrgbToLinear(t);        // G full
+            img.Pixels[i + 2] = ColorSpace.SrgbToLinear(t * 0.5f); // B nén (ngả vàng)
+            img.Pixels[i + 3] = 1f;
+            idx++;
+        }
+        var c = AutoTone.AnalyzeColorLevels(img);
+        // White point kênh B phải thấp hơn nhiều so với R (để kéo B lên khi áp).
+        Assert.True(c.WhiteB < c.WhiteR - 0.2f, $"WhiteB={c.WhiteB} WhiteR={c.WhiteR}");
+        Assert.True(c.WhiteR > 0.85f);
+    }
+
+    [Fact]
+    public void AutoColor_AppliedViaPerChannelLevels_ReducesCast()
+    {
+        var img = new LinearImage(16, 16);
+        int idx = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4)
+        {
+            float t = (idx % 256) / 255f;
+            img.Pixels[i] = ColorSpace.SrgbToLinear(t);
+            img.Pixels[i + 1] = ColorSpace.SrgbToLinear(t);
+            img.Pixels[i + 2] = ColorSpace.SrgbToLinear(t * 0.5f);
+            img.Pixels[i + 3] = 1f;
+            idx++;
+        }
+        var c = AutoTone.AnalyzeColorLevels(img);
+        new RgbLevelsOp
+        {
+            BlackR = c.BlackR, WhiteR = c.WhiteR,
+            BlackG = c.BlackG, WhiteG = c.WhiteG,
+            BlackB = c.BlackB, WhiteB = c.WhiteB,
+        }.Apply(img, 1f);
+
+        // Sau khử cast: pixel sáng nhất có B gần với R hơn (ám vàng giảm).
+        // Tìm pixel có R lớn nhất.
+        float maxR = 0; int mo = 0;
+        for (int i = 0; i < img.Pixels.Length; i += 4) if (img.Pixels[i] > maxR) { maxR = img.Pixels[i]; mo = i; }
+        float ratioAfter = img.Pixels[mo + 2] / Math.Max(1e-4f, img.Pixels[mo]);
+        Assert.True(ratioAfter > 0.7f, $"B/R sau khử cast phải gần 1: {ratioAfter}");
+    }
+
+    [Fact]
     public void AutoLevels_AppliedViaRgbLevels_IncreasesContrast()
     {
         var img = new LinearImage(20, 20);

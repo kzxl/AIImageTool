@@ -117,4 +117,51 @@ public static class AutoTone
         white = Math.Clamp(white, Math.Max(black + 0.05f, 0.55f), 1f);
         return new LevelsSuggestion { Black = black, White = white, Gamma = 1f };
     }
+
+    /// <summary>Gợi ý Auto Color: black/white point RIÊNG cho từng kênh R/G/B (khử ám màu).</summary>
+    public struct ColorLevelsSuggestion
+    {
+        public float BlackR, WhiteR, BlackG, WhiteG, BlackB, WhiteB;
+    }
+
+    /// <summary>
+    /// Auto Color (per-channel levels): căng dải động ĐỘC LẬP từng kênh R/G/B theo phân vị. Vì mỗi kênh
+    /// được kéo điểm đen/trắng riêng, ám màu đồng đều (vd ảnh ngả vàng) bị triệt — kiểu "Auto Color" của
+    /// Photoshop. Mạnh tay hơn gray-world; dùng khi muốn khử cast rõ.
+    /// </summary>
+    public static ColorLevelsSuggestion AnalyzeColorLevels(LinearImage img, float lowPct = 0.005f, float highPct = 0.995f)
+    {
+        const int N = 256;
+        var hr = new int[N]; var hg = new int[N]; var hb = new int[N];
+        float[] px = img.Pixels;
+        int count = 0;
+        for (int o = 0; o < px.Length; o += 4)
+        {
+            Acc(hr, px[o]); Acc(hg, px[o + 1]); Acc(hb, px[o + 2]);
+            count++;
+        }
+        if (count == 0)
+            return new ColorLevelsSuggestion { WhiteR = 1f, WhiteG = 1f, WhiteB = 1f };
+
+        var s = new ColorLevelsSuggestion();
+        (s.BlackR, s.WhiteR) = ChannelBW(hr, count, lowPct, highPct);
+        (s.BlackG, s.WhiteG) = ChannelBW(hg, count, lowPct, highPct);
+        (s.BlackB, s.WhiteB) = ChannelBW(hb, count, lowPct, highPct);
+        return s;
+
+        static void Acc(int[] h, float lin)
+        {
+            float v = ColorSpace.LinearToSrgb(lin);
+            int bin = (int)(v * (N - 1) + 0.5f);
+            if (bin < 0) bin = 0; else if (bin >= N) bin = N - 1;
+            h[bin]++;
+        }
+    }
+
+    private static (float black, float white) ChannelBW(int[] hist, int count, float lowPct, float highPct)
+    {
+        float black = Math.Clamp(Percentile(hist, count, lowPct), 0f, 0.45f);
+        float white = Math.Clamp(Percentile(hist, count, highPct), Math.Max(black + 0.05f, 0.55f), 1f);
+        return (black, white);
+    }
 }

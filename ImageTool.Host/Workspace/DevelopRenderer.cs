@@ -235,6 +235,18 @@ public sealed class DevelopRenderer
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AnalyzeAutoLevels", path, ex); return null; }
     }
 
+    /// <summary>Phân tích Auto Color (per-channel levels) trên proxy. Trả black/white mỗi kênh; null nếu lỗi.</summary>
+    public AutoTone.ColorLevelsSuggestion? AnalyzeAutoColor(string path)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return AutoTone.AnalyzeColorLevels(proxy);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AnalyzeAutoColor", path, ex); return null; }
+    }
+
     /// <summary>Phân tích Auto White Balance trên proxy. Trả gain per-channel; null nếu lỗi.</summary>
     public AutoWhiteBalance.Gains? AnalyzeAutoWhiteBalance(string path)
     {
