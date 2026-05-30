@@ -3,8 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-29 (d) — thêm section 13 + catalog 8.2/8.3/8.4/8.7 + keyword search.
-> 191/191 test pass, build 0 warning. Light theme (11.9) hoãn: cần migrate ~51 màu hardcode trước.
+> Cập nhật lần cuối: 2026-05-30 — section 13 + catalog 8.2/8.3/8.4/8.5/8.6/8.7 + keyword search + GPS/map
+> + WB eyedropper (3.1) + import Lightroom XMP (9.3) + AppLog cho lỗi nuốt. 211/211 test pass, build 0 warning.
 
 ---
 
@@ -131,7 +131,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 ## 3. TÍNH NĂNG DEVELOP - Color (Lightroom Color Mixer + Darktable)
 
-- [ ] **3.1** White Balance theo nhiệt độ Kelvin thực (as-shot, eyedropper, presets) thay gain đơn giản. (Hiện: gain temp/tint trong DevelopBasic.)
+- [x] **3.1** White Balance: Kelvin slider (`WBKelvinOp`) + **eyedropper** (click điểm xám -> `ChannelGainOp`)
+      + **Auto WB** (gray-world). As-shot từ RAW metadata CHƯA (cần RAW decode).
 - [x] **3.2** HSL / Color Mixer 8 kênh (Hue/Sat/Lum cho Red..Magenta) — `HslMixerOp`, UI combo chọn dải + 3 slider.
 - [x] **3.3** Color Grading (`ColorGradingOp`, Shadows/Midtones/Highlights/Global + Blending, có test). UI color-wheel
       (`ColorWheel` 3-way: kéo hue/sat trên vòng tròn cho Shadows/Midtones/Highlights/Global + lum slider).
@@ -204,10 +205,11 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       "Lưu vào Keywords" + search workspace khớp keyword). + test.
 - [x] **8.3** Smart Collections (lọc theo rule: rating, keyword, EXIF, ngày...) — `SmartCollection` + dialog. + test.
 - [x] **8.4** Tìm kiếm nâng cao (metadata, keyword, camera, lens, ISO...) — `CatalogQuery` + `SearchAdvanced`. + test.
-- [ ] **8.5** Map / GPS view (nếu có GPS EXIF) - tùy chọn.
-- [ ] **8.6** Compare/Survey view (đã có Cull 2x2, mở rộng zoom đồng bộ).
+- [x] **8.5** Map / GPS view — `GpsHelper` (DMS->decimal + validate + map URL), `ExifReader.TryReadGps`,
+      cột GPS trong catalog, InfoPanel hiện toạ độ + nút "🗺 Bản đồ" mở Google Maps. + test.
+- [x] **8.6** Compare/Survey view: Cull 2x2 + **side-by-side before/after (Y) + zoom đồng bộ 2 khung** (mousewheel).
 - [~] **8.7** Stacking ảnh (`ImageStacker`: StackByTime burst/bracket + StackByBaseName, có test). UI gom nhóm
-      trong grid CHƯA — engine sẵn sàng.
+      trong grid CHƯA — engine sẵn sàng (cần thao tác UI runtime nên hoãn).
 
 ---
 
@@ -215,7 +217,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 - [x] **9.1** Develop Presets: lưu/áp qua StyleService (combo + nút Lưu trong DevelopPanel).
 - [x] **9.2** Copy/Paste settings (`DevelopClipboard`) + Sync selection + phím tắt + context menu.
-- [ ] **9.3** Import preset XMP của Lightroom (.xmp) và style Darktable (.dtstyle) - tùy chọn.
+- [~] **9.3** Import preset XMP của Lightroom (`LightroomXmpImporter`: crs:* -> EditOps -> Style, có UI + test).
+      Style Darktable (.dtstyle) CHƯA (format khác).
 - [x] **9.4** Export: watermark chữ, resize %/cạnh dài, TIFF, pattern đổi tên, **Sharpen-for-output**
       (None/Screen/Print Low/Print High qua GaussianSharpen, áp sau resize trong ExportBatchAdapter + UI ComboBox).
 - [x] **9.5** XMP sidecar (`XmpSidecar`, namespace imgtool:, tùy chọn writeXmp khi export + test).
