@@ -356,6 +356,9 @@ public partial class DevelopPanel : UserControl
         AddSlider(gFilm, "film_bbase", "Base B", 0.02, 1, 0.18, "0.00");
         AddSlider(gFilm, "film_gamma", "Contrast (gamma)", 0.3, 3, 1, "0.00");
         AddSlider(gFilm, "film_exposure", "Exposure", 0.1, 4, 1, "0.00");
+        var btnPickBase = new Button { Content = "Pick film base (click mép phim)", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left };
+        btnPickBase.Click += BtnPickFilmBase_Click;
+        gFilm.Children.Add(btnPickBase);
         gFilm.Children.Add(new TextBlock { Text = "Mẹo: chọn Base bằng vùng mép phim trống (sáng nhất).", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
 
         // Black & White
@@ -1201,6 +1204,27 @@ public partial class DevelopPanel : UserControl
         var g = _renderer.SampleWhiteBalance(_currentPath, nx, ny);
         if (g == null) return;
         _wbGainR = g.Value.R; _wbGainG = g.Value.G; _wbGainB = g.Value.B;
+        Commit();
+    }
+
+    /// <summary>Bắn khi user bật eyedropper Film Base; CenterPreview vào chế độ click chọn mép phim.</summary>
+    public event EventHandler? FilmBasePickRequested;
+
+    private void BtnPickFilmBase_Click(object sender, RoutedEventArgs e)
+        => FilmBasePickRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>CenterPreview gọi lại khi user click mép phim -> nạp màu base + bật Film Negative.</summary>
+    public void ApplyFilmBasePick(float nx, float ny)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var b = _renderer.SampleFilmBase(_currentPath, nx, ny);
+        if (b == null) return;
+        _loading = true;
+        SetVal("film_rbase", b.Value.R);
+        SetVal("film_gbase", b.Value.G);
+        SetVal("film_bbase", b.Value.B);
+        if (_chkFilmNeg != null) _chkFilmNeg.IsChecked = true;
+        _loading = false;
         Commit();
     }
 

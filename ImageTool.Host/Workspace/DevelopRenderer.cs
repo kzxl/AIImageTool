@@ -290,6 +290,21 @@ public sealed class DevelopRenderer
     }
 
     /// <summary>
+    /// Lấy mẫu film base (linear) tại điểm chuẩn hoá trên proxy GỐC (chưa áp op) — dùng cho eyedropper
+    /// Film Negative: click vào mép phim trống (sáng nhất) để lấy màu base. Null nếu không decode được.
+    /// </summary>
+    public (float R, float G, float B)? SampleFilmBase(string path, float nx, float ny)
+    {
+        try
+        {
+            var proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return FilmNegativeOp.SampleBase(proxy, nx, ny, 3);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.SampleFilmBase", path, ex); return null; }
+    }
+
+    /// <summary>
     /// Tính histogram + clip warning cho ảnh đã áp ops (trên proxy, downscale thêm cho nhanh).
     /// Dùng cho histogram live trong DevelopPanel (11.3). Null nếu không decode được.
     /// </summary>

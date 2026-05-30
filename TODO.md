@@ -307,7 +307,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       Nút "Auto WB" trong nhóm White Balance. + test.
 - [x] **13.3** Negative / Invert (`InvertOp`, đảo trong sRGB cho workflow scan phim). Toggle trong Effects. + test.
       **Film Negative (negadoctor):** `FilmNegativeOp` khử film base màu cam + đảo trong miền mật độ
-      (per-channel base/gamma/exposure, SampleBase lấy mẫu mép phim), nhóm "Film Negative" + test.
+      (per-channel base/gamma/exposure, SampleBase lấy mẫu mép phim), nhóm "Film Negative" + eyedropper
+      "Pick film base" (click mép phim trống) + test.
 - [x] **13.4** Crop aspect-ratio presets (`CropAspect`: 1:1/4:3/3:2/16:9/5:4/dọc + Original). ComboBox trong
       thanh Crop, căn giữa khung. + test.
 - [x] **13.5** Export presets (`ExportPreset` trong AppSettings): lưu/gọi/xoá toàn bộ thiết lập Export (combo + nút).
