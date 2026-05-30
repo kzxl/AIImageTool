@@ -148,4 +148,68 @@ public partial class VisionTaggerControl : UserControl
         _meta.SetTags(_currentPath, merged);
         MessageBox.Show($"Đã lưu {merged.Count} keyword vào ảnh.", "Lưu Keywords", MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
+    /// <summary>AI batch tagging (#3): chạy tagger cho mọi ảnh đang chọn, lưu keyword (gộp, khử trùng).</summary>
+    private async void BtnTagSelection_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null || _meta == null || _downloader == null)
+        {
+            MessageBox.Show("Service chưa khởi tạo.", "Batch Tag", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        var targets = _workspace.Selection.Where(File.Exists).ToList();
+        if (targets.Count == 0 && !string.IsNullOrEmpty(_currentPath) && File.Exists(_currentPath))
+            targets.Add(_currentPath);
+        if (targets.Count == 0)
+        {
+            MessageBox.Show("Hãy chọn ít nhất 1 ảnh.", "Batch Tag", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        btnTagSelection.IsEnabled = false;
+        btnAnalyze.IsEnabled = false;
+        pnlLoading.Visibility = Visibility.Visible;
+        int done = 0, ok = 0;
+        try
+        {
+            var modelPath = await _downloader.EnsureAsync(KnownModels.WdViTV3, new Progress<DownloadProgress>(p =>
+                Dispatcher.BeginInvoke(() => txtDescription.Text = $"Tải model: {p.Percent:N0}%")));
+            var tagsPath = await _downloader.EnsureAsync(KnownModels.WdViTV3Tags);
+            _processor ??= await Task.Run(() => new WdTaggerProcessor(modelPath, tagsPath));
+
+            foreach (var path in targets)
+            {
+                _ = Dispatcher.BeginInvoke(() => txtDescription.Text = $"Đang tag {done + 1}/{targets.Count}: {Path.GetFileName(path)}");
+                try
+                {
+                    var result = await Task.Run(() => _processor!.Run(path, generalThreshold: 0.35f, characterThreshold: 0.85f));
+                    var tags = result.General.Take(30).Select(x => x.Tag)
+                        .Concat(result.Character.Select(x => x.Tag)).ToList();
+                    if (tags.Count > 0)
+                    {
+                        var existing = _meta.Get(path).Tags;
+                        var merged = new List<string>(existing);
+                        var seen = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+                        foreach (var t in tags) if (t.Length > 0 && seen.Add(t)) merged.Add(t);
+                        _meta.SetTags(path, merged);
+                        ok++;
+                    }
+                }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Batch tag lỗi {path}: {ex.Message}"); }
+                done++;
+            }
+            MessageBox.Show($"Đã tag {ok}/{targets.Count} ảnh (lưu vào keyword).", "Batch Tag", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi batch tag: {ex.Message}", "Batch Tag", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            pnlLoading.Visibility = Visibility.Collapsed;
+            btnTagSelection.IsEnabled = true;
+            btnAnalyze.IsEnabled = !string.IsNullOrEmpty(_currentPath);
+            txtDescription.Text = "";
+        }
+    }
 }

@@ -26,8 +26,13 @@
                    ToolTip="Ảnh đang mở ở khung xem trung tâm"/>
 
         <!-- Nút Action -->
-        <Button x:Name="btnAnalyze" Grid.Row="2" Content="Phân Tích Bằng AI" Height="38" Margin="0,0,0,14"
-                Click="BtnAnalyze_Click" FontWeight="Bold" IsEnabled="False"/>
+        <StackPanel Grid.Row="2" Margin="0,0,0,14">
+            <Button x:Name="btnAnalyze" Content="Phân Tích Bằng AI" Height="38" Margin="0,0,0,6"
+                    Click="BtnAnalyze_Click" FontWeight="Bold" IsEnabled="False"/>
+            <Button x:Name="btnTagSelection" Content="Tag toàn bộ ảnh đang chọn (Batch)" Height="28"
+                    Click="BtnTagSelection_Click"
+                    ToolTip="Chạy AI tag cho mọi ảnh đang chọn và lưu vào keyword"/>
+        </StackPanel>
 
         <!-- Tiêu đề mô tả -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
