@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 439/439 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 439/439 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -261,7 +261,7 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **11.1** Develop module: tab Develop nhóm thu gọn được (Expander): WB/Tone/ParametricCurve/Presence/HSL/SplitToning/Detail/Effects/Geometry.
 - [x] **11.2** Slider: double-click reset + ô nhập số trực tiếp (Enter/blur) + hiển thị giá trị.
 - [x] **11.3** Histogram trực quan + cảnh báo clip (live trong DevelopPanel: RGB/Luma toggle, marker
-      shadow/highlight + %). Kéo trực tiếp trên histogram để chỉnh tone CHƯA (13.10, giá trị biên).
+      shadow/highlight + %). Kéo trực tiếp trên histogram để chỉnh tone ĐÃ XONG (13.10).
 - [x] **11.4** Before/After: splitter (cũ) + giữ phím `\` xem ảnh gốc + **side-by-side (phím Y)** 2 khung.
 - [x] **11.5** Zoom/Pan loupe: wheel-zoom quanh con trỏ, Z toggle fit/100%, +/-, right-drag pan, **Space + kéo trái để pan** (kiểu Photoshop).
 - [x] **11.6** Phím tắt kiểu LR: rating/flag/label + Ctrl+Shift+C/V + Ctrl+Z/Y + **D/M module switch** + R crop + J clip + Y compare.
@@ -314,7 +314,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **13.11** Nối B&W / Invert / Auto WB / crop-ratio vào Develop + Crop UI.
 - [x] **13.7** Batch Rename UI (`BatchRenameDialog` + `BatchRenamer`): dialog xem trước live, đổi tên an toàn
       2 pha (xử lý hoán đổi/đụng tên), mở từ context menu thumbnail. + test.
-- [ ] **13.10** Histogram tương tác kéo trực tiếp để chỉnh tone (mới có hiển thị + clip warning).
+- [x] **13.10** Histogram tương tác kéo trực tiếp để chỉnh tone — kéo ngang trên histogram chỉnh slider Basic
+      theo vùng tone (Blacks/Shadows/Exposure/Highlights/Whites trái→phải), commit debounce như slider.
 
 ---
 

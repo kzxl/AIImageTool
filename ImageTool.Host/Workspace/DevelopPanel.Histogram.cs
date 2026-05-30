@@ -40,9 +40,14 @@ public partial class DevelopPanel
         {
             Height = 90,
             Background = new SolidColorBrush(Color.FromRgb(0x0F, 0x0F, 0x0F)),
-            ClipToBounds = true
+            ClipToBounds = true,
+            Cursor = System.Windows.Input.Cursors.SizeWE,
+            ToolTip = "Kéo ngang trên histogram để chỉnh tone: trái→phải = Blacks · Shadows · Exposure · Highlights · Whites"
         };
         _histCanvas.SizeChanged += (_, _) => DrawHistogram();
+        _histCanvas.MouseLeftButtonDown += HistCanvas_MouseDown;
+        _histCanvas.MouseMove += HistCanvas_MouseMove;
+        _histCanvas.MouseLeftButtonUp += HistCanvas_MouseUp;
         _histHost = new Border
         {
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)),
@@ -144,5 +149,62 @@ public partial class DevelopPanel
     {
         Fill = new SolidColorBrush(c),
         Points = new PointCollection { new(x, y), new(x + s, y), new(x, y + s) }
+    };
+
+    // ===== Kéo trực tiếp trên histogram để chỉnh tone (13.10) =====
+    // Chia trục ngang [0..1] làm 5 vùng tone, mỗi vùng map sang 1 slider Basic. Kéo ngang:
+    // sang phải = tăng, sang trái = giảm. Bước nhỏ để mượt; commit debounce như slider thường.
+    private bool _histDragging;
+    private double _histDragLastX;
+    private string? _histDragKey;
+
+    private void HistCanvas_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_histCanvas == null || _loading || string.IsNullOrEmpty(_currentPath)) return;
+        double w = _histCanvas.ActualWidth;
+        if (w <= 0) return;
+        double x = e.GetPosition(_histCanvas).X;
+        _histDragKey = ToneKeyAt(x / w);
+        _histDragging = true;
+        _histDragLastX = x;
+        _histCanvas.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void HistCanvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_histDragging || _histCanvas == null || _histDragKey == null) return;
+        double w = _histCanvas.ActualWidth;
+        if (w <= 0) return;
+        double x = e.GetPosition(_histCanvas).X;
+        double dxFrac = (x - _histDragLastX) / w;   // tỉ lệ chiều ngang đã kéo
+        _histDragLastX = x;
+        if (Math.Abs(dxFrac) < 1e-4) return;
+
+        // Exposure thang [-5..5] nhạy hơn; còn lại [-1..1].
+        double gain = _histDragKey == "exposure" ? 4.0 : 1.6;
+        double cur = GetVal(_histDragKey);
+        double next = cur + dxFrac * gain;
+        next = _histDragKey == "exposure" ? Math.Clamp(next, -5, 5) : Math.Clamp(next, -1, 1);
+        SetVal(_histDragKey, next);   // slider.ValueChanged tự ScheduleCommit (debounce)
+    }
+
+    private void HistCanvas_MouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!_histDragging) return;
+        _histDragging = false;
+        _histDragKey = null;
+        _histCanvas?.ReleaseMouseCapture();
+        e.Handled = true;
+    }
+
+    /// <summary>Vùng tone theo vị trí ngang chuẩn hoá [0..1] -> slider Basic tương ứng.</summary>
+    private static string ToneKeyAt(double xFrac) => xFrac switch
+    {
+        < 0.20 => "blacks",
+        < 0.40 => "shadows",
+        < 0.60 => "exposure",
+        < 0.80 => "highlights",
+        _ => "whites",
     };
 }
