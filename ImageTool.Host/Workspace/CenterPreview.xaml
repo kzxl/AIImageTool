@@ -29,6 +29,15 @@
                     <Button x:Name="btnCrop" Content="◳  Crop (R)" Padding="10,4" Margin="12,0,4,0"
                             Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                             Click="BtnCrop_Click" ToolTip="Bật/tắt cắt ảnh (kéo khung)"/>
+                    <Button x:Name="btnRotateLeft" Content="⟲" Padding="9,4" Margin="4,0,0,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnRotateLeft_Click" ToolTip="Xoay trái 90° ([)"/>
+                    <Button x:Name="btnRotateRight" Content="⟳" Padding="9,4" Margin="2,0,0,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnRotateRight_Click" ToolTip="Xoay phải 90° (])"/>
+                    <Button x:Name="btnFlipH" Content="⇋" Padding="9,4" Margin="2,0,4,0"
+                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Click="BtnFlipH_Click" ToolTip="Lật ngang"/>
                     <Button x:Name="btnCompare" Content="◫  Before/After (Y)" Padding="10,4" Margin="4,0,4,0"
                             Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                             Click="BtnCompare_Click" ToolTip="So sánh ảnh gốc và ảnh đã chỉnh cạnh nhau"/>

@@ -804,6 +804,12 @@ public partial class DevelopPanel : UserControl
         ApplyOrientation(cur);
     }
 
+    /// <summary>Xoay ảnh đang chọn (dir=-1 trái, +1 phải). Gọi được từ CenterPreview mode bar.</summary>
+    public void RotateActive(int dir) => RotateBy(dir);
+
+    /// <summary>Lật ảnh đang chọn (true=ngang, false=dọc). Gọi từ CenterPreview.</summary>
+    public void FlipActive(bool horizontal) => ToggleFlip(horizontal);
+
     private void ToggleFlip(bool horizontal)
     {
         if (_currentPath == null || _history == null) return;
