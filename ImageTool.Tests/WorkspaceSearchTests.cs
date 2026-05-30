@@ -15,12 +15,20 @@ public class WorkspaceSearchTests
     {
         private readonly Dictionary<string, ImageMeta> _map = new(StringComparer.OrdinalIgnoreCase);
         public void Set(string path, params string[] tags) => _map[path] = new ImageMeta { Tags = tags.ToList() };
+        public void SetPickStub(string path, PickFlag pick)
+        {
+            if (!_map.TryGetValue(path, out var m)) { m = new ImageMeta(); _map[path] = m; }
+            m.Pick = pick;
+        }
         public ImageMeta Get(string imagePath) => _map.TryGetValue(imagePath, out var m) ? m : new ImageMeta();
         public void SetRating(string imagePath, int rating) { }
         public void SetLabel(string imagePath, ColorLabel label) { }
         public void SetPick(string imagePath, PickFlag pick) { }
         public void SetTags(string imagePath, IEnumerable<string> tags) { }
         public void SetDescription(string imagePath, string? description) { }
+        public void SetRatingMany(IEnumerable<string> imagePaths, int rating) { }
+        public void SetLabelMany(IEnumerable<string> imagePaths, ColorLabel label) { }
+        public void SetPickMany(IEnumerable<string> imagePaths, PickFlag pick) { }
 #pragma warning disable CS0067 // event bắt buộc bởi interface, stub không dùng
         public event EventHandler<ImageMetaChangedEventArgs>? MetaChanged;
 #pragma warning restore CS0067
@@ -88,6 +96,71 @@ public class WorkspaceSearchTests
             ws.Filter.Search = null;
             ws.ApplyFilterAndSort();
             Assert.Equal(2, ws.Images.Count);
+        }
+        finally { System.Threading.SynchronizationContext.SetSynchronizationContext(prevCtx); Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Filter_HideRejected_DropsRejectedImages()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_ws_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var prevCtx = System.Threading.SynchronizationContext.Current;
+        System.Threading.SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            var a = Path.Combine(dir, "keep.jpg"); File.WriteAllText(a, "x");
+            var b = Path.Combine(dir, "reject.jpg"); File.WriteAllText(b, "x");
+            var c = Path.Combine(dir, "pick.jpg"); File.WriteAllText(c, "x");
+
+            var meta = new StubMeta();
+            meta.SetPickStub(b, PickFlag.Reject);
+            meta.SetPickStub(c, PickFlag.Pick);
+
+            var ws = new WorkspaceService(meta);
+            ws.OpenCatalogView(new[] { a, b, c }, "Test");
+
+            ws.Filter.HideRejected = true;
+            ws.ApplyFilterAndSort();
+            Assert.Equal(2, ws.Images.Count);
+            Assert.DoesNotContain(b, ws.Images);
+
+            ws.Filter.HideRejected = false;
+            ws.ApplyFilterAndSort();
+            Assert.Equal(3, ws.Images.Count);
+        }
+        finally { System.Threading.SynchronizationContext.SetSynchronizationContext(prevCtx); Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Filter_RequiredPick_ShowsOnlyMatching()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_ws_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var prevCtx = System.Threading.SynchronizationContext.Current;
+        System.Threading.SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            var a = Path.Combine(dir, "none.jpg"); File.WriteAllText(a, "x");
+            var b = Path.Combine(dir, "reject.jpg"); File.WriteAllText(b, "x");
+            var c = Path.Combine(dir, "pick.jpg"); File.WriteAllText(c, "x");
+
+            var meta = new StubMeta();
+            meta.SetPickStub(b, PickFlag.Reject);
+            meta.SetPickStub(c, PickFlag.Pick);
+
+            var ws = new WorkspaceService(meta);
+            ws.OpenCatalogView(new[] { a, b, c }, "Test");
+
+            ws.Filter.RequiredPick = PickFlag.Reject;
+            ws.ApplyFilterAndSort();
+            Assert.Single(ws.Images);
+            Assert.Equal(b, ws.Images[0]);
+
+            ws.Filter.RequiredPick = PickFlag.Pick;
+            ws.ApplyFilterAndSort();
+            Assert.Single(ws.Images);
+            Assert.Equal(c, ws.Images[0]);
         }
         finally { System.Threading.SynchronizationContext.SetSynchronizationContext(prevCtx); Directory.Delete(dir, true); }
     }

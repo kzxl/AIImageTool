@@ -128,7 +128,7 @@ public class WorkspaceService : IWorkspaceService
         bool needSize = Sort is WorkspaceSort.SizeAsc or WorkspaceSort.SizeDesc;
         bool needMeta = _meta != null && (
             Filter.MinRating > 0 || Filter.RequiredLabel.HasValue || Filter.RequiredPick.HasValue
-            || Sort == WorkspaceSort.RatingDesc);
+            || Filter.HideRejected || Sort == WorkspaceSort.RatingDesc);
 
         string? search = string.IsNullOrWhiteSpace(Filter.Search) ? null : Filter.Search.Trim();
         // Search cũng cần meta (để khớp keyword/tags), không chỉ tên file.
@@ -153,6 +153,7 @@ public class WorkspaceService : IWorkspaceService
                 if (Filter.MinRating > 0 && m.Rating < Filter.MinRating) continue;
                 if (Filter.RequiredLabel.HasValue && m.Label != Filter.RequiredLabel.Value) continue;
                 if (Filter.RequiredPick.HasValue && m.Pick != Filter.RequiredPick.Value) continue;
+                if (Filter.HideRejected && m.Pick == PickFlag.Reject) continue;
             }
 
             rows.Add(new Row(

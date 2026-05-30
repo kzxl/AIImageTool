@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 430/430 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 436/436 test pass, build 0 warning, 3 plugin.
 
 ---
 

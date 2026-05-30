@@ -34,6 +34,9 @@ public class WorkspaceFilter
     public ColorLabel? RequiredLabel { get; set; }
     public PickFlag? RequiredPick { get; set; }
     public string? Search { get; set; }
+
+    /// <summary>Ẩn ảnh đã gắn cờ Reject (luồng cull thông dụng: loại trước, xem lại trước khi xoá).</summary>
+    public bool HideRejected { get; set; }
 }
 
 public enum WorkspaceSort { NameAsc, NameDesc, DateAsc, DateDesc, SizeAsc, SizeDesc, RatingDesc }

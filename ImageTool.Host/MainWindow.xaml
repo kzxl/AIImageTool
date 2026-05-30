@@ -74,6 +74,13 @@
                         <Button Tag="Green"  Width="16" Height="16" Background="LimeGreen"    BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
                         <Button Tag="Blue"   Width="16" Height="16" Background="DodgerBlue"   BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
                         <Button Tag="Purple" Width="16" Height="16" Background="MediumPurple" BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
+                        <Border Width="1" Background="{DynamicResource BorderBrush_}" Margin="8,2"/>
+                        <Button x:Name="btnFilterPick" Content="✓" Width="22" Height="20" Margin="2,0" Padding="0"
+                                Click="FilterPick_Click" ToolTip="Chỉ hiện ảnh Pick (bấm lại để bỏ)"/>
+                        <Button x:Name="btnFilterReject" Content="✗" Width="22" Height="20" Margin="2,0" Padding="0"
+                                Click="FilterReject_Click" ToolTip="Chỉ hiện ảnh Reject (bấm lại để bỏ)"/>
+                        <Button x:Name="btnHideReject" Content="⊘" Width="22" Height="20" Margin="2,0" Padding="0"
+                                Click="HideReject_Click" ToolTip="Ẩn ảnh đã Reject (luồng cull)"/>
                     </StackPanel>
                 </Border>
 

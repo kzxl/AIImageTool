@@ -100,7 +100,9 @@ Darktable module -> op của ta đã làm:
       + checkbox "Append" trong StylePanel + StyleBatchAdapter mode append/replace. + test.
 - [ ] **D6.3** Duplicate / virtual copies (nhiều phiên bản edit của 1 ảnh) — cần model history per-version.
 - [ ] **D6.4** Tagging phân cấp + recently used + tag từ điển (đã có keyword phẳng phân cấp; bổ sung từ điển/tag tree UI).
-- [ ] **D6.5** Culling nâng cao + đánh dấu reject hàng loạt (đã có cull/stack; thêm flow lọc reject).
+- [x] **D6.5** Culling nâng cao + đánh dấu reject hàng loạt — `IImageMetaService.SetRating/Label/PickMany`
+      (gộp ghi sidecar 1 lần/folder), phím rating/flag/label áp cho TOÀN BỘ selection (không chỉ ảnh active),
+      `WorkspaceFilter.HideRejected` + bộ lọc Pick/Reject/Hide-rejected trên top bar (luồng cull). + test.
 
 ## H. ƯU TIÊN & ƯỚC LƯỢNG
 

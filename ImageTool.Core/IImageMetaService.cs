@@ -35,6 +35,13 @@ public interface IImageMetaService
     void SetTags(string imagePath, IEnumerable<string> tags);
     void SetDescription(string imagePath, string? description);
 
+    /// <summary>Đặt rating cho nhiều ảnh: gộp ghi sidecar theo folder (1 lần/folder) thay vì mỗi ảnh 1 lần.</summary>
+    void SetRatingMany(IEnumerable<string> imagePaths, int rating);
+    /// <summary>Đặt color label cho nhiều ảnh (batch theo folder).</summary>
+    void SetLabelMany(IEnumerable<string> imagePaths, ColorLabel label);
+    /// <summary>Đặt pick/reject flag cho nhiều ảnh (batch theo folder).</summary>
+    void SetPickMany(IEnumerable<string> imagePaths, PickFlag pick);
+
     event EventHandler<ImageMetaChangedEventArgs>? MetaChanged;
 }
 

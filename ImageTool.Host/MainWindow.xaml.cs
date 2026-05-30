@@ -254,20 +254,54 @@ public partial class MainWindow : Window
 
         switch (e.Key)
         {
-            case System.Windows.Input.Key.D0: _meta.SetRating(path, 0); e.Handled = true; break;
-            case System.Windows.Input.Key.D1: _meta.SetRating(path, 1); e.Handled = true; break;
-            case System.Windows.Input.Key.D2: _meta.SetRating(path, 2); e.Handled = true; break;
-            case System.Windows.Input.Key.D3: _meta.SetRating(path, 3); e.Handled = true; break;
-            case System.Windows.Input.Key.D4: _meta.SetRating(path, 4); e.Handled = true; break;
-            case System.Windows.Input.Key.D5: _meta.SetRating(path, 5); e.Handled = true; break;
-            case System.Windows.Input.Key.P: _meta.SetPick(path, PickFlag.Pick); e.Handled = true; break;
-            case System.Windows.Input.Key.X: _meta.SetPick(path, PickFlag.Reject); e.Handled = true; break;
-            case System.Windows.Input.Key.U: _meta.SetPick(path, PickFlag.None); e.Handled = true; break;
-            case System.Windows.Input.Key.D6: _meta.SetLabel(path, ColorLabel.Red); e.Handled = true; break;
-            case System.Windows.Input.Key.D7: _meta.SetLabel(path, ColorLabel.Yellow); e.Handled = true; break;
-            case System.Windows.Input.Key.D8: _meta.SetLabel(path, ColorLabel.Green); e.Handled = true; break;
-            case System.Windows.Input.Key.D9: _meta.SetLabel(path, ColorLabel.Blue); e.Handled = true; break;
+            case System.Windows.Input.Key.D0: ApplyRatingToTargets(0); e.Handled = true; break;
+            case System.Windows.Input.Key.D1: ApplyRatingToTargets(1); e.Handled = true; break;
+            case System.Windows.Input.Key.D2: ApplyRatingToTargets(2); e.Handled = true; break;
+            case System.Windows.Input.Key.D3: ApplyRatingToTargets(3); e.Handled = true; break;
+            case System.Windows.Input.Key.D4: ApplyRatingToTargets(4); e.Handled = true; break;
+            case System.Windows.Input.Key.D5: ApplyRatingToTargets(5); e.Handled = true; break;
+            case System.Windows.Input.Key.P: ApplyPickToTargets(PickFlag.Pick); e.Handled = true; break;
+            case System.Windows.Input.Key.X: ApplyPickToTargets(PickFlag.Reject); e.Handled = true; break;
+            case System.Windows.Input.Key.U: ApplyPickToTargets(PickFlag.None); e.Handled = true; break;
+            case System.Windows.Input.Key.D6: ApplyLabelToTargets(ColorLabel.Red); e.Handled = true; break;
+            case System.Windows.Input.Key.D7: ApplyLabelToTargets(ColorLabel.Yellow); e.Handled = true; break;
+            case System.Windows.Input.Key.D8: ApplyLabelToTargets(ColorLabel.Green); e.Handled = true; break;
+            case System.Windows.Input.Key.D9: ApplyLabelToTargets(ColorLabel.Blue); e.Handled = true; break;
         }
+    }
+
+    /// <summary>Ảnh đích cho thao tác meta nhanh: toàn bộ selection, nếu rỗng thì ảnh active.</summary>
+    private List<string> MetaTargets()
+        => _workspace.Selection.Count > 0
+            ? _workspace.Selection.ToList()
+            : (_workspace.ActiveImage != null ? new List<string> { _workspace.ActiveImage } : new List<string>());
+
+    private void ApplyRatingToTargets(int rating)
+    {
+        var t = MetaTargets();
+        if (t.Count == 0) return;
+        _meta.SetRatingMany(t, rating);
+        if (t.Count > 1) txtStatus.Text = $"Đặt {rating}★ cho {t.Count} ảnh";
+    }
+
+    private void ApplyPickToTargets(PickFlag pick)
+    {
+        var t = MetaTargets();
+        if (t.Count == 0) return;
+        _meta.SetPickMany(t, pick);
+        if (t.Count > 1)
+        {
+            string label = pick == PickFlag.Pick ? "Pick" : pick == PickFlag.Reject ? "Reject" : "bỏ cờ";
+            txtStatus.Text = $"Đặt {label} cho {t.Count} ảnh";
+        }
+    }
+
+    private void ApplyLabelToTargets(ColorLabel label)
+    {
+        var t = MetaTargets();
+        if (t.Count == 0) return;
+        _meta.SetLabelMany(t, label);
+        if (t.Count > 1) txtStatus.Text = $"Gắn nhãn {label} cho {t.Count} ảnh";
     }
 
     // ===== Copy/Paste Develop settings =====
@@ -474,6 +508,53 @@ public partial class MainWindow : Window
             }
             _workspace.ApplyFilterAndSort();
         }
+    }
+
+    private void FilterPick_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        // Toggle "chỉ hiện Pick". Bật cái này tự tắt Reject + HideRejected (loại trừ nhau).
+        bool on = _workspace.Filter.RequiredPick != PickFlag.Pick;
+        _workspace.Filter.RequiredPick = on ? PickFlag.Pick : (PickFlag?)null;
+        if (on) _workspace.Filter.HideRejected = false;
+        SyncPickFilterButtons();
+        _workspace.ApplyFilterAndSort();
+    }
+
+    private void FilterReject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        bool on = _workspace.Filter.RequiredPick != PickFlag.Reject;
+        _workspace.Filter.RequiredPick = on ? PickFlag.Reject : (PickFlag?)null;
+        if (on) _workspace.Filter.HideRejected = false;
+        SyncPickFilterButtons();
+        _workspace.ApplyFilterAndSort();
+    }
+
+    private void HideReject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        bool on = !_workspace.Filter.HideRejected;
+        _workspace.Filter.HideRejected = on;
+        // Ẩn Reject mâu thuẫn với "chỉ hiện Reject" -> gỡ bộ lọc pick nếu nó đang là Reject.
+        if (on && _workspace.Filter.RequiredPick == PickFlag.Reject)
+            _workspace.Filter.RequiredPick = null;
+        SyncPickFilterButtons();
+        _workspace.ApplyFilterAndSort();
+    }
+
+    /// <summary>Cập nhật trạng thái "đang bật" (nền sáng) cho 3 nút lọc cờ.</summary>
+    private void SyncPickFilterButtons()
+    {
+        if (_workspace == null) return;
+        var on = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x7E, 0xFF));
+        var off = System.Windows.Media.Brushes.Transparent;
+        if (btnFilterPick != null)
+            btnFilterPick.Background = _workspace.Filter.RequiredPick == PickFlag.Pick ? on : off;
+        if (btnFilterReject != null)
+            btnFilterReject.Background = _workspace.Filter.RequiredPick == PickFlag.Reject ? on : off;
+        if (btnHideReject != null)
+            btnHideReject.Background = _workspace.Filter.HideRejected ? on : off;
     }
 
     private void PlaceOnSecondaryMonitor(Window w)

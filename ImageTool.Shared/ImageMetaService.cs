@@ -49,6 +49,15 @@ public class ImageMetaService : IImageMetaService
         Mutate(imagePath, m => m.Description = description);
     }
 
+    public void SetRatingMany(IEnumerable<string> imagePaths, int rating)
+        => MutateMany(imagePaths, m => m.Rating = Math.Clamp(rating, 0, 5));
+
+    public void SetLabelMany(IEnumerable<string> imagePaths, ColorLabel label)
+        => MutateMany(imagePaths, m => m.Label = label);
+
+    public void SetPickMany(IEnumerable<string> imagePaths, PickFlag pick)
+        => MutateMany(imagePaths, m => m.Pick = pick);
+
     private void Mutate(string imagePath, Action<ImageMeta> apply)
     {
         var folder = GetFolderMeta(imagePath);
@@ -58,6 +67,38 @@ public class ImageMetaService : IImageMetaService
         folder.Items[key] = meta;
         SaveFolder(folder);
         MetaChanged?.Invoke(this, new ImageMetaChangedEventArgs(imagePath, meta));
+    }
+
+    /// <summary>
+    /// Áp 1 thay đổi lên nhiều ảnh, gộp ghi sidecar theo từng folder (1 lần/folder) để tránh
+    /// ghi file lặp lại khi gắn cờ/sao hàng loạt. Vẫn bắn MetaChanged mỗi ảnh để UI cập nhật badge.
+    /// </summary>
+    private void MutateMany(IEnumerable<string> imagePaths, Action<ImageMeta> apply)
+    {
+        // Gom theo folder để ghi mỗi folder đúng 1 lần.
+        var touched = new Dictionary<string, (FolderMeta Folder, List<(string Path, ImageMeta Meta)> Items)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var imagePath in imagePaths)
+        {
+            if (string.IsNullOrEmpty(imagePath)) continue;
+            var folder = GetFolderMeta(imagePath);
+            var key = Path.GetFileName(imagePath);
+            var meta = folder.Items.TryGetValue(key, out var existing) ? existing : new ImageMeta();
+            apply(meta);
+            folder.Items[key] = meta;
+            if (!touched.TryGetValue(folder.Folder, out var bucket))
+            {
+                bucket = (folder, new List<(string, ImageMeta)>());
+                touched[folder.Folder] = bucket;
+            }
+            bucket.Items.Add((imagePath, meta));
+        }
+
+        foreach (var bucket in touched.Values)
+        {
+            SaveFolder(bucket.Folder);
+            foreach (var (path, meta) in bucket.Items)
+                MetaChanged?.Invoke(this, new ImageMetaChangedEventArgs(path, meta));
+        }
     }
 
     private FolderMeta GetFolderMeta(string imagePath)

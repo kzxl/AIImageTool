@@ -86,7 +86,7 @@ public static class ImageContextMenu
         {
             int rr = r;
             var item = new MenuItem { Header = r == 0 ? "No rating" : new string('★', r) };
-            item.Click += (_, _) => { foreach (var t in Targets()) meta.SetRating(t, rr); };
+            item.Click += (_, _) => meta.SetRatingMany(Targets(), rr);
             miRating.Items.Add(item);
         }
         menu.Items.Add(miRating);
@@ -101,7 +101,7 @@ public static class ImageContextMenu
         {
             var ll = lbl;
             var item = new MenuItem { Header = name };
-            item.Click += (_, _) => { foreach (var t in Targets()) meta.SetLabel(t, ll); };
+            item.Click += (_, _) => meta.SetLabelMany(Targets(), ll);
             miLabel.Items.Add(item);
         }
         menu.Items.Add(miLabel);
@@ -115,7 +115,7 @@ public static class ImageContextMenu
         {
             var pp = pf;
             var item = new MenuItem { Header = name };
-            item.Click += (_, _) => { foreach (var t in Targets()) meta.SetPick(t, pp); };
+            item.Click += (_, _) => meta.SetPickMany(Targets(), pp);
             miPick.Items.Add(item);
         }
         menu.Items.Add(miPick);
