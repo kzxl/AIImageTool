@@ -116,4 +116,60 @@ public class DevelopModulesTests
         Assert.Equal(DevelopBasicOp.Type, merged[1].OpType);
         Assert.Equal(SharpenOp.Type, merged[2].OpType);
     }
+
+    // ---- ApplyStyle (D6.2) ----
+
+    [Fact]
+    public void ApplyStyle_Append_KeepsTargetModulesNotInStyle()
+    {
+        // đích có Basic + Sharpen; style chỉ có HSL -> append giữ Basic+Sharpen, thêm HSL.
+        var target = new List<EditOperation> { Op(DevelopBasicOp.Type, "T"), Op(SharpenOp.Type, "T") };
+        var style = new List<EditOperation> { Op(HslMixerOp.Type, "S") };
+
+        var merged = DevelopModules.ApplyStyle(target, style, append: true);
+
+        Assert.Contains(merged, o => o.OpType == DevelopBasicOp.Type && o.Params["v"] == "T");
+        Assert.Contains(merged, o => o.OpType == SharpenOp.Type && o.Params["v"] == "T");
+        Assert.Contains(merged, o => o.OpType == HslMixerOp.Type && o.Params["v"] == "S");
+    }
+
+    [Fact]
+    public void ApplyStyle_Append_OverwritesOverlappingModule()
+    {
+        // đích Basic(T); style Basic(S) -> append ghi đè Basic bằng S.
+        var target = new List<EditOperation> { Op(DevelopBasicOp.Type, "T") };
+        var style = new List<EditOperation> { Op(DevelopBasicOp.Type, "S") };
+
+        var merged = DevelopModules.ApplyStyle(target, style, append: true);
+
+        var basic = merged.Single(o => o.OpType == DevelopBasicOp.Type);
+        Assert.Equal("S", basic.Params["v"]);
+    }
+
+    [Fact]
+    public void ApplyStyle_Replace_DropsTargetModules()
+    {
+        // replace: bỏ hết edit đích, chỉ giữ module của style.
+        var target = new List<EditOperation> { Op(DevelopBasicOp.Type, "T"), Op(SharpenOp.Type, "T") };
+        var style = new List<EditOperation> { Op(HslMixerOp.Type, "S") };
+
+        var merged = DevelopModules.ApplyStyle(target, style, append: false);
+
+        Assert.Single(merged);
+        Assert.Equal(HslMixerOp.Type, merged[0].OpType);
+    }
+
+    [Fact]
+    public void ApplyStyle_SpecificModuleKeys_OnlyAppliesThose()
+    {
+        // style có Basic + HSL, nhưng chỉ chọn module "basic".
+        var target = new List<EditOperation>();
+        var style = new List<EditOperation> { Op(DevelopBasicOp.Type, "S"), Op(HslMixerOp.Type, "S") };
+        var keys = new HashSet<string> { "basic" };
+
+        var merged = DevelopModules.ApplyStyle(target, style, append: true, keys);
+
+        Assert.Contains(merged, o => o.OpType == DevelopBasicOp.Type);
+        Assert.DoesNotContain(merged, o => o.OpType == HslMixerOp.Type);
+    }
 }

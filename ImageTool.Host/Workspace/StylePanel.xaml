@@ -12,6 +12,9 @@
                 <Button x:Name="btnImportXmp" DockPanel.Dock="Right" Content="Import XMP" Height="22" Padding="8,2" Margin="0,0,4,0"
                         Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
                         Click="BtnImportXmp_Click" ToolTip="Nhập preset Lightroom (.xmp) thành Style"/>
+                <CheckBox x:Name="chkAppend" DockPanel.Dock="Right" Content="Append" Foreground="#BBB" FontSize="10"
+                          VerticalAlignment="Center" Margin="0,0,8,0" IsChecked="True"
+                          ToolTip="Append: giữ chỉnh sửa hiện có, chỉ thay/thêm module của style. Bỏ chọn = thay toàn bộ."/>
             </DockPanel>
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">

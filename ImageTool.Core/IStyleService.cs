@@ -22,6 +22,12 @@ public interface IStyleService
     /// <summary>Apply style: copy operations vào history stack của ảnh đích.</summary>
     void ApplyToImage(Style style, string imagePath);
 
+    /// <summary>
+    /// Apply style theo module (D6.2): append = true giữ edit hiện có, chỉ thay/thêm module style; false
+    /// thay toàn bộ. moduleKeys = null -> mọi module có trong style. Chỉ tác động op Develop.
+    /// </summary>
+    void ApplyToImageMerged(Style style, string imagePath, bool append, ISet<string>? moduleKeys = null);
+
     void Delete(string styleId);
     void Rename(string styleId, string newName);
 

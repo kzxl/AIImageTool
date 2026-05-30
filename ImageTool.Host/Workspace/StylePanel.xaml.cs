@@ -114,7 +114,11 @@ public partial class StylePanel : UserControl
             PluginId = StyleBatchAdapter.Plugin,
             OpType = StyleBatchAdapter.OpApply,
             InputPath = p,
-            Params = new Dictionary<string, string> { ["styleId"] = id }
+            Params = new Dictionary<string, string>
+            {
+                ["styleId"] = id,
+                ["mode"] = chkAppend?.IsChecked == true ? "append" : "replace",
+            }
         });
         _batch.EnqueueRange(jobs);
     }

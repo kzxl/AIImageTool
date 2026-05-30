@@ -138,4 +138,23 @@ public static class DevelopModules
     /// <summary>Sắp xếp 1 danh sách op theo thứ tự pipeline chuẩn (ổn định cho op cùng OpType).</summary>
     public static List<EditOperation> SortCanonical(IEnumerable<EditOperation> ops)
         => ops.OrderBy(o => CanonicalIndex(o.OpType)).ToList();
+
+    /// <summary>
+    /// Apply 1 style theo module (D6.2):
+    /// - <paramref name="append"/> = true: GIỮ edit Develop hiện có, style chỉ THAY/THÊM các module được chọn
+    ///   (module trùng -> style ghi đè; module khác giữ nguyên).
+    /// - append = false: THAY toàn bộ Develop bằng các module style được chọn (reset rồi áp).
+    /// <paramref name="moduleKeys"/> = null => mọi module có mặt trong style.
+    /// </summary>
+    public static List<EditOperation> ApplyStyle(
+        IReadOnlyList<EditOperation> targetDevOps,
+        IReadOnlyList<EditOperation> styleDevOps,
+        bool append,
+        ISet<string>? moduleKeys = null)
+    {
+        var keys = moduleKeys ?? new HashSet<string>(
+            ModulesPresent(styleDevOps).Select(m => m.Key), StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<EditOperation> baseOps = append ? targetDevOps : System.Array.Empty<EditOperation>();
+        return SelectivePaste(baseOps, styleDevOps, keys);
+    }
 }

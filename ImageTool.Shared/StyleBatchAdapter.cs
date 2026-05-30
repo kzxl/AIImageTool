@@ -33,7 +33,12 @@ public class StyleBatchAdapter : IBatchCapable
             if (style == null) throw new InvalidOperationException($"Style {styleId} not found");
 
             progress.Report(40);
-            _styleService.ApplyToImage(style, job.InputPath);
+            // D6.2: mặc định append (merge module, giữ edit hiện có); "replace" = thay toàn bộ.
+            string mode = job.Params.GetValueOrDefault("mode", "append");
+            if (string.Equals(mode, "replace", StringComparison.OrdinalIgnoreCase))
+                _styleService.ApplyToImageMerged(style, job.InputPath, append: false);
+            else
+                _styleService.ApplyToImageMerged(style, job.InputPath, append: true);
 
             // Note: side-effects (render output PNG, save) thuộc plugin xử lý op cụ thể.
             // Phase này chỉ ghi history; pipeline render sẽ build sau ở giai đoạn render unified.

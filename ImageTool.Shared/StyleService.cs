@@ -85,6 +85,41 @@ public class StyleService : IStyleService
         }
     }
 
+    public void ApplyToImageMerged(Style style, string imagePath, bool append, ISet<string>? moduleKeys = null)
+    {
+        // Chỉ xử lý op thuộc plugin Develop bằng merge module; op plugin khác (nếu có) push như cũ.
+        const string developPlugin = "Develop";
+        var styleDev = style.Operations
+            .Where(o => string.Equals(o.PluginId, developPlugin, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (styleDev.Count == 0)
+        {
+            // không có op Develop -> fallback hành vi cũ (append toàn bộ).
+            ApplyToImage(style, imagePath);
+            return;
+        }
+
+        var targetDev = _history.GetStack(imagePath)
+            .Take(_history.GetPointer(imagePath))
+            .Where(o => string.Equals(o.PluginId, developPlugin, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var merged = DevelopModules.ApplyStyle(targetDev, styleDev, append, moduleKeys)
+            .Select(o => new EditOperation
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                PluginId = o.PluginId,
+                OpType = o.OpType,
+                Title = o.Title,
+                Timestamp = DateTime.UtcNow,
+                Params = new Dictionary<string, string>(o.Params)
+            })
+            .ToList();
+
+        _history.UpsertGroup(imagePath, developPlugin, merged);
+    }
+
     public void Delete(string styleId)
     {
         if (_styles.RemoveAll(s => s.Id == styleId) > 0)
