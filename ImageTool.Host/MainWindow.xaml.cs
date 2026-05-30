@@ -77,6 +77,7 @@ public partial class MainWindow : Window
         developPanel.Bind(_workspace, _history, centerView.Renderer, _developClipboard, _styles);
         centerView.BindCropPanel(developPanel);
         centerView.BindBrushPanel(developPanel);
+        centerView.BindWhiteBalancePick(developPanel);
 
         _aiManager.StartWorker();
         Closed += (s, e) =>

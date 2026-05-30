@@ -117,7 +117,10 @@ public partial class DevelopPanel : UserControl
         var wbBtnRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
         var btnAutoWb = new Button { Content = "Auto WB", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 4, 0), ToolTip = "Tự cân bằng trắng (gray-world)" };
         btnAutoWb.Click += BtnAutoWb_Click;
+        var btnPickWb = new Button { Content = "⊙ Pick", Padding = new Thickness(8, 3, 8, 3), ToolTip = "Eyedropper: bấm rồi click 1 điểm xám trung tính trên ảnh" };
+        btnPickWb.Click += BtnPickWb_Click;
         wbBtnRow.Children.Add(btnAutoWb);
+        wbBtnRow.Children.Add(btnPickWb);
         gWb.Children.Add(wbBtnRow);
 
         var gTone = AddGroup("Tone", true);
@@ -838,6 +841,22 @@ public partial class DevelopPanel : UserControl
     {
         if (_currentPath == null || _renderer == null) return;
         var g = _renderer.AnalyzeAutoWhiteBalance(_currentPath);
+        if (g == null) return;
+        _wbGainR = g.Value.R; _wbGainG = g.Value.G; _wbGainB = g.Value.B;
+        Commit();
+    }
+
+    /// <summary>Bắn khi user bật eyedropper WB; CenterPreview vào chế độ click chọn điểm.</summary>
+    public event EventHandler? WhiteBalancePickRequested;
+
+    private void BtnPickWb_Click(object sender, RoutedEventArgs e)
+        => WhiteBalancePickRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>CenterPreview gọi lại khi user click 1 điểm (toạ độ chuẩn hoá) để lấy mẫu WB.</summary>
+    public void ApplyWhiteBalancePick(float nx, float ny)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var g = _renderer.SampleWhiteBalance(_currentPath, nx, ny);
         if (g == null) return;
         _wbGainR = g.Value.R; _wbGainG = g.Value.G; _wbGainB = g.Value.B;
         Commit();

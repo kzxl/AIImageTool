@@ -236,6 +236,48 @@ public sealed class DevelopRenderer
     }
 
     /// <summary>
+    /// Eyedropper WB (3.1): lấy mẫu vùng quanh điểm chuẩn hoá (nx,ny) trên proxy gốc rồi tính gain
+    /// để pixel đó thành xám trung tính. Lấy trung bình ô 5x5 cho ổn định. Null nếu lỗi/quá tối.
+    /// </summary>
+    public AutoWhiteBalance.Gains? SampleWhiteBalance(string path, float nx, float ny)
+    {
+        try
+        {
+            var proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            int w = proxy.Width, h = proxy.Height;
+            int cx = Math.Clamp((int)(nx * (w - 1)), 0, w - 1);
+            int cy = Math.Clamp((int)(ny * (h - 1)), 0, h - 1);
+            float[] px = proxy.Pixels;
+
+            double sr = 0, sg = 0, sb = 0; int n = 0;
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                int y = cy + dy; if (y < 0 || y >= h) continue;
+                for (int dx = -2; dx <= 2; dx++)
+                {
+                    int x = cx + dx; if (x < 0 || x >= w) continue;
+                    int o = (y * w + x) * 4;
+                    sr += px[o]; sg += px[o + 1]; sb += px[o + 2]; n++;
+                }
+            }
+            if (n == 0) return null;
+            float ar = (float)(sr / n), ag = (float)(sg / n), ab = (float)(sb / n);
+            float lum = ColorSpace.Luminance(ar, ag, ab);
+            if (lum < 1e-4f) return null; // quá tối -> không tin cậy
+
+            // gain để cân bằng về xám (chuẩn hoá theo G).
+            float gray = (ar + ag + ab) / 3f;
+            float gr = ar > 1e-6f ? gray / ar : 1f;
+            float gg = ag > 1e-6f ? gray / ag : 1f;
+            float gb = ab > 1e-6f ? gray / ab : 1f;
+            if (gg < 1e-6f) gg = 1f;
+            return new AutoWhiteBalance.Gains { R = gr / gg, G = 1f, B = gb / gg };
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.SampleWB", path, ex); return null; }
+    }
+
+    /// <summary>
     /// Tính histogram + clip warning cho ảnh đã áp ops (trên proxy, downscale thêm cho nhanh).
     /// Dùng cho histogram live trong DevelopPanel (11.3). Null nếu không decode được.
     /// </summary>
