@@ -93,4 +93,31 @@ public class FileNameTokenizerTests
         var result = FileNameTokenizer.ResolveBatch(paths, "{name}_edit", now: DateTime.Now);
         Assert.Equal("photo_edit.JPEG", result[0].NewName);
     }
+
+    [Fact]
+    public void EnsureUniquePath_NoCollision_ReturnsSame()
+    {
+        string p = @"C:\out\img.jpg";
+        Assert.Equal(p, FileNameTokenizer.EnsureUniquePath(p, _ => false));
+    }
+
+    [Fact]
+    public void EnsureUniquePath_Collision_AppendsSuffix()
+    {
+        // Giả lập: img.jpg và img (1).jpg đã tồn tại -> phải ra img (2).jpg.
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            @"C:\out\img.jpg", @"C:\out\img (1).jpg"
+        };
+        string result = FileNameTokenizer.EnsureUniquePath(@"C:\out\img.jpg", existing.Contains);
+        Assert.Equal(@"C:\out\img (2).jpg", result);
+    }
+
+    [Fact]
+    public void EnsureUniquePath_PreservesExtensionAndDir()
+    {
+        string result = FileNameTokenizer.EnsureUniquePath(
+            @"C:\photos\sunset.png", p => p == @"C:\photos\sunset.png");
+        Assert.Equal(@"C:\photos\sunset (1).png", result);
+    }
 }

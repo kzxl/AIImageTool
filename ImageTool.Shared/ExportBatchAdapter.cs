@@ -111,6 +111,10 @@ public class ExportBatchAdapter : IBatchCapable
             fileName = fileName.Replace("{id}", job.Id);
             if (!fileName.EndsWith("." + ext, StringComparison.OrdinalIgnoreCase)) fileName += "." + ext;
             string outPath = Path.Combine(outDir, fileName);
+            // Không ghi đè im lặng: nếu file đích đã có, thêm hậu tố " (1)"... (trừ khi overwrite=true).
+            bool overwrite = string.Equals(job.Params.GetValueOrDefault("overwrite", "false"), "true", StringComparison.OrdinalIgnoreCase);
+            if (!overwrite)
+                outPath = FileNameTokenizer.EnsureUniquePath(outPath);
 
             // Bảo toàn EXIF gốc (đã dọn orientation/kích thước cũ) trên ảnh xuất.
             if (copyExif)

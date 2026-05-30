@@ -96,6 +96,26 @@ public static class FileNameTokenizer
     }
 
     /// <summary>
+    /// Trả về 1 đường dẫn không đụng file có sẵn trên đĩa: nếu <paramref name="path"/> chưa tồn tại thì
+    /// trả nguyên; nếu đã có thì thêm hậu tố " (1)", " (2)"... trước phần đuôi cho tới khi tìm được tên trống.
+    /// Tránh ghi đè im lặng khi export. Thuần đường dẫn nên test được (dùng <paramref name="exists"/> bơm vào).
+    /// </summary>
+    public static string EnsureUniquePath(string path, Func<string, bool>? exists = null)
+    {
+        exists ??= File.Exists;
+        if (!exists(path)) return path;
+        string dir = Path.GetDirectoryName(path) ?? "";
+        string stem = Path.GetFileNameWithoutExtension(path);
+        string ext = Path.GetExtension(path); // gồm dấu chấm
+        for (int i = 1; i < 100000; i++)
+        {
+            string candidate = Path.Combine(dir, $"{stem} ({i}){ext}");
+            if (!exists(candidate)) return candidate;
+        }
+        return path; // fallback cực hiếm
+    }
+
+    /// <summary>
     /// Sinh danh sách tên mới cho 1 loạt file (batch rename). Tự đảm bảo tên không trùng nhau
     /// trong cùng lô (thêm hậu tố _1, _2... nếu đụng). Trả map oldPath -> newFileName (gồm đuôi).
     /// </summary>
