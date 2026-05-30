@@ -20,12 +20,14 @@ public partial class InfoPanel : UserControl
 
     public ObservableCollection<ExifRow> Exif { get; } = new();
     public ObservableCollection<ColorSwatchVm> Colors { get; } = new();
+    public ObservableCollection<ColorSwatchVm> Suggestions { get; } = new();
 
     public InfoPanel()
     {
         InitializeComponent();
         icExif.ItemsSource = Exif;
         icColors.ItemsSource = Colors;
+        icSuggest.ItemsSource = Suggestions;
     }
 
     public void Bind(IWorkspaceService ws)
@@ -45,9 +47,11 @@ public partial class InfoPanel : UserControl
         {
             Exif.Clear();
             Colors.Clear();
+            Suggestions.Clear();
             imgHistogram.Source = null;
             txtHistEmpty.Visibility = Visibility.Visible;
             txtCaptureSummary.Visibility = Visibility.Collapsed;
+            txtContrastAdvice.Visibility = Visibility.Collapsed;
             btnSaveMeta.IsEnabled = false;
             ClearMetaFields();
         });
@@ -155,6 +159,21 @@ public partial class InfoPanel : UserControl
                     foreach (var s in swatches)
                         Colors.Add(new ColorSwatchVm(s.Hex, s.PercentText,
                             new SolidColorBrush(System.Windows.Media.Color.FromRgb(s.R, s.G, s.B))));
+
+                    // Gợi ý màu (color theory) từ màu chủ đạo + đánh giá tương phản.
+                    Suggestions.Clear();
+                    if (swatches.Count > 0)
+                    {
+                        var top = swatches[0];
+                        foreach (var sg in ImageTool.Shared.ColorSuggestion.FromDominant(top.R, top.G, top.B))
+                            Suggestions.Add(new ColorSwatchVm(sg.Hex, sg.Role,
+                                new SolidColorBrush(System.Windows.Media.Color.FromRgb(sg.R, sg.G, sg.B))));
+
+                        var swList = swatches.Select(s => (s.R, s.G, s.B)).ToList();
+                        var (score, advice) = ImageTool.Shared.ColorSuggestion.AssessContrast(swList);
+                        txtContrastAdvice.Text = $"Tương phản màu: {score * 100:0}% — {advice}";
+                        txtContrastAdvice.Visibility = Visibility.Visible;
+                    }
 
                     // Form sửa metadata.
                     LoadMetaFields(path);
@@ -301,4 +320,9 @@ public partial class InfoPanel : UserControl
 public record ExifRow(string Name, string Value);
 
 /// <summary>1 ô màu chủ đạo cho ItemsControl (gộp từ ColorLab). Brush dùng để vẽ swatch.</summary>
-public record ColorSwatchVm(string Hex, string PercentText, Brush Brush);
+/// <summary>1 ô màu chủ đạo cho ItemsControl (gộp từ ColorLab). Brush dùng để vẽ swatch.
+/// PercentText dùng cho palette; Role là alias cùng giá trị cho ô gợi ý màu (color theory).</summary>
+public record ColorSwatchVm(string Hex, string PercentText, Brush Brush)
+{
+    public string Role => PercentText;
+}

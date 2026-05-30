@@ -44,6 +44,26 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <!-- Gợi ý màu (color theory) -->
+                <TextBlock x:Name="txtContrastAdvice" Margin="10,0,10,2" FontSize="10" Foreground="#BBB"
+                           TextWrapping="Wrap" Visibility="Collapsed"/>
+                <ItemsControl x:Name="icSuggest" Margin="6,0,6,4">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="2" CornerRadius="3" Cursor="Hand" ToolTip="Màu gợi ý — click để copy"
+                                    MouseLeftButtonUp="ColorSwatch_Click" Tag="{Binding Hex}">
+                                <StackPanel>
+                                    <Border Width="36" Height="22" CornerRadius="3" Background="{Binding Brush}"/>
+                                    <TextBlock Text="{Binding Role}" FontSize="8" Foreground="#AAA" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <!-- EXIF header + map -->
                 <Border Background="#252526" Padding="10,4">
                     <DockPanel>
