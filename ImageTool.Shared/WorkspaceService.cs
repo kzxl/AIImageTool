@@ -5,7 +5,8 @@ namespace ImageTool.Shared;
 
 public class WorkspaceService : IWorkspaceService
 {
-    private static readonly string[] _supportedExtensions = { ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff" };
+    private static readonly string[] _supportedExtensions = { ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
+        ".cr2", ".cr3", ".nef", ".arw", ".dng", ".raf", ".rw2", ".orf", ".pef", ".srw", ".raw", ".nrw", ".sr2" };
 
     private readonly ObservableCollection<string> _images = new();
     private readonly ObservableCollection<string> _selection = new();

@@ -80,6 +80,7 @@ public sealed class ImageDecoderRegistry
     {
         var reg = new ImageDecoderRegistry();
         reg.Register(new StandardImageDecoder());
+        reg.Register(new RawPreviewDecoder()); // RAW qua JPEG preview nhúng (plugin LibRaw có thể đè sau)
         return reg;
     }
 }

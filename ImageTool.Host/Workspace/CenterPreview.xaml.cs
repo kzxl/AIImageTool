@@ -170,6 +170,13 @@ public partial class CenterPreview : UserControl, IImageToolHost
             return;
         }
 
+        // RAW: WPF BitmapImage không đọc được -> render qua pipeline (trích JPEG preview nhúng).
+        if (ImageTool.Imaging.RawPreviewExtractor.IsRawExtension(path) && _renderer.CanDecode(path))
+        {
+            _ = RenderDevelopAsync(path);
+            return;
+        }
+
         // Mặc định: hiển thị nhanh bằng BitmapImage (proxy decode width để tiết kiệm RAM).
         try
         {

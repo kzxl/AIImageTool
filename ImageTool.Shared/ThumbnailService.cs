@@ -100,28 +100,43 @@ public class ThumbnailService : IThumbnailService, IDisposable
             TargetSize = new Size(size, size)
         };
 
-        using var image = Image.Load(decoderOpts, srcPath);
-
-        // Sau khi decode, có thể vẫn lớn hơn size → resize chính xác.
-        if (image.Width > size || image.Height > size)
+        // RAW: ImageSharp không đọc được -> trích JPEG preview nhúng trước.
+        Image image;
+        if (ImageTool.Imaging.RawPreviewExtractor.IsRawExtension(srcPath))
         {
-            image.Mutate(x => x.Resize(new ResizeOptions
+            var jpeg = ImageTool.Imaging.RawPreviewExtractor.ExtractLargestJpeg(srcPath);
+            if (jpeg == null) throw new NotSupportedException($"RAW không có JPEG preview: {Path.GetFileName(srcPath)}");
+            using var ms = new MemoryStream(jpeg);
+            image = Image.Load(decoderOpts, ms);
+        }
+        else
+        {
+            image = Image.Load(decoderOpts, srcPath);
+        }
+
+        using (image)
+        {
+            // Sau khi decode, có thể vẫn lớn hơn size → resize chính xác.
+            if (image.Width > size || image.Height > size)
             {
-                Size = new Size(size, size),
-                Mode = ResizeMode.Max,
-                Sampler = KnownResamplers.Bicubic
-            }));
-        }
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(size, size),
+                    Mode = ResizeMode.Max,
+                    Sampler = KnownResamplers.Bicubic
+                }));
+            }
 
-        var dir = Path.GetDirectoryName(dstPath);
-        if (dir != null && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
-        var tmp = dstPath + ".tmp";
-        using (var fs = File.Create(tmp))
-        {
-            image.SaveAsJpeg(fs, new JpegEncoder { Quality = 82 });
+            var dir = Path.GetDirectoryName(dstPath);
+            if (dir != null && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            var tmp = dstPath + ".tmp";
+            using (var fs = File.Create(tmp))
+            {
+                image.SaveAsJpeg(fs, new JpegEncoder { Quality = 82 });
+            }
+            if (File.Exists(dstPath)) File.Delete(dstPath);
+            File.Move(tmp, dstPath);
         }
-        if (File.Exists(dstPath)) File.Delete(dstPath);
-        File.Move(tmp, dstPath);
     }
 
     private string GetThumbPath(string imagePath, int size)
