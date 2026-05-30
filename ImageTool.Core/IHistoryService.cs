@@ -51,7 +51,34 @@ public interface IHistoryService
     /// <summary>Xóa toàn bộ history của ảnh.</summary>
     void Clear(string imagePath);
 
+    /// <summary>
+    /// Lưu trạng thái edit hiện tại (các op active = đến pointer) thành 1 snapshot có tên.
+    /// Nếu tên đã tồn tại thì ghi đè. Snapshot là ảnh chụp bất biến (deep-clone op), không đổi
+    /// khi user tiếp tục chỉnh. Khác undo/redo: nhiều mốc song song, không tuyến tính.
+    /// </summary>
+    void SaveSnapshot(string imagePath, string name);
+
+    /// <summary>Danh sách snapshot của ảnh (tên + thời điểm tạo + số op), mới nhất sau cùng.</summary>
+    IReadOnlyList<HistorySnapshot> GetSnapshots(string imagePath);
+
+    /// <summary>
+    /// Áp 1 snapshot: thay toàn bộ stack active bằng op của snapshot (deep-clone), đặt pointer = cuối.
+    /// Trả false nếu không tìm thấy tên.
+    /// </summary>
+    bool ApplySnapshot(string imagePath, string name);
+
+    /// <summary>Xoá 1 snapshot theo tên. Trả false nếu không có.</summary>
+    bool DeleteSnapshot(string imagePath, string name);
+
     event EventHandler<HistoryChangedEventArgs>? HistoryChanged;
+}
+
+/// <summary>1 snapshot edit có tên (mốc lưu thủ công), bất biến sau khi tạo.</summary>
+public class HistorySnapshot
+{
+    public string Name { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public List<EditOperation> Ops { get; set; } = new();
 }
 
 public class HistoryChangedEventArgs : EventArgs

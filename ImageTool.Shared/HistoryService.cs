@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Text.Json;
 using ImageTool.Core;
 
@@ -112,6 +113,57 @@ public class HistoryService : IHistoryService
         SaveAndRaise(imagePath, entry);
     }
 
+    public void SaveSnapshot(string imagePath, string name)
+    {
+        name = (name ?? "").Trim();
+        if (name.Length == 0) return;
+        var entry = GetEntry(imagePath);
+        // Chụp các op active (đến pointer), deep-clone để bất biến.
+        var ops = entry.Stack.Take(entry.Pointer).Select(CloneOp).ToList();
+        // Ghi đè nếu trùng tên (so sánh không phân biệt hoa thường).
+        entry.Snapshots.RemoveAll(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+        entry.Snapshots.Add(new HistorySnapshot { Name = name, CreatedAt = DateTime.UtcNow, Ops = ops });
+        SaveFolder(GetFolderHistory(imagePath));
+        // Không đổi stack/pointer -> không cần raise render lại, nhưng raise để UI snapshot list cập nhật.
+        HistoryChanged?.Invoke(this, new HistoryChangedEventArgs(imagePath, entry.Stack.ToList(), entry.Pointer));
+    }
+
+    public IReadOnlyList<HistorySnapshot> GetSnapshots(string imagePath)
+        => GetEntry(imagePath).Snapshots.ToList();
+
+    public bool ApplySnapshot(string imagePath, string name)
+    {
+        var entry = GetEntry(imagePath);
+        var snap = entry.Snapshots.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (snap == null) return false;
+        // Thay toàn bộ stack active bằng op snapshot (deep-clone), bỏ redo phía sau.
+        entry.Stack.Clear();
+        entry.Stack.AddRange(snap.Ops.Select(CloneOp));
+        entry.Pointer = entry.Stack.Count;
+        SaveAndRaise(imagePath, entry);
+        return true;
+    }
+
+    public bool DeleteSnapshot(string imagePath, string name)
+    {
+        var entry = GetEntry(imagePath);
+        int removed = entry.Snapshots.RemoveAll(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (removed == 0) return false;
+        SaveFolder(GetFolderHistory(imagePath));
+        HistoryChanged?.Invoke(this, new HistoryChangedEventArgs(imagePath, entry.Stack.ToList(), entry.Pointer));
+        return true;
+    }
+
+    private static EditOperation CloneOp(EditOperation o) => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        PluginId = o.PluginId,
+        OpType = o.OpType,
+        Title = o.Title,
+        Timestamp = o.Timestamp,
+        Params = new Dictionary<string, string>(o.Params),
+    };
+
     private void SaveAndRaise(string imagePath, ImageHistoryEntry entry)
     {
         SaveFolder(GetFolderHistory(imagePath));
@@ -171,6 +223,7 @@ public class HistoryService : IHistoryService
     {
         public List<EditOperation> Stack { get; set; } = new();
         public int Pointer { get; set; }
+        public List<HistorySnapshot> Snapshots { get; set; } = new();
     }
 
     private class FolderHistory
