@@ -31,6 +31,11 @@ public class AppSettings
     public List<string> TagDictionary { get; set; } = new();
     /// <summary>Tag dùng gần đây nhất (mới nhất đứng đầu), giới hạn số lượng.</summary>
     public List<string> RecentTags { get; set; } = new();
+
+    /// <summary>Bề rộng cột panel trái (Workspace Browser), px. 0 = dùng mặc định.</summary>
+    public double LeftPanelWidth { get; set; }
+    /// <summary>Bề rộng cột panel phải (Tools), px. 0 = dùng mặc định.</summary>
+    public double RightPanelWidth { get; set; }
 }
 
 public interface ISettingsService

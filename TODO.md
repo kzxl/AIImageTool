@@ -269,7 +269,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **11.8** Tooltip cho nút Develop (Copy/Paste/Auto/Reset) + trạng thái rỗng "Chọn ảnh để bắt đầu". Onboarding đầy đủ CHƯA.
 - [~] **11.9** Theme: `ThemeManager` + `LightTheme.xaml` + nút đổi Sáng/Tối + lưu setting (áp lúc khởi động).
       Light theme experimental: ~113 màu hardcode trong panel cần migrate sang DynamicResource để hoàn chỉnh.
-- [ ] **11.10** Responsive panel: kéo rộng/hẹp, nhớ layout; pop-out tools (đã có) ổn định đa màn hình.
+- [~] **11.10** Responsive panel: kéo rộng/hẹp + **nhớ bề rộng panel trái/phải** (lưu `LeftPanelWidth`/
+      `RightPanelWidth` vào AppSettings, khôi phục lúc khởi động); pop-out tools (đã có) ổn định đa màn hình.
 - [x] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure" qua `OpDisplayNames`) + history panel nhãn thân thiện.
       Thumbnail từng bước (tùy chọn) CHƯA.
 - [x] **11.12** Badge "đã chỉnh sửa" (✎) trong grid + filmstrip, cập nhật theo history.

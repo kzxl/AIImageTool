@@ -111,11 +111,11 @@
         <!-- ========== MAIN AREA ========== -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" MinWidth="220"/>
+                <ColumnDefinition x:Name="colLeft" Width="280" MinWidth="220"/>
                 <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="380" MinWidth="280"/>
+                <ColumnDefinition x:Name="colRight" Width="380" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT -->

@@ -105,8 +105,10 @@ public partial class MainWindow : Window
         };
 
         _aiManager.StartWorker();
+        RestorePanelLayout();
         Closed += (s, e) =>
         {
+            SavePanelLayout();
             _aiManager.Dispose();
             _aiMaskService.Dispose();
             (_thumbs as IDisposable)?.Dispose();
@@ -508,6 +510,33 @@ public partial class MainWindow : Window
             }
             _workspace.ApplyFilterAndSort();
         }
+    }
+
+    // ===== Nhớ bề rộng panel trái/phải (11.10) =====
+    private void RestorePanelLayout()
+    {
+        var s = _settings.Current;
+        if (s.LeftPanelWidth >= colLeft.MinWidth && s.LeftPanelWidth > 0)
+            colLeft.Width = new GridLength(s.LeftPanelWidth);
+        if (s.RightPanelWidth >= colRight.MinWidth && s.RightPanelWidth > 0)
+            colRight.Width = new GridLength(s.RightPanelWidth);
+    }
+
+    private void SavePanelLayout()
+    {
+        try
+        {
+            double left = colLeft.ActualWidth, right = colRight.ActualWidth;
+            if (left <= 0 || right <= 0) return;
+            var s = _settings.Current;
+            if (Math.Abs(s.LeftPanelWidth - left) > 0.5 || Math.Abs(s.RightPanelWidth - right) > 0.5)
+            {
+                s.LeftPanelWidth = left;
+                s.RightPanelWidth = right;
+                _settings.Save();
+            }
+        }
+        catch { /* không chặn đóng app */ }
     }
 
     private void FilterPick_Click(object sender, RoutedEventArgs e)
