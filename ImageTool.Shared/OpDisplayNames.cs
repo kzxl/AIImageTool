@@ -30,6 +30,7 @@ public static class OpDisplayNames
         ["Orientation"] = "Rotate / Flip",
         ["Crop"] = "Crop / Straighten",
         ["Perspective"] = "Perspective",
+        ["Liquify"] = "Liquify / Warp",
         ["WBKelvin"] = "White Balance (K)",
         ["SelectiveColor"] = "Selective Color",
         ["ColorUnify"] = "Color Unify",

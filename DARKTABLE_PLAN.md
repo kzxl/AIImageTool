@@ -19,7 +19,7 @@ Darktable module -> op của ta đã làm:
 - soften/glow (Orton) -> `GlowOp` (blur + screen blend + bright-pass threshold)
 - hot/dead pixel -> `HotPixelOp`
 - lens correction (thủ công) -> `LensCorrectionOp` (distortion k1/k2 + vignette)
-- crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`
+- crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`; liquify/warp -> `LiquifyOp` (handle đẩy/kéo)
 - lut 3D -> `LutCubeOp`; monochrome -> `BlackWhiteOp`; invert -> `InvertOp`
 - retouch (1 phần: heal/clone) -> `HealingOp`; drawn+parametric mask -> `MaskedOp` + 8 loại mask
   (gradient/radial/brush/polygon/lum-range/color-range/sky/raster) + `ParametricMask` đa kênh (L/C/h/R/G/B)
@@ -60,7 +60,10 @@ Darktable module -> op của ta đã làm:
 - [x] **D3.3** `HotPixelOp` — khử điểm chết/nóng (so 4 lân cận theo ngưỡng -> thay trung bình, có test).
 - [x] **D3.4** `CaCorrectOp` — khử quang sai màu trục (lateral CA) theo co/giãn radial kênh R/B quanh tâm
       (bilinear, có test). Khác defringe (viền cục bộ).
-- [ ] **D3.5** `LiquifyOp` (cơ bản) — kéo/đẩy điểm (warp) — phức tạp, để cuối.
+- [x] **D3.5** `LiquifyOp` (diffuse/warp cơ bản) — biến dạng cục bộ bằng tập handle đẩy/kéo
+      (tâm + vector dịch + bán kính, falloff (1-t²)², trường dịch cộng dồn). `IResizingOp` inverse-map
+      lặp điểm-bất-động, toạ độ/bán kính chuẩn hoá (khớp proxy/full-res), kẹp mép không thủng. Đăng ký
+      registry + module Geometry + test. UI kéo handle tương tác trên canvas CHƯA (để sau).
 
 ## E. PHASE D4 — Mask & local nâng cao, test được
 
@@ -118,7 +121,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 9. [~] D2.2 ICC color management — matrix gamut (sRGB/AdobeRGB/Rec2020/P3) ✅; parse ICC nhúng + output profile còn lại.
 10. ✅ D3.1 Diffuse-or-sharpen (PDE); D6.3 virtual copies (còn lại).
 11. **D5.x RAW thật qua LibRaw** — bước nhảy lớn nhất; cần bundle native + verify trên máy thật.
-12. D3.5 Liquify, D4.4 instance UI.
+12. D3.5 Liquify ✅ (engine warp + test; UI kéo handle còn lại), D4.4 instance UI.
 
 ## I. NGUYÊN TẮC THỰC HIỆN
 - Mỗi op mới: `IEditOp` linear-light, thuần tham số, **có unit test**, đăng ký `EditOpRegistry`, nối DevelopPanel.

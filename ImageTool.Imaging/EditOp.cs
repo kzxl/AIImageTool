@@ -118,6 +118,7 @@ public sealed class EditOpRegistry
         InputProfileOp.Register(reg);
         GlowOp.Register(reg);
         HighlightReconstructionOp.Register(reg);
+        LiquifyOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;

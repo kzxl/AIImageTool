@@ -30,7 +30,7 @@ public static class DevelopModules
     /// </summary>
     public static readonly string[] PipelineOrder =
     {
-        CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LensCorrectionOp.Type, HealingOp.Type,
+        CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LiquifyOp.Type, LensCorrectionOp.Type, HealingOp.Type,
         InputProfileOp.Type,
         WhiteBalanceKelvinOp.Type, ChannelGainOp.Type,
         DevelopBasicOp.Type,
@@ -50,7 +50,7 @@ public static class DevelopModules
     /// <summary>Danh sách module (theo thứ tự hiển thị), gom OpType liên quan.</summary>
     public static readonly IReadOnlyList<Module> All = new List<Module>
     {
-        new("geometry", "Geometry", CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LensCorrectionOp.Type),
+        new("geometry", "Geometry", CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LiquifyOp.Type, LensCorrectionOp.Type),
         new("healing", "Healing / Clone", HealingOp.Type),
         new("input", "Input Profile", InputProfileOp.Type),
         new("wb", "White Balance", WhiteBalanceKelvinOp.Type, ChannelGainOp.Type),
