@@ -100,11 +100,30 @@ public class SmartCollection
     public int ImageCount { get; set; }
 }
 
+/// <summary>Kết quả đồng bộ thư mục (Sync Folder): số file mới thêm, số file thiếu/đã gỡ.</summary>
+public class SyncResult
+{
+    public int Added { get; set; }
+    public int Missing { get; set; }
+    public int Removed { get; set; }
+    public List<string> MissingPaths { get; set; } = new();
+}
+
 public interface ICatalogService
 {
     IReadOnlyList<CatalogImage> SearchAdvanced(CatalogQuery query);
     Task<int> ImportAsync(IEnumerable<string> filePaths, ImportOptions options,
                           IProgress<ImportProgress>? progress = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Đồng bộ 1 thư mục (kiểu Lightroom "Synchronize Folder"): quét file ảnh trên đĩa, IMPORT các
+    /// file CHƯA có trong catalog, và (tuỳ chọn) gỡ các entry mà file không còn trên đĩa.
+    /// Trả số file mới thêm + số file thiếu.
+    /// </summary>
+    Task<SyncResult> SyncFolderAsync(string folderPath, bool recursive, bool removeMissing = false,
+                                     IProgress<ImportProgress>? progress = null, CancellationToken ct = default);
+
+    /// <summary>True nếu file đã có trong catalog.</summary>
     bool IsImported(string filePath);
     /// <summary>True nếu folder (đệ quy) chứa ít nhất 1 ảnh đã import vào catalog.</summary>
     bool IsFolderImported(string folderPath);

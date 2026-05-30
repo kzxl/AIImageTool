@@ -19,51 +19,17 @@ public static class ExifReader
 
         try
         {
-            using var image = Image.Load(filePath);
-            img.Width = image.Width;
-            img.Height = image.Height;
+            // Image.Identify CHỈ đọc header (kích thước + metadata) — KHÔNG decode pixel.
+            // Nhanh hơn Image.Load hàng chục–trăm lần khi import (đặc biệt ảnh lớn).
+            var info = Image.Identify(filePath);
+            if (info == null) return img;
+            img.Width = info.Width;
+            img.Height = info.Height;
 
-            var exif = image.Metadata?.ExifProfile;
+            var exif = info.Metadata?.ExifProfile;
             if (exif == null) return img;
 
-            ReadGps(exif, img);
-
-            foreach (var val in exif.Values)
-            {
-                var raw = val.GetValue()?.ToString()?.Trim('\0', ' ');
-                if (string.IsNullOrEmpty(raw)) continue;
-
-                var tag = val.Tag;
-
-                if (tag == ExifTag.DateTimeOriginal)
-                    img.DateTaken ??= ParseDateTime(raw);
-                else if (tag == ExifTag.DateTimeDigitized)
-                    img.DateTaken ??= ParseDateTime(raw);
-                else if (tag == ExifTag.DateTime)
-                    img.DateTaken ??= ParseDateTime(raw);
-                else if (tag == ExifTag.Make)
-                    img.CameraMake = raw;
-                else if (tag == ExifTag.Model)
-                    img.CameraModel = raw;
-                else if (tag == ExifTag.LensModel)
-                    img.LensModel = raw;
-                else if (tag == ExifTag.FocalLength)
-                    img.FocalLength = ParseRational(raw);
-                else if (tag == ExifTag.FNumber)
-                    img.Aperture = ParseRational(raw);
-                else if (tag == ExifTag.ExposureTime)
-                    img.ShutterSpeed = FormatShutterSpeed(ParseRational(raw));
-                else if (tag == ExifTag.ISOSpeedRatings)
-                {
-                    if (int.TryParse(raw.Split(' ', '/')[0], out var iso))
-                        img.Iso = iso;
-                }
-                else if (tag == ExifTag.Orientation)
-                {
-                    if (int.TryParse(raw, out var orient))
-                        img.Orientation = orient;
-                }
-            }
+            ApplyExif(exif, img);
         }
         catch
         {
@@ -71,6 +37,49 @@ public static class ExifReader
         }
 
         return img;
+    }
+
+    /// <summary>Áp các trường EXIF vào CatalogImage (tách ra để dùng chung Identify/Load).</summary>
+    private static void ApplyExif(ExifProfile exif, CatalogImage img)
+    {
+        ReadGps(exif, img);
+
+        foreach (var val in exif.Values)
+        {
+            var raw = val.GetValue()?.ToString()?.Trim('\0', ' ');
+            if (string.IsNullOrEmpty(raw)) continue;
+
+            var tag = val.Tag;
+
+            if (tag == ExifTag.DateTimeOriginal)
+                img.DateTaken ??= ParseDateTime(raw);
+            else if (tag == ExifTag.DateTimeDigitized)
+                img.DateTaken ??= ParseDateTime(raw);
+            else if (tag == ExifTag.DateTime)
+                img.DateTaken ??= ParseDateTime(raw);
+            else if (tag == ExifTag.Make)
+                img.CameraMake = raw;
+            else if (tag == ExifTag.Model)
+                img.CameraModel = raw;
+            else if (tag == ExifTag.LensModel)
+                img.LensModel = raw;
+            else if (tag == ExifTag.FocalLength)
+                img.FocalLength = ParseRational(raw);
+            else if (tag == ExifTag.FNumber)
+                img.Aperture = ParseRational(raw);
+            else if (tag == ExifTag.ExposureTime)
+                img.ShutterSpeed = FormatShutterSpeed(ParseRational(raw));
+            else if (tag == ExifTag.ISOSpeedRatings)
+            {
+                if (int.TryParse(raw.Split(' ', '/')[0], out var iso))
+                    img.Iso = iso;
+            }
+            else if (tag == ExifTag.Orientation)
+            {
+                if (int.TryParse(raw, out var orient))
+                    img.Orientation = orient;
+            }
+        }
     }
 
     private static void ReadGps(ExifProfile exif, CatalogImage img)

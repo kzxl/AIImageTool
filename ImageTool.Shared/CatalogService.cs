@@ -118,56 +118,130 @@ public class CatalogService : ICatalogService
     {
         var files = filePaths.ToList();
         int total = files.Count;
-        int completed = 0;
         var importedPaths = new List<string>();
 
         await Task.Run(() =>
         {
-            using var conn = Open();
-            using var tx = conn.BeginTransaction();
-
+            // 1) CopyToLibrary (nếu cần) chạy trước, ánh xạ target -> original.
+            var targets = new List<(string Target, string? Original, string Source)>(files.Count);
             foreach (var file in files)
             {
                 ct.ThrowIfCancellationRequested();
-
-                string targetPath = file;
-                string? originalPath = null;
-
                 if (options.Mode == ImportMode.CopyToLibrary && !string.IsNullOrEmpty(options.DestinationFolder))
                 {
-                    targetPath = CopyToLibrary(file, options);
-                    originalPath = file;
+                    var tgt = CopyToLibrary(file, options);
+                    targets.Add((tgt, file, file));
                 }
+                else targets.Add((file, null, file));
+            }
 
-                if (conn.ExecuteScalar<int>("SELECT COUNT(1) FROM CatalogImage WHERE FilePath = @targetPath", new { targetPath }, tx) > 0)
-                {
-                    completed++;
-                    progress?.Report(new ImportProgress { Total = total, Completed = completed, CurrentFile = Path.GetFileName(file) });
-                    continue;
-                }
+            // 2) Batch existence check: 1 truy vấn lấy toàn bộ FilePath đã có -> HashSet (thay vì N query).
+            HashSet<string> existing;
+            using (var conn0 = Open())
+            {
+                existing = new HashSet<string>(
+                    conn0.Query<string>("SELECT FilePath FROM CatalogImage"),
+                    StringComparer.OrdinalIgnoreCase);
+            }
 
-                var meta = ExifReader.ReadMetadata(targetPath);
+            var toInsert = targets.Where(t => !existing.Contains(t.Target)).ToList();
+
+            // 3) Đọc metadata SONG SONG (Image.Identify header-only) — phần tốn thời gian nhất.
+            int processed = 0;
+            var metas = new CatalogImage[toInsert.Count];
+            var parallelOpts = new ParallelOptions
+            {
+                CancellationToken = ct,
+                MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount)
+            };
+            Parallel.For(0, toInsert.Count, parallelOpts, i =>
+            {
+                var t = toInsert[i];
+                var meta = ExifReader.ReadMetadata(t.Target);
                 meta.ImportedAt = DateTime.UtcNow;
                 meta.ImportMode = options.Mode;
-                meta.OriginalPath = originalPath;
+                meta.OriginalPath = t.Original;
+                metas[i] = meta;
 
+                int done = Interlocked.Increment(ref processed);
+                progress?.Report(new ImportProgress { Total = total, Completed = done, CurrentFile = meta.FileName });
+            });
+
+            // 4) Ghi DB 1 transaction (nhanh, tuần tự — SQLite không ghi song song).
+            using var conn = Open();
+            using var tx = conn.BeginTransaction();
+            foreach (var meta in metas)
+            {
+                if (meta == null) continue;
                 conn.Execute("""
                     INSERT INTO CatalogImage (FilePath, FileName, FolderPath, FileSize, ImportedAt, ImportMode, OriginalPath,
                         DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation, GpsLatitude, GpsLongitude)
                     VALUES (@FilePath, @FileName, @FolderPath, @FileSize, @ImportedAt, @ImportMode, @OriginalPath,
                         @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation, @GpsLatitude, @GpsLongitude)
                     """, meta, tx);
-
-                importedPaths.Add(targetPath);
-                completed++;
-                progress?.Report(new ImportProgress { Total = total, Completed = completed, CurrentFile = Path.GetFileName(file) });
+                importedPaths.Add(meta.FilePath);
             }
-
             tx.Commit();
         }, ct);
 
         ImportCompleted?.Invoke(this, new ImportCompletedEventArgs(importedPaths.Count, importedPaths));
         return importedPaths.Count;
+    }
+
+    private static readonly string[] _imageExts =
+        { ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff",
+          ".cr2", ".cr3", ".nef", ".arw", ".dng", ".raf", ".rw2", ".orf", ".pef", ".srw", ".raw", ".nrw", ".sr2" };
+
+    public async Task<SyncResult> SyncFolderAsync(string folderPath, bool recursive, bool removeMissing = false,
+        IProgress<ImportProgress>? progress = null, CancellationToken ct = default)
+    {
+        var result = new SyncResult();
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath)) return result;
+
+        // 1) Quét file ảnh trên đĩa.
+        var opt = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        List<string> onDisk;
+        try
+        {
+            onDisk = Directory.EnumerateFiles(folderPath, "*.*", opt)
+                .Where(f => Array.IndexOf(_imageExts, Path.GetExtension(f).ToLowerInvariant()) >= 0)
+                .ToList();
+        }
+        catch (Exception ex) { AppLog.Error("Catalog.Sync", folderPath, ex); return result; }
+
+        // 2) Lấy entry catalog hiện có trong folder.
+        var inCatalog = recursive
+            ? GetImagesUnderFolder(folderPath)
+            : GetImagesByFolder(folderPath);
+        var catalogSet = new HashSet<string>(inCatalog.Select(i => i.FilePath), StringComparer.OrdinalIgnoreCase);
+        var diskSet = new HashSet<string>(onDisk, StringComparer.OrdinalIgnoreCase);
+
+        // 3) File mới trên đĩa chưa có trong catalog -> import in-place.
+        var newFiles = onDisk.Where(f => !catalogSet.Contains(f)).ToList();
+        if (newFiles.Count > 0)
+            result.Added = await ImportAsync(newFiles, new ImportOptions { Mode = ImportMode.AddInPlace }, progress, ct);
+
+        // 4) Entry catalog mà file không còn trên đĩa.
+        var missing = inCatalog.Where(i => !diskSet.Contains(i.FilePath)).Select(i => i.FilePath).ToList();
+        result.Missing = missing.Count;
+        result.MissingPaths = missing;
+        if (removeMissing && missing.Count > 0)
+        {
+            RemoveFromCatalog(missing);
+            result.Removed = missing.Count;
+        }
+
+        return result;
+    }
+
+    /// <summary>Lấy mọi ảnh catalog nằm dưới folder (đệ quy, theo tiền tố FolderPath).</summary>
+    private IReadOnlyList<CatalogImage> GetImagesUnderFolder(string folderPath)
+    {
+        using var conn = Open();
+        var prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return conn.Query<CatalogImage>(
+            "SELECT * FROM CatalogImage WHERE FolderPath = @prefix OR FolderPath LIKE @likePat OR FolderPath LIKE @likePatAlt",
+            new { prefix, likePat = prefix + Path.DirectorySeparatorChar + "%", likePatAlt = prefix + Path.AltDirectorySeparatorChar + "%" }).ToList();
     }
 
     private string CopyToLibrary(string sourcePath, ImportOptions options)

@@ -54,6 +54,7 @@
                 <ContextMenu x:Name="folderContextMenu">
                     <MenuItem x:Name="miOpenWorkspace" Header="Open in Workspace" Click="MiOpenInWorkspace_Click"/>
                     <MenuItem x:Name="miImport" Header="Import folder…" Click="MiImport_Click"/>
+                    <MenuItem x:Name="miSync" Header="Sync Folder (đồng bộ file mới)" Click="MiSync_Click"/>
                     <Separator/>
                     <MenuItem x:Name="miShowExplorer" Header="Show in Explorer" Click="MiShowInExplorer_Click"/>
                 </ContextMenu>

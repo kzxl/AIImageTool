@@ -259,8 +259,18 @@ public partial class ImportDialog : Window
             MessageBox.Show($"Successfully imported {count} photos.", "Import Complete",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
-            var allImages = _catalog.GetAllImages();
-            _workspace.OpenCatalogView(allImages.Select(i => i.FilePath).ToList(), "All Photos");
+            // AddInPlace + cùng 1 thư mục nguồn: mở thẳng folder đó để GIỮ cấu trúc subfolder trong browser.
+            // Ngược lại (copy library / nhiều nguồn): hiện view phẳng "All Photos".
+            var srcFolder = txtSourcePath.Text;
+            if (options.Mode == ImportMode.AddInPlace && Directory.Exists(srcFolder))
+            {
+                _workspace.OpenFolder(srcFolder);
+            }
+            else
+            {
+                var allImages = _catalog.GetAllImages();
+                _workspace.OpenCatalogView(allImages.Select(i => i.FilePath).ToList(), "All Photos");
+            }
             DialogResult = true;
             Close();
         }

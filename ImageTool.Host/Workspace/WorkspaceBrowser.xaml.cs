@@ -77,6 +77,35 @@ public partial class WorkspaceBrowser : UserControl, System.ComponentModel.INoti
 
     private void MiImport_Click(object sender, RoutedEventArgs e) => OpenImportDialog(SelectedFolder?.Path);
 
+    /// <summary>Sync Folder (kiểu Lightroom): quét folder, import file mới vào catalog in-place.</summary>
+    private async void MiSync_Click(object sender, RoutedEventArgs e)
+    {
+        var fn = SelectedFolder;
+        if (fn == null || !Directory.Exists(fn.Path) || _catalog == null) return;
+
+        var miSyncRef = sender as MenuItem;
+        if (miSyncRef != null) miSyncRef.IsEnabled = false;
+        try
+        {
+            var result = await _catalog.SyncFolderAsync(fn.Path, recursive: true, removeMissing: false);
+            string msg = $"Đồng bộ xong:\n• {result.Added} file mới thêm vào catalog";
+            if (result.Missing > 0)
+                msg += $"\n• {result.Missing} file trong catalog không còn trên đĩa";
+            if (result.Added == 0 && result.Missing == 0)
+                msg = "Không có thay đổi — catalog đã khớp thư mục.";
+            MessageBox.Show(msg, "Sync Folder", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Mở lại folder để thấy file mới.
+            _workspace?.OpenFolder(fn.Path);
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Error("Browser.Sync", fn.Path, ex);
+            MessageBox.Show($"Lỗi đồng bộ: {ex.Message}", "Sync Folder", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { if (miSyncRef != null) miSyncRef.IsEnabled = true; }
+    }
+
     private void MiShowInExplorer_Click(object sender, RoutedEventArgs e)
     {
         var fn = SelectedFolder;
