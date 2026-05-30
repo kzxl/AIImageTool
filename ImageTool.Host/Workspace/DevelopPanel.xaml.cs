@@ -57,6 +57,7 @@ public partial class DevelopPanel : UserControl
     // B&W + Invert toggles.
     private CheckBox? _chkBw;
     private CheckBox? _chkInvert;
+    private CheckBox? _chkAiUpscale;
 
     // Auto WB gains (áp qua ChannelGainOp). 1,1,1 = không.
     private float _wbGainR = 1f, _wbGainG = 1f, _wbGainB = 1f;
@@ -248,6 +249,10 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
         AddSlider(gDetail, "aiDenoise", "AI Denoise", 0, 1, 0);
+        _chkAiUpscale = new CheckBox { Content = "AI Upscale 4x (khi export)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2), ToolTip = "Phóng to 4x bằng AI lúc export (cần model Upscaler)" };
+        _chkAiUpscale.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _chkAiUpscale.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        gDetail.Children.Add(_chkAiUpscale);
 
         // Effects
         var gFx = AddGroup("Effects", false);
@@ -420,6 +425,7 @@ public partial class DevelopPanel : UserControl
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
         SetVal("aiDenoise", Param(path!, AiDenoiseOp.Type, "strength"));
+        if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = FindOp(path!, AiUpscaleOp.Type) != null;
         SetVal("vignette", Param(path!, VignetteOp.Type, "amount"));
         SetVal("grain", Param(path!, GrainOp.Type, "amount"));
 
@@ -779,6 +785,10 @@ public partial class DevelopPanel : UserControl
         // 9) Local adjustments (masked ops) — sau cùng để áp lên kết quả global.
         AppendMaskOps(ops);
 
+        // 10) AI Upscale (#7) — op resizing CUỐI cùng, chỉ chạy full-res khi export.
+        if (_chkAiUpscale?.IsChecked == true)
+            ops.Add(Op(AiUpscaleOp.Type, "AI Upscale", new AiUpscaleOp { Factor = 4 }.ToParams()));
+
         return ops;
     }
 
@@ -835,6 +845,7 @@ public partial class DevelopPanel : UserControl
         // reset B&W / Invert / Auto WB
         if (_chkBw != null) _chkBw.IsChecked = false;
         if (_chkInvert != null) _chkInvert.IsChecked = false;
+        if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         ClearHealing();

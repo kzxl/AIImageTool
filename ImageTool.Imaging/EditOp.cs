@@ -103,6 +103,7 @@ public sealed class EditOpRegistry
         AiDenoiseOp.Register(reg);
         HealingOp.Register(reg);
         LensCorrectionOp.Register(reg);
+        AiUpscaleOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;

@@ -4,6 +4,9 @@
     <ProjectReference Include="..\ImageTool.Core\ImageTool.Core.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\ImageTool.Imaging\ImageTool.Imaging.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>

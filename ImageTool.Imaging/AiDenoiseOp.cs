@@ -17,6 +17,14 @@ public static class AiOpHost
     public static Action<LinearImage, float, float>? DenoiseProcessor;
 
     public static bool HasDenoise => DenoiseProcessor != null;
+
+    /// <summary>
+    /// Bộ xử lý AI upscale do Host cắm vào: nhận (ảnh, hệ số phóng) trả ảnh MỚI lớn hơn.
+    /// Null = chưa sẵn sàng -> op trả nguyên ảnh.
+    /// </summary>
+    public static Func<LinearImage, int, LinearImage>? UpscaleProcessor;
+
+    public static bool HasUpscale => UpscaleProcessor != null;
 }
 
 /// <summary>
