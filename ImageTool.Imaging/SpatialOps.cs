@@ -189,6 +189,10 @@ public sealed class SharpenOp : IEditOp
 /// Post-crop Vignette: tối/sáng dần ở rìa theo khoảng cách tới tâm (đơn vị chuẩn hoá nên
 /// độc lập với kích thước/scale). amount [-1..1] âm = tối rìa, dương = sáng rìa.
 /// midpoint điều chỉnh bán kính bắt đầu, feather độ mượt.
+///
+/// Roundness [-1..1]: hình dạng vùng vignette — 0 = theo tỉ lệ ảnh, +1 = tròn hơn, -1 = chữ nhật hơn.
+/// Highlights [0..1]: khi tối rìa (amount&lt;0), bảo vệ vùng SÁNG khỏi bị tối (kiểu LR "Highlights"),
+/// giữ đèn/điểm sáng ở rìa không bị dìm — chỉ áp khi amount&lt;0.
 /// </summary>
 public sealed class VignetteOp : IEditOp
 {
@@ -197,6 +201,8 @@ public sealed class VignetteOp : IEditOp
     public float Amount;          // [-1..1]
     public float Midpoint = 0.5f; // [0..1]
     public float Feather = 0.5f;  // [0..1]
+    public float Roundness;       // [-1..1] hình dạng (0 = theo aspect)
+    public float Highlights;      // [0..1] bảo vệ highlight khi tối rìa
 
     public bool IsIdentity => MathF.Abs(Amount) < 1e-4f;
 
@@ -206,27 +212,46 @@ public sealed class VignetteOp : IEditOp
         int w = image.Width, h = image.Height;
         float[] px = image.Pixels;
         float cx = w * 0.5f, cy = h * 0.5f;
-        float maxDist = MathF.Sqrt(cx * cx + cy * cy);
         float amt = Math.Clamp(Amount, -1f, 1f);
         float mid = Math.Clamp(Midpoint, 0f, 1f);
         float feather = Math.Clamp(Feather, 0.01f, 1f);
-        float start = mid;             // bắt đầu mờ ở bán kính chuẩn hoá này
-        float end = mid + feather;     // tối đa hiệu ứng
+        float round = Math.Clamp(Roundness, -1f, 1f);
+        float hiProt = Math.Clamp(Highlights, 0f, 1f);
+        float start = mid;
+        float end = mid + feather;
+
+        // Bán kính chuẩn hoá theo từng trục. round>0 -> tiến tới hình tròn (2 trục bằng nhau);
+        // round<0 -> kéo dài trục dài hơn (chữ nhật hơn). Mặc định (round=0) theo bán-đường-chéo.
+        float baseR = MathF.Sqrt(cx * cx + cy * cy);
+        // pha trộn giữa "đường chéo" (anisotropic theo ảnh) và "tròn" (max cạnh).
+        float circ = MathF.Max(cx, cy);
+        float rx = cx, ry = cy;
+        if (round > 0f) { rx = cx + (circ - cx) * round; ry = cy + (circ - cy) * round; }
+        else if (round < 0f) { float k = -round; rx = cx * (1f - 0.5f * k); ry = cy * (1f - 0.5f * k); }
+        if (rx < 1f) rx = 1f; if (ry < 1f) ry = 1f;
 
         Parallel.For(0, h, y =>
         {
             int row = y * w;
-            float dy = (y - cy);
+            float dy = (y - cy) / ry;
             for (int x = 0; x < w; x++)
             {
-                float dx = (x - cx);
-                float d = MathF.Sqrt(dx * dx + dy * dy) / maxDist; // [0..1]
+                float dx = (x - cx) / rx;
+                float d = MathF.Sqrt(dx * dx + dy * dy); // ~[0..~1.41] elip chuẩn hoá
                 float t = (d - start) / (end - start);
                 if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
                 float s = t * t * (3f - 2f * t); // smoothstep
                 float factor = 1f + amt * s;     // amt<0: tối rìa
                 if (factor < 0f) factor = 0f;
+
                 int p = (row + x) * 4;
+                if (factor < 1f && hiProt > 0f)
+                {
+                    // Bảo vệ highlight: pixel càng sáng càng ít bị tối (blend factor về 1 theo luminance).
+                    float lum = ColorSpace.Luminance(px[p], px[p + 1], px[p + 2]);
+                    float prot = hiProt * Math.Clamp(lum, 0f, 1f);
+                    factor = factor + (1f - factor) * prot;
+                }
                 px[p] *= factor; px[p + 1] *= factor; px[p + 2] *= factor;
             }
         });
@@ -235,6 +260,7 @@ public sealed class VignetteOp : IEditOp
     public Dictionary<string, string> ToParams() => new()
     {
         ["amount"] = F(Amount), ["midpoint"] = F(Midpoint), ["feather"] = F(Feather),
+        ["roundness"] = F(Roundness), ["highlights"] = F(Highlights),
     };
     private static string F(float v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
     public static VignetteOp FromParams(IReadOnlyDictionary<string, string> p)
@@ -243,6 +269,8 @@ public sealed class VignetteOp : IEditOp
             Amount = EditOpRegistry.F(p, "amount"),
             Midpoint = EditOpRegistry.F(p, "midpoint", 0.5f),
             Feather = EditOpRegistry.F(p, "feather", 0.5f),
+            Roundness = EditOpRegistry.F(p, "roundness"),
+            Highlights = EditOpRegistry.F(p, "highlights"),
         };
     public static void Register(EditOpRegistry reg) => reg.Register(Type, FromParams);
 }

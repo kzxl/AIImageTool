@@ -355,6 +355,53 @@ public class SpatialOpsTests
     }
 
     [Fact]
+    public void Vignette_Highlights_ProtectsBrightEdges()
+    {
+        // 2 ảnh giống nhau (sáng), 1 bật Highlights protection -> góc ít bị tối hơn.
+        var plain = new LinearImage(33, 33);
+        var prot = new LinearImage(33, 33);
+        for (int i = 0; i < plain.Pixels.Length; i += 4)
+        {
+            plain.Pixels[i] = 0.95f; plain.Pixels[i + 1] = 0.95f; plain.Pixels[i + 2] = 0.95f; plain.Pixels[i + 3] = 1f;
+            prot.Pixels[i] = 0.95f; prot.Pixels[i + 1] = 0.95f; prot.Pixels[i + 2] = 0.95f; prot.Pixels[i + 3] = 1f;
+        }
+        new VignetteOp { Amount = -0.9f, Midpoint = 0.2f, Feather = 0.8f, Highlights = 0f }.Apply(plain, 1f);
+        new VignetteOp { Amount = -0.9f, Midpoint = 0.2f, Feather = 0.8f, Highlights = 1f }.Apply(prot, 1f);
+        // Góc: bản có Highlights protection phải sáng hơn (ít bị dìm).
+        Assert.True(prot.Pixels[0] > plain.Pixels[0]);
+    }
+
+    [Fact]
+    public void Vignette_Roundness_ChangesShape()
+    {
+        // Trên ảnh không vuông, roundness thay đổi mức độ tối ở cạnh giữa so với góc.
+        var a = new LinearImage(64, 32);
+        var b = new LinearImage(64, 32);
+        for (int i = 0; i < a.Pixels.Length; i += 4)
+        {
+            a.Pixels[i] = 0.7f; a.Pixels[i + 1] = 0.7f; a.Pixels[i + 2] = 0.7f; a.Pixels[i + 3] = 1f;
+            b.Pixels[i] = 0.7f; b.Pixels[i + 1] = 0.7f; b.Pixels[i + 2] = 0.7f; b.Pixels[i + 3] = 1f;
+        }
+        new VignetteOp { Amount = -0.8f, Midpoint = 0.2f, Feather = 0.8f, Roundness = 0f }.Apply(a, 1f);
+        new VignetteOp { Amount = -0.8f, Midpoint = 0.2f, Feather = 0.8f, Roundness = 1f }.Apply(b, 1f);
+        // Điểm cạnh giữa-dọc (x=32, y=31): roundness mở rộng trục ngắn -> giá trị khác.
+        int edge = (31 * 64 + 32) * 4;
+        Assert.NotEqual(a.Pixels[edge], b.Pixels[edge], 3);
+    }
+
+    [Fact]
+    public void Vignette_RoundTrip_AllParams()
+    {
+        var op = new VignetteOp { Amount = -0.5f, Midpoint = 0.4f, Feather = 0.6f, Roundness = 0.3f, Highlights = 0.7f };
+        var back = VignetteOp.FromParams(op.ToParams());
+        Assert.Equal(-0.5f, back.Amount, 4);
+        Assert.Equal(0.4f, back.Midpoint, 4);
+        Assert.Equal(0.6f, back.Feather, 4);
+        Assert.Equal(0.3f, back.Roundness, 4);
+        Assert.Equal(0.7f, back.Highlights, 4);
+    }
+
+    [Fact]
     public void Sharpen_ParamsRoundTrip()
     {
         var op = new SharpenOp { Amount = 0.5f, Radius = 1.5f, Threshold = 0.2f, Masking = 0.4f };

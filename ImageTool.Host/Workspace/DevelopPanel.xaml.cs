@@ -338,6 +338,10 @@ public partial class DevelopPanel : UserControl
         // Effects
         var gFx = AddGroup("Effects", false);
         AddSlider(gFx, "vignette", "Vignette", -1, 1, 0);
+        AddSlider(gFx, "vig_mid", "Vignette Midpoint", 0, 1, 0.5);
+        AddSlider(gFx, "vig_feather", "Vignette Feather", 0.01, 1, 0.5, "0.00");
+        AddSlider(gFx, "vig_round", "Vignette Roundness", -1, 1, 0, "0.00");
+        AddSlider(gFx, "vig_hi", "Vignette Highlights", 0, 1, 0, "0.00");
         AddSlider(gFx, "grain", "Grain", 0, 1, 0);
         AddSlider(gFx, "glow", "Glow / Soften", 0, 1, 0);
         _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
@@ -602,6 +606,11 @@ public partial class DevelopPanel : UserControl
         SetVal("aiDenoise", Param(path!, AiDenoiseOp.Type, "strength"));
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = FindOp(path!, AiUpscaleOp.Type) != null;
         SetVal("vignette", Param(path!, VignetteOp.Type, "amount"));
+        var vigP = FindOp(path!, VignetteOp.Type);
+        SetVal("vig_mid", vigP != null ? Param(path!, VignetteOp.Type, "midpoint") : 0.5);
+        SetVal("vig_feather", vigP != null ? Param(path!, VignetteOp.Type, "feather") : 0.5);
+        SetVal("vig_round", Param(path!, VignetteOp.Type, "roundness"));
+        SetVal("vig_hi", Param(path!, VignetteOp.Type, "highlights"));
         SetVal("grain", Param(path!, GrainOp.Type, "amount"));
         SetVal("glow", Param(path!, GlowOp.Type, "amount"));
 
@@ -1038,7 +1047,12 @@ public partial class DevelopPanel : UserControl
         if (!diffuse.IsIdentity) ops.Add(Op(DiffuseOp.Type, "Diffuse/Sharpen", diffuse.ToParams()));
 
         // 8) Effects
-        var vig = new VignetteOp { Amount = (float)GetVal("vignette") };
+        var vig = new VignetteOp
+        {
+            Amount = (float)GetVal("vignette"), Midpoint = (float)GetVal("vig_mid"),
+            Feather = (float)GetVal("vig_feather"), Roundness = (float)GetVal("vig_round"),
+            Highlights = (float)GetVal("vig_hi"),
+        };
         if (!vig.IsIdentity) ops.Add(Op(VignetteOp.Type, "Vignette", vig.ToParams()));
         var grain = new GrainOp { Amount = (float)GetVal("grain") };
         if (!grain.IsIdentity) ops.Add(Op(GrainOp.Type, "Grain", grain.ToParams()));
