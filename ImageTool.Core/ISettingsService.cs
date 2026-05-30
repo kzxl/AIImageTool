@@ -24,6 +24,8 @@ public class AppSettings
     public int? DefaultGpuId { get; set; }
     public string PerformanceMode { get; set; } = "Safe";
     public List<ExportPreset> ExportPresets { get; set; } = new();
+    /// <summary>Giao diện: "Dark" (mặc định) hoặc "Light".</summary>
+    public string Theme { get; set; } = "Dark";
 }
 
 public interface ISettingsService

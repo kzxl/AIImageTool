@@ -22,6 +22,9 @@
                         ToolTip="Import photos into catalog"/>
 
                 <!-- Right: Pop Out + Mode Switcher + Quick Filter -->
+                <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="◐" Width="30" Padding="6,6"
+                        VerticalAlignment="Center" Margin="6,0,0,0" Click="BtnTheme_Click"
+                        ToolTip="Đổi giao diện Sáng/Tối"/>
                 <Button x:Name="btnPopOutTools" DockPanel.Dock="Right" Content="⇱  Pop Out Tools"
                         Padding="10,6" VerticalAlignment="Center" Margin="6,0,0,0"
                         Click="BtnPopOutTools_Click"

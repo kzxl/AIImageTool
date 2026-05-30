@@ -398,9 +398,16 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
-    private void BtnPopOutTools_Click(object sender, RoutedEventArgs e)
+    private void BtnTheme_Click(object sender, RoutedEventArgs e)
     {
-        if (_toolsWindow != null)
+        var applied = ThemeManager.Toggle();
+        _settings.Current.Theme = applied;
+        _settings.Save();
+        txtStatus.Text = $"Giao diện: {applied}";
+    }
+
+    private void BtnPopOutTools_Click(object sender, RoutedEventArgs e)
+    {        if (_toolsWindow != null)
         {
             _toolsWindow.Activate();
             return;

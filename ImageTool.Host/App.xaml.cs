@@ -121,6 +121,14 @@ public partial class App : Application
             if (styleSvc != null)
                 batchSvc?.RegisterCapability(new ImageTool.Shared.StyleBatchAdapter(styleSvc));
 
+            // Áp theme đã lưu (Dark/Light) trước khi hiện cửa sổ.
+            try
+            {
+                var settings = (ISettingsService)_serviceProvider.GetService(typeof(ISettingsService))!;
+                ThemeManager.Apply(settings?.Current?.Theme ?? ThemeManager.Dark);
+            }
+            catch { }
+
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
