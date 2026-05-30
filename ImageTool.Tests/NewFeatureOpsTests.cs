@@ -58,6 +58,19 @@ public class NewFeatureOpsTests
         Assert.Equal(0.3f, back.ToneStrength, 4);
     }
 
+    [Fact]
+    public void BlackWhite_RedFilter_DarkensBlueSky_VsBlueFilter()
+    {
+        // Trời xanh: red filter (kính lọc đỏ) làm trời TỐI hơn; blue filter làm trời SÁNG hơn.
+        var sky = Solid(0.2f, 0.4f, 0.8f);
+        var skyRed = Solid(0.2f, 0.4f, 0.8f);
+        var skyBlue = Solid(0.2f, 0.4f, 0.8f);
+        // weights như preset trong UI.
+        new BlackWhiteOp { Enabled = true, RedWeight = 0.80f, GreenWeight = 0.15f, BlueWeight = 0.05f }.Apply(skyRed, 1f);
+        new BlackWhiteOp { Enabled = true, RedWeight = 0.05f, GreenWeight = 0.25f, BlueWeight = 0.70f }.Apply(skyBlue, 1f);
+        Assert.True(skyRed.Pixels[0] < skyBlue.Pixels[0], "red filter phải làm trời xanh tối hơn blue filter");
+    }
+
     // ---- InvertOp (13.3) ----
 
     [Fact]

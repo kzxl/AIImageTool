@@ -385,6 +385,17 @@ public partial class DevelopPanel : UserControl
         AddSlider(gBw, "bw_r", "Red mix", 0, 1, 0.299, "0.00");
         AddSlider(gBw, "bw_g", "Green mix", 0, 1, 0.587, "0.00");
         AddSlider(gBw, "bw_b", "Blue mix", 0, 1, 0.114, "0.00");
+        // Preset filter màu cổ điển (mô phỏng kính lọc khi chụp phim B&W).
+        var bwFilterRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        bwFilterRow.Children.Add(new TextBlock { Text = "Filter", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        var cmbBwFilter = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
+        foreach (var n in new[] { "Neutral", "Red", "Orange", "Yellow", "Green", "Blue" })
+            cmbBwFilter.Items.Add(new ComboBoxItem { Content = n });
+        cmbBwFilter.SelectedIndex = 0;
+        cmbBwFilter.SelectionChanged += (_, _) => { if (!_loading) ApplyBwFilter(cmbBwFilter.SelectedIndex); };
+        cmbBwFilter.ToolTip = "Mô phỏng kính lọc màu: Red làm trời tối/da sáng, Green làm tán lá sáng...";
+        bwFilterRow.Children.Add(cmbBwFilter);
+        gBw.Children.Add(bwFilterRow);
         AddSlider(gBw, "bw_toneHue", "Tone Hue", 0, 360, 0, "0");
         AddSlider(gBw, "bw_toneStr", "Tone Strength", 0, 1, 0);
 
@@ -824,6 +835,26 @@ public partial class DevelopPanel : UserControl
         int ch = _curveChannel.SelectedIndex < 0 ? 0 : _curveChannel.SelectedIndex;
         _curveData[ch] = serialized;
         ScheduleCommit();
+    }
+
+    /// <summary>Áp filter màu B&W cổ điển -> set trọng số mix kênh + bật B&W. 0 = Neutral.</summary>
+    private void ApplyBwFilter(int index)
+    {
+        if (_currentPath == null) return;
+        (double r, double g, double b) w = index switch
+        {
+            1 => (0.80, 0.15, 0.05), // Red: trời tối, da sáng
+            2 => (0.65, 0.30, 0.05), // Orange
+            3 => (0.50, 0.42, 0.08), // Yellow (phong cảnh cổ điển)
+            4 => (0.15, 0.70, 0.15), // Green: tán lá/da sáng
+            5 => (0.05, 0.25, 0.70), // Blue: tăng sương/khí quyển
+            _ => (0.299, 0.587, 0.114), // Neutral (luma)
+        };
+        _loading = true;
+        SetVal("bw_r", w.r); SetVal("bw_g", w.g); SetVal("bw_b", w.b);
+        if (_chkBw != null) _chkBw.IsChecked = true;
+        _loading = false;
+        Commit();
     }
 
     /// <summary>Áp 1 preset đường cong tương phản lên kênh RGB master (index 0). 0 = Linear (reset).</summary>
