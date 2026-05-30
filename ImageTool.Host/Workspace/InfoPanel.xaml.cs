@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -15,13 +16,16 @@ public partial class InfoPanel : UserControl
 {
     private IWorkspaceService? _workspace;
     private CancellationTokenSource? _cts;
+    private string? _currentPath;
 
     public ObservableCollection<ExifRow> Exif { get; } = new();
+    public ObservableCollection<ColorSwatchVm> Colors { get; } = new();
 
     public InfoPanel()
     {
         InitializeComponent();
         icExif.ItemsSource = Exif;
+        icColors.ItemsSource = Colors;
     }
 
     public void Bind(IWorkspaceService ws)
@@ -35,12 +39,17 @@ public partial class InfoPanel : UserControl
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
+        _currentPath = path;
 
         Dispatcher.BeginInvoke(() =>
         {
             Exif.Clear();
+            Colors.Clear();
             imgHistogram.Source = null;
             txtHistEmpty.Visibility = Visibility.Visible;
+            txtCaptureSummary.Visibility = Visibility.Collapsed;
+            btnSaveMeta.IsEnabled = false;
+            ClearMetaFields();
         });
 
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
@@ -79,6 +88,13 @@ public partial class InfoPanel : UserControl
                         rows.Add(new ExifRow(v.Tag.ToString() ?? "", val));
                     }
                 }
+
+                // Dòng tóm tắt thông số chụp từ catalog metadata (camera/lens/exposure).
+                string summary = BuildCaptureSummary(path);
+
+                // Bảng màu chủ đạo (K-Means trên ảnh đã load).
+                var swatches = ImageTool.Shared.DominantColors.Extract(img, k: 6);
+                if (ct.IsCancellationRequested) return;
 
                 // Histogram (downscale rồi tính)
                 using var small = img.Clone(c => c.Resize(new ResizeOptions
@@ -126,6 +142,23 @@ public partial class InfoPanel : UserControl
                     txtHistEmpty.Visibility = Visibility.Collapsed;
                     _gpsLat = gpsLat; _gpsLon = gpsLon; _hasGps = hasGps;
                     btnMap.Visibility = hasGps ? Visibility.Visible : Visibility.Collapsed;
+
+                    // Tóm tắt chụp.
+                    if (!string.IsNullOrEmpty(summary))
+                    {
+                        txtCaptureSummary.Text = summary;
+                        txtCaptureSummary.Visibility = Visibility.Visible;
+                    }
+
+                    // Bảng màu.
+                    Colors.Clear();
+                    foreach (var s in swatches)
+                        Colors.Add(new ColorSwatchVm(s.Hex, s.PercentText,
+                            new SolidColorBrush(System.Windows.Media.Color.FromRgb(s.R, s.G, s.B))));
+
+                    // Form sửa metadata.
+                    LoadMetaFields(path);
+                    btnSaveMeta.IsEnabled = true;
                 });
             }
             catch (Exception ex) { ImageTool.Shared.AppLog.Error("InfoPanel.Refresh", path, ex); }
@@ -144,6 +177,74 @@ public partial class InfoPanel : UserControl
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
         }
         catch (Exception ex) { ImageTool.Shared.AppLog.Warn("InfoPanel.Map", ex.Message); }
+    }
+
+    /// <summary>Dòng tóm tắt chụp từ EXIF: "Canon R5 · 50mm · f/1.8 · 1/200s · ISO 400".</summary>
+    private static string BuildCaptureSummary(string path)
+    {
+        try
+        {
+            var ci = ImageTool.Shared.ExifReader.ReadMetadata(path);
+            var parts = new List<string>();
+            var camera = string.Join(" ", new[] { ci.CameraMake, ci.CameraModel }
+                .Where(s => !string.IsNullOrWhiteSpace(s))).Trim();
+            if (!string.IsNullOrWhiteSpace(camera)) parts.Add(camera);
+            if (ci.FocalLength is > 0) parts.Add($"{ci.FocalLength:0.#}mm");
+            if (ci.Aperture is > 0) parts.Add($"f/{ci.Aperture:0.#}");
+            if (!string.IsNullOrWhiteSpace(ci.ShutterSpeed)) parts.Add(ci.ShutterSpeed!);
+            if (ci.Iso is > 0) parts.Add($"ISO {ci.Iso}");
+            return string.Join("  ·  ", parts);
+        }
+        catch { return ""; }
+    }
+
+    private void ColorSwatch_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string hex)
+        {
+            try { System.Windows.Clipboard.SetText(hex); }
+            catch (Exception ex) { ImageTool.Shared.AppLog.Warn("InfoPanel.CopyHex", ex.Message); }
+        }
+    }
+
+    // ===== Sửa metadata (gộp từ MetaEditor) =====
+    private void ClearMetaFields()
+    {
+        txtDescription.Text = ""; txtArtist.Text = ""; txtCopyright.Text = "";
+        txtSoftware.Text = ""; txtMake.Text = ""; txtModel.Text = "";
+    }
+
+    private void LoadMetaFields(string path)
+    {
+        try
+        {
+            var m = ImageTool.Shared.ExifWriter.ReadEditable(path);
+            txtDescription.Text = m.GetValueOrDefault("ImageDescription", "");
+            txtArtist.Text = m.GetValueOrDefault("Artist", "");
+            txtCopyright.Text = m.GetValueOrDefault("Copyright", "");
+            txtSoftware.Text = m.GetValueOrDefault("Software", "");
+            txtMake.Text = m.GetValueOrDefault("Make", "");
+            txtModel.Text = m.GetValueOrDefault("Model", "");
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Warn("InfoPanel.LoadMeta", ex.Message); }
+    }
+
+    private void BtnSaveMeta_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_currentPath) || !File.Exists(_currentPath)) return;
+        var values = new Dictionary<string, string>
+        {
+            ["ImageDescription"] = txtDescription.Text,
+            ["Artist"] = txtArtist.Text,
+            ["Copyright"] = txtCopyright.Text,
+            ["Software"] = txtSoftware.Text,
+            ["Make"] = txtMake.Text,
+            ["Model"] = txtModel.Text,
+        };
+        bool ok = ImageTool.Shared.ExifWriter.Write(_currentPath, values);
+        MessageBox.Show(ok ? "Đã lưu metadata vào ảnh." : "Không lưu được metadata (xem app.log).",
+            "Metadata", MessageBoxButton.OK, ok ? MessageBoxImage.Information : MessageBoxImage.Error);
+        if (ok) Refresh(_currentPath);
     }
 
     private static BitmapSource RenderHistogram(int[] r, int[] g, int[] b, int w, int h, bool hiClip = false, bool loClip = false)
@@ -198,3 +299,6 @@ public partial class InfoPanel : UserControl
 }
 
 public record ExifRow(string Name, string Value);
+
+/// <summary>1 ô màu chủ đạo cho ItemsControl (gộp từ ColorLab). Brush dùng để vẽ swatch.</summary>
+public record ColorSwatchVm(string Hex, string PercentText, Brush Brush);

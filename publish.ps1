@@ -3,8 +3,7 @@ $hostProj = "$slnDir\ImageTool.Host\ImageTool.Host.csproj"
 $pluginsDir = @(
     "$slnDir\ImageTool.Plugins.FaceRestorer\ImageTool.Plugins.FaceRestorer.csproj",
     "$slnDir\ImageTool.Plugins.Upscaler\ImageTool.Plugins.Upscaler.csproj",
-    "$slnDir\ImageTool.Plugins.MetaEditor\ImageTool.Plugins.MetaEditor.csproj",
-    "$slnDir\ImageTool.Plugins.ColorLab\ImageTool.Plugins.ColorLab.csproj"
+    "$slnDir\ImageTool.Plugins.VisionTagger\ImageTool.Plugins.VisionTagger.csproj"
 )
 
 # Lite Build
