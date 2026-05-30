@@ -314,6 +314,15 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 ---
 
+## 14. SÁP NHẬP DARKTABLE (plan chi tiết)
+
+> Xem `DARKTABLE_PLAN.md` — đối chiếu module Darktable với op đã có; phần còn thiếu chia 6 phase
+> (D1 scene-referred tone, D2 color science, D3 detail/correction, D4 mask/local nâng cao,
+> D5 RAW thật/LibRaw, D6 lighttable). Khuyến nghị làm trước: blend modes + opacity (D4.5),
+> Sigmoid/Filmic RGB đầy đủ (D1.1/D1.2), parametric mask đa kênh (D4.1).
+
+---
+
 ## Ghi chú ưu tiên
 
 1. **Phần 1 (Nền tảng) là blocker tuyệt đối** - làm trước. Không có nó, Phần 2-6 vô nghĩa.
