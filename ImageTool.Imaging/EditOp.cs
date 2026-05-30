@@ -100,6 +100,7 @@ public sealed class EditOpRegistry
         BlackWhiteOp.Register(reg);
         InvertOp.Register(reg);
         ChannelGainOp.Register(reg);
+        AiDenoiseOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;

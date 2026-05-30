@@ -97,6 +97,7 @@ public sealed class MaskedOp : IEditOp
             case LuminanceRangeMask.Type: range = LuminanceRangeMask.FromParams(p); break;
             case ColorRangeMask.Type: colorRange = ColorRangeMask.FromParams(p); break;
             case BrushMask.Type: mask = BrushMask.FromParams(p); break;
+            case RasterMask.Type: mask = RasterMask.FromParams(p); break;
         }
         return new MaskedOp(inner, mask, range, colorRange, p);
     }
