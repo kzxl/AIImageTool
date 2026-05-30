@@ -52,12 +52,16 @@ public sealed class AiMaskService : IDisposable
     {
         try
         {
+            // Cache (#2): nếu mask cho ảnh này (path+mtime) đã tồn tại -> tái dùng, khỏi chạy ONNX.
+            string maskPath = Path.Combine(_maskDir, MaskName(imagePath));
+            if (File.Exists(maskPath) && new FileInfo(maskPath).Length > 0)
+                return maskPath;
+
             var modelPath = await _downloader.EnsureAsync(KnownModels.U2Net, progress, ct);
             await _initLock.WaitAsync(ct);
             try { _segmenter ??= new OnnxSegmenter(modelPath); }
             finally { _initLock.Release(); }
 
-            string maskPath = Path.Combine(_maskDir, MaskName(imagePath));
             await Task.Run(() => _segmenter!.GenerateMask(imagePath, maskPath), ct);
             return File.Exists(maskPath) ? maskPath : null;
         }
