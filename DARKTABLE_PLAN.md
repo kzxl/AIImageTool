@@ -100,7 +100,10 @@ Darktable module -> op của ta đã làm:
 - [x] **D6.2** Styles có thể append (không thay thế) + chọn module khi áp — `DevelopModules.ApplyStyle`
       (append giữ edit hiện có, chỉ thay/thêm module style; replace thay toàn bộ) + `StyleService.ApplyToImageMerged`
       + checkbox "Append" trong StylePanel + StyleBatchAdapter mode append/replace. + test.
-- [ ] **D6.3** Duplicate / virtual copies (nhiều phiên bản edit của 1 ảnh) — cần model history per-version.
+- [~] **D6.3** Duplicate / virtual copies (nhiều phiên bản edit của 1 ảnh) — cần model history per-version.
+      **Named Snapshots ĐÃ XONG** (`IHistoryService.SaveSnapshot/ApplySnapshot/DeleteSnapshot/GetSnapshots`:
+      lưu nhiều mốc edit có tên, bất biến, persist sidecar; UI Snapshots trong HistoryPanel + test). Virtual
+      copy đầy đủ (nhiều bản song song trong grid) vẫn cần model per-version + selection-by-copy-id.
 - [x] **D6.4** Tagging phân cấp + recently used + tag từ điển — `KeywordHelper.CountTags` (đếm tag/ảnh
       cho cây), `AppSettings.TagDictionary`/`RecentTags` + `ISettingsService.AddRecentTags` (chuẩn hoá +
       mở rộng tổ tiên + cap), trình sửa Keywords trong InfoPanel (chip thêm/gỡ, nhập phân cấp "/", gợi ý từ

@@ -12,11 +12,13 @@ public partial class HistoryPanel : UserControl
     private IHistoryService? _history;
 
     public ObservableCollection<HistoryRow> Rows { get; } = new();
+    public ObservableCollection<SnapshotRow> Snapshots { get; } = new();
 
     public HistoryPanel()
     {
         InitializeComponent();
         icHistory.ItemsSource = Rows;
+        icSnapshots.ItemsSource = Snapshots;
     }
 
     public void Bind(IWorkspaceService workspace, IHistoryService history)
@@ -36,6 +38,7 @@ public partial class HistoryPanel : UserControl
         Dispatcher.BeginInvoke(() =>
         {
             Rows.Clear();
+            Snapshots.Clear();
             if (_history == null || string.IsNullOrEmpty(path)) return;
 
             var stack = _history.GetStack(path);
@@ -65,6 +68,13 @@ public partial class HistoryPanel : UserControl
                     Marker = future ? "·" : "●"
                 });
             }
+
+            foreach (var s in _history.GetSnapshots(path))
+                Snapshots.Add(new SnapshotRow
+                {
+                    Name = s.Name,
+                    TimeShort = s.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm"),
+                });
         });
     }
 
@@ -88,6 +98,40 @@ public partial class HistoryPanel : UserControl
     {
         if (_workspace?.ActiveImage != null) _history?.Clear(_workspace.ActiveImage);
     }
+
+    private void BtnAddSnapshot_Click(object sender, RoutedEventArgs e)
+    {
+        if (_history == null || _workspace?.ActiveImage == null)
+        {
+            MessageBox.Show("Hãy chọn 1 ảnh trước khi lưu snapshot.", "Snapshot", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        int n = _history.GetSnapshots(_workspace.ActiveImage).Count + 1;
+        var dlg = new InputDialog("Lưu Snapshot", "Tên snapshot:", $"Snapshot {n}");
+        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.Result))
+            _history.SaveSnapshot(_workspace.ActiveImage, dlg.Result.Trim());
+    }
+
+    private void Snapshot_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_history == null || _workspace?.ActiveImage == null) return;
+        if (sender is FrameworkElement fe && fe.DataContext is SnapshotRow row)
+            _history.ApplySnapshot(_workspace.ActiveImage, row.Name);
+    }
+
+    private void DeleteSnapshot_Click(object sender, RoutedEventArgs e)
+    {
+        if (_history == null || _workspace?.ActiveImage == null) return;
+        if (sender is FrameworkElement fe && fe.Tag is string name)
+            _history.DeleteSnapshot(_workspace.ActiveImage, name);
+        e.Handled = true; // không lan ra Snapshot_Click (áp snapshot)
+    }
+}
+
+public class SnapshotRow
+{
+    public string Name { get; set; } = "";
+    public string TimeShort { get; set; } = "";
 }
 
 public class HistoryRow

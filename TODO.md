@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 464/464 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 471/471 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -277,7 +277,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [~] **11.10** Responsive panel: kéo rộng/hẹp + **nhớ bề rộng panel trái/phải** (lưu `LeftPanelWidth`/
       `RightPanelWidth` vào AppSettings, khôi phục lúc khởi động); pop-out tools (đã có) ổn định đa màn hình.
 - [x] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure" qua `OpDisplayNames`) + history panel nhãn thân thiện.
-      Thumbnail từng bước (tùy chọn) CHƯA.
+      Thumbnail từng bước (tùy chọn) CHƯA. **Named Snapshots ĐÃ XONG**: lưu/áp/xoá mốc edit có tên (mục
+      SNAPSHOTS trong HistoryPanel, persist sidecar) — đường tắt tới virtual copies (D6.3).
 - [x] **11.12** Badge "đã chỉnh sửa" (✎) trong grid + filmstrip, cập nhật theo history.
 - [x] **11.13** Toast không chặn ở đáy cửa sổ (báo batch/export xong/lỗi, tự ẩn 3s).
 - [x] **11.14** Fix nhảy tab panel phải: header TabControl luôn 1 hàng, cuộn ngang (template tùy biến).
