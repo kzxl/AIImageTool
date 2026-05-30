@@ -288,6 +288,7 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "sharpen", "Sharpen", 0, 1, 0);
         AddSlider(gDetail, "lumaNR", "Luminance NR", 0, 1, 0);
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
+        AddSlider(gDetail, "chromaNR", "Chroma NR (edge)", 0, 1, 0);
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
         AddSlider(gDetail, "hotpix", "Hot Pixel", 0, 1, 0);
@@ -502,6 +503,7 @@ public partial class DevelopPanel : UserControl
         SetVal("sharpen", Param(path!, SharpenOp.Type, "amount"));
         SetVal("lumaNR", Param(path!, LumaNoiseReductionOp.Type, "amount"));
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
+        SetVal("chromaNR", Param(path!, ChromaDenoiseOp.Type, "amount"));
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
         SetVal("hotpix", Param(path!, HotPixelOp.Type, "strength"));
@@ -876,6 +878,8 @@ public partial class DevelopPanel : UserControl
         if (!colorNR.IsIdentity) ops.Add(Op(ColorNoiseReductionOp.Type, "Color NR", colorNR.ToParams()));
         var lumaNR = new LumaNoiseReductionOp { Amount = (float)GetVal("lumaNR") };
         if (!lumaNR.IsIdentity) ops.Add(Op(LumaNoiseReductionOp.Type, "Luminance NR", lumaNR.ToParams()));
+        var chromaNR = new ChromaDenoiseOp { Amount = (float)GetVal("chromaNR") };
+        if (!chromaNR.IsIdentity) ops.Add(Op(ChromaDenoiseOp.Type, "Chroma NR", chromaNR.ToParams()));
         var hotpix = new HotPixelOp { Strength = (float)GetVal("hotpix"), Threshold = (float)GetVal("hotpixThr") };
         if (!hotpix.IsIdentity) ops.Add(Op(HotPixelOp.Type, "Hot Pixel", hotpix.ToParams()));
         var ca = new CaCorrectOp { Red = (float)GetVal("caRed"), Blue = (float)GetVal("caBlue") };
