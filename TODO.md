@@ -3,8 +3,8 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-30 — RAW preview (7.1) + AI Subject mask (6.6) + AI denoise (4.3) + gộp
-> MetaEditor/ColorLab vào Info. 241/241 test pass, build 0 warning, 3 plugin (Upscaler/VisionTagger/FaceRestorer).
+> Cập nhật lần cuối: 2026-05-30 — Healing brush, Lens correction, Sky mask, AI batch tag, AI Upscale op chuỗi,
+> Space-to-pan, Light theme, PipelineProfiler. 271/271 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -164,7 +164,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       (`CenterPreview.Crop`: overlay khung + 8 tay nắm + thirds + shade, đồng bộ 2 chiều với DevelopPanel,
       phím R bật/tắt, ảnh hiển thị chưa-cắt khi đang chỉnh) + Straighten slider.
 - [x] **5.2** Rotate/Flip 90° (`OrientationOp`, IResizingOp, nút xoay/lật trong UI + test).
-- [ ] **5.3** Lens Correction (distortion/vignette/CA) - đọc profile lensfun (Darktable dùng lensfun).
+- [~] **5.3** Lens Correction: `LensCorrectionOp` (distortion k1/k2 đa thức bán kính + bù vignette góc), thủ công,
+      có UI slider + test. Đọc profile lensfun tự động CHƯA (cần database).
 - [x] **5.4** Perspective / Upright (`PerspectiveOp`, homography 3x3: Vertical/Horizontal keystone + Rotate +
       Scale bù viền, inverse-map song tuyến, IResizingOp, có UI trong Geometry + test).
 - [x] **5.5** Vignette (`VignetteOp`, post-crop: amount/midpoint/feather, smoothstep).
@@ -184,8 +185,9 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       UI vẽ tay trên canvas (`CenterPreview.Brush`: bắt nét kéo chuột, chấm phản hồi tức thì, gắn vào brush mask đang chọn).
 - [x] **6.5** Range mask Luminance (`LuminanceRangeMask`) + Range theo màu (`ColorRangeMask`: hue±range +
       ngưỡng sat, mép mượt, qua MaskedOp + test).
-- [~] **6.6** AI mask Subject (`OnnxSegmenter` U²-Net -> `RasterMask` -> MaskedOp), nút "AI Subject" trong
-      Local Adjustments, auto-tải model. Sky/Background riêng CHƯA (cần model phân lớp). Cần model ONNX.
+- [~] **6.6** AI mask Subject (`OnnxSegmenter` U²-Net -> `RasterMask` -> MaskedOp, cache theo path+mtime) +
+      **Sky mask heuristic** (`SkyMask`, không cần AI) — nút "AI Subject" + "+ Sky" trong Local Adjustments.
+      Background = Subject invert. Sky bằng model phân lớp riêng CHƯA. (AI Subject cần model ONNX.)
 - [x] **6.7** Mỗi local mask có full bộ slider Light/Color như global (`LocalMask` + DevelopPanel.Masks:
       Exposure/Contrast/Highlights/Shadows/Whites/Blacks/Temp/Tint/Sat/Vibrance/Clarity/Sharpen; mỗi mask sinh
       MaskedOp riêng, gom nhóm theo maskId khi load).
@@ -241,7 +243,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **10.6** Cache theo tầng: `CachedEditPipeline` lưu snapshot sau từng op, replay chỉ từ op đầu tiên bị
       đổi (longest-common-prefix theo chữ ký op). Bộ nhớ giới hạn `MaxCheckpoints`. Nối vào DevelopRenderer
       cho preview; 8 test khẳng định kết quả trùng khít `EditPipeline`.
-- [ ] **10.7** Cân nhắc GPU compute cho Develop (ComputeSharp/DirectML) - tùy chọn dài hạn.
+- [~] **10.7** GPU compute cho Develop (ComputeSharp/DirectML) - dài hạn. Đã có `PipelineProfiler` đo bottleneck
+      từng op làm cơ sở quyết định; rewrite GPU chưa làm (rủi ro cao, cần verify shader trên máy thật).
 - [x] **10.8** ArrayPool cho buffer blur trung gian (GaussianBlur) — giảm GC khi kéo slider.
 - [ ] **10.9** Thumbnail: xác nhận decode bằng TargetSize hint (đã có) + cache đĩa hoạt động tốt.
 - [ ] **10.10** Plugin load: cân nhắc AssemblyLoadContext riêng (hiện load chung default ALC, có hack BAML).
@@ -256,11 +259,12 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **11.3** Histogram trực quan + cảnh báo clip (live trong DevelopPanel: RGB/Luma toggle, marker
       shadow/highlight + %). Kéo trực tiếp trên histogram để chỉnh tone CHƯA (13.10, giá trị biên).
 - [x] **11.4** Before/After: splitter (cũ) + giữ phím `\` xem ảnh gốc + **side-by-side (phím Y)** 2 khung.
-- [ ] **11.5** Zoom/Pan loupe mượt (fit/100%/zoom level), space để pan.
+- [x] **11.5** Zoom/Pan loupe: wheel-zoom quanh con trỏ, Z toggle fit/100%, +/-, right-drag pan, **Space + kéo trái để pan** (kiểu Photoshop).
 - [x] **11.6** Phím tắt kiểu LR: rating/flag/label + Ctrl+Shift+C/V + Ctrl+Z/Y + **D/M module switch** + R crop + J clip + Y compare.
 - [x] **11.7** Hiển thị tiến trình render/AI rõ ràng ở status bar (ReportProgress hiện ghi vào txtMeta - TODO trong code).
 - [x] **11.8** Tooltip cho nút Develop (Copy/Paste/Auto/Reset) + trạng thái rỗng "Chọn ảnh để bắt đầu". Onboarding đầy đủ CHƯA.
-- [ ] **11.9** Theme: rà soát DarkTheme cho nhất quán; cân nhắc light theme tùy chọn.
+- [~] **11.9** Theme: `ThemeManager` + `LightTheme.xaml` + nút đổi Sáng/Tối + lưu setting (áp lúc khởi động).
+      Light theme experimental: ~113 màu hardcode trong panel cần migrate sang DynamicResource để hoàn chỉnh.
 - [ ] **11.10** Responsive panel: kéo rộng/hẹp, nhớ layout; pop-out tools (đã có) ổn định đa màn hình.
 - [x] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure" qua `OpDisplayNames`) + history panel nhãn thân thiện.
       Thumbnail từng bước (tùy chọn) CHƯA.
