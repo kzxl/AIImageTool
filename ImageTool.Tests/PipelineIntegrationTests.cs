@@ -171,7 +171,7 @@ public class PipelineIntegrationTests
     }
 
     [Fact]
-    public void ExportBatchAdapter_BakesEdits_FromHistory()
+    public async System.Threading.Tasks.Task ExportBatchAdapter_BakesEdits_FromHistory()
     {
         var dir = TempDir();
         try
@@ -193,7 +193,7 @@ public class PipelineIntegrationTests
                 InputPath = src,
                 Params = new() { ["format"] = "png", ["outDir"] = outDir, ["pattern"] = "{name}.{ext}" }
             };
-            adapter.RunJobAsync(job, new Progress<int>(), default).GetAwaiter().GetResult();
+            await adapter.RunJobAsync(job, new Progress<int>(), default);
 
             Assert.False(string.IsNullOrEmpty(job.OutputPath));
             Assert.True(File.Exists(job.OutputPath));
