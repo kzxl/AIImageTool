@@ -24,6 +24,8 @@ public class CatalogImage
     public int? Width { get; set; }
     public int? Height { get; set; }
     public int? Orientation { get; set; }
+    public double? GpsLatitude { get; set; }
+    public double? GpsLongitude { get; set; }
 }
 
 public class ImageCollection

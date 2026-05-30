@@ -26,6 +26,8 @@ public static class ExifReader
             var exif = image.Metadata?.ExifProfile;
             if (exif == null) return img;
 
+            ReadGps(exif, img);
+
             foreach (var val in exif.Values)
             {
                 var raw = val.GetValue()?.ToString()?.Trim('\0', ' ');
@@ -69,6 +71,49 @@ public static class ExifReader
         }
 
         return img;
+    }
+
+    private static void ReadGps(ExifProfile exif, CatalogImage img)
+    {
+        if (TryReadGps(exif, out var lat, out var lon))
+        {
+            img.GpsLatitude = lat;
+            img.GpsLongitude = lon;
+        }
+    }
+
+    /// <summary>
+    /// Đọc GPS lat/lon (decimal degrees) từ 1 ExifProfile đã có. Trả true nếu hợp lệ.
+    /// Dùng chung cho catalog import và InfoPanel (khỏi load ảnh 2 lần).
+    /// </summary>
+    public static bool TryReadGps(ExifProfile exif, out double lat, out double lon)
+    {
+        lat = 0; lon = 0;
+        try
+        {
+            if (!exif.TryGetValue(ExifTag.GPSLatitude, out var latVal) ||
+                !exif.TryGetValue(ExifTag.GPSLongitude, out var lonVal))
+                return false;
+
+            var la = latVal?.Value as Rational[];
+            var lo = lonVal?.Value as Rational[];
+            if (la == null || la.Length < 3 || lo == null || lo.Length < 3) return false;
+
+            string? latRef = null, lonRef = null;
+            if (exif.TryGetValue(ExifTag.GPSLatitudeRef, out var lr)) latRef = lr?.Value?.ToString();
+            if (exif.TryGetValue(ExifTag.GPSLongitudeRef, out var gr)) lonRef = gr?.Value?.ToString();
+
+            double? latDd = GpsHelper.ToDecimalDegrees(la[0].ToDouble(), la[1].ToDouble(), la[2].ToDouble(), latRef);
+            double? lonDd = GpsHelper.ToDecimalDegrees(lo[0].ToDouble(), lo[1].ToDouble(), lo[2].ToDouble(), lonRef);
+
+            if (latDd.HasValue && lonDd.HasValue && GpsHelper.IsValid(latDd.Value, lonDd.Value))
+            {
+                lat = latDd.Value; lon = lonDd.Value;
+                return true;
+            }
+        }
+        catch (Exception ex) { AppLog.Warn("ExifReader.Gps", ex.Message); }
+        return false;
     }
 
     private static DateTime? ParseDateTime(string? s)

@@ -95,6 +95,22 @@ public class CatalogService : ICatalogService
                 CreatedAt TEXT NOT NULL
             );
             """);
+
+        // Migration: thêm cột GPS nếu DB cũ chưa có (ALTER an toàn, bọc try vì SQLite không có IF NOT EXISTS cho cột).
+        AddColumnIfMissing(conn, "CatalogImage", "GpsLatitude", "REAL");
+        AddColumnIfMissing(conn, "CatalogImage", "GpsLongitude", "REAL");
+    }
+
+    private static void AddColumnIfMissing(IDbConnection conn, string table, string column, string type)
+    {
+        try
+        {
+            var cols = conn.Query<dynamic>($"PRAGMA table_info({table})");
+            bool exists = cols.Any(c => string.Equals((string)c.name, column, StringComparison.OrdinalIgnoreCase));
+            if (!exists)
+                conn.Execute($"ALTER TABLE {table} ADD COLUMN {column} {type}");
+        }
+        catch (Exception ex) { AppLog.Warn("Catalog.Migrate", $"{table}.{column}: {ex.Message}"); }
     }
 
     public async Task<int> ImportAsync(IEnumerable<string> filePaths, ImportOptions options,
@@ -137,9 +153,9 @@ public class CatalogService : ICatalogService
 
                 conn.Execute("""
                     INSERT INTO CatalogImage (FilePath, FileName, FolderPath, FileSize, ImportedAt, ImportMode, OriginalPath,
-                        DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation)
+                        DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation, GpsLatitude, GpsLongitude)
                     VALUES (@FilePath, @FileName, @FolderPath, @FileSize, @ImportedAt, @ImportMode, @OriginalPath,
-                        @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation)
+                        @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation, @GpsLatitude, @GpsLongitude)
                     """, meta, tx);
 
                 importedPaths.Add(targetPath);

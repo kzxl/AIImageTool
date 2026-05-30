@@ -54,6 +54,8 @@ public partial class InfoPanel : UserControl
                 // EXIF
                 var rows = new List<ExifRow>();
                 var fi = new FileInfo(path);
+                double gpsLat = 0, gpsLon = 0;
+                bool hasGps = false;
                 rows.Add(new ExifRow("File", fi.Name));
                 rows.Add(new ExifRow("Size", $"{fi.Length / 1024.0:N0} KB"));
                 rows.Add(new ExifRow("Pixels", $"{img.Width} x {img.Height}"));
@@ -61,6 +63,13 @@ public partial class InfoPanel : UserControl
 
                 if (img.Metadata.ExifProfile != null)
                 {
+                    // GPS (8.5): hiển thị toạ độ + lưu để mở bản đồ.
+                    if (ImageTool.Shared.ExifReader.TryReadGps(img.Metadata.ExifProfile, out var gLat, out var gLon))
+                    {
+                        rows.Insert(0, new ExifRow("GPS", ImageTool.Shared.GpsHelper.Format(gLat, gLon)));
+                        gpsLat = gLat; gpsLon = gLon; hasGps = true;
+                    }
+
                     foreach (var v in img.Metadata.ExifProfile.Values)
                     {
                         if (ct.IsCancellationRequested) return;
@@ -115,10 +124,26 @@ public partial class InfoPanel : UserControl
                     if (loWarn) Exif.Insert(hiWarn ? 1 : 0, new ExifRow("⚠ Shadow clip", $"{loPct:0.0}%"));
                     imgHistogram.Source = bmp;
                     txtHistEmpty.Visibility = Visibility.Collapsed;
+                    _gpsLat = gpsLat; _gpsLon = gpsLon; _hasGps = hasGps;
+                    btnMap.Visibility = hasGps ? Visibility.Visible : Visibility.Collapsed;
                 });
             }
-            catch { }
+            catch (Exception ex) { ImageTool.Shared.AppLog.Error("InfoPanel.Refresh", path, ex); }
         }, ct);
+    }
+
+    private double _gpsLat, _gpsLon;
+    private bool _hasGps;
+
+    private void BtnMap_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_hasGps) return;
+        try
+        {
+            var url = ImageTool.Shared.GpsHelper.GoogleMapsUrl(_gpsLat, _gpsLon);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Warn("InfoPanel.Map", ex.Message); }
     }
 
     private static BitmapSource RenderHistogram(int[] r, int[] g, int[] b, int w, int h, bool hiClip = false, bool loClip = false)

@@ -23,7 +23,13 @@
         </Border>
 
         <Border Grid.Row="2" Background="#252526" Padding="10,4">
-            <TextBlock Text="EXIF" FontSize="10" FontWeight="SemiBold" Foreground="#888"/>
+            <DockPanel>
+                <Button x:Name="btnMap" DockPanel.Dock="Right" Content="🗺 Bản đồ" Visibility="Collapsed"
+                        Padding="6,1" FontSize="10" Background="#2D2D30" Foreground="#55C1E7"
+                        BorderThickness="0" Cursor="Hand" Click="BtnMap_Click"
+                        ToolTip="Mở vị trí GPS trên Google Maps"/>
+                <TextBlock Text="EXIF" FontSize="10" FontWeight="SemiBold" Foreground="#888" VerticalAlignment="Center"/>
+            </DockPanel>
         </Border>
 
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Padding="6">
