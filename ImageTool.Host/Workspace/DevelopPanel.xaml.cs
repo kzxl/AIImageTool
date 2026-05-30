@@ -126,6 +126,17 @@ public partial class DevelopPanel : UserControl
         wbBtnRow.Children.Add(btnAutoWb);
         wbBtnRow.Children.Add(btnPickWb);
         gWb.Children.Add(wbBtnRow);
+        // WB preset theo nguồn sáng (đặt Kelvin chuẩn).
+        var wbPresetRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        wbPresetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        var cmbWbPreset = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
+        foreach (var n in new[] { "—", "Daylight (5500K)", "Cloudy (6500K)", "Shade (7500K)", "Tungsten (3200K)", "Fluorescent (4000K)", "Flash (5500K)" })
+            cmbWbPreset.Items.Add(new ComboBoxItem { Content = n });
+        cmbWbPreset.SelectedIndex = 0;
+        cmbWbPreset.SelectionChanged += (_, _) => { if (!_loading) ApplyWbPreset(cmbWbPreset.SelectedIndex); };
+        cmbWbPreset.ToolTip = "Đặt nhiệt độ Kelvin theo nguồn sáng điển hình.";
+        wbPresetRow.Children.Add(cmbWbPreset);
+        gWb.Children.Add(wbPresetRow);
 
         var gTone = AddGroup("Tone", true);
         AddSlider(gTone, "exposure", "Exposure", -5, 5, 0, "0.00");
@@ -1256,6 +1267,25 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_white", v.White);
         SetVal("lvl_gamma", v.Gamma);
         _loading = false;
+        Commit();
+    }
+
+    /// <summary>Đặt Kelvin theo preset nguồn sáng. 0 = không đổi.</summary>
+    private void ApplyWbPreset(int index)
+    {
+        if (_currentPath == null) return;
+        double kelvin = index switch
+        {
+            1 => 5500, // Daylight
+            2 => 6500, // Cloudy
+            3 => 7500, // Shade
+            4 => 3200, // Tungsten
+            5 => 4000, // Fluorescent
+            6 => 5500, // Flash
+            _ => 0,
+        };
+        if (kelvin <= 0) return;
+        SetVal("kelvin", kelvin);
         Commit();
     }
 
