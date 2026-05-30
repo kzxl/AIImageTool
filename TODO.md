@@ -169,7 +169,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       (`CenterPreview.Crop`: overlay khung + 8 tay nắm + thirds + shade, đồng bộ 2 chiều với DevelopPanel,
       phím R bật/tắt, ảnh hiển thị chưa-cắt khi đang chỉnh) + Straighten slider.
 - [x] **5.2** Rotate/Flip 90° (`OrientationOp`, IResizingOp, nút xoay/lật trong UI + test). **EXIF auto-orientation:
-      `ExifOrientation.Bake` áp cờ orientation (1..8) vào pixel lúc decode (ảnh chụp dọc không còn nằm ngang). + test.**
+      `ExifOrientation.Bake` áp cờ orientation (1..8) vào pixel lúc decode (ảnh chụp dọc không còn nằm ngang). + test.
+      Thumbnail cũng `AutoOrient()` để khớp.**
 - [~] **5.3** Lens Correction: `LensCorrectionOp` (distortion k1/k2 đa thức bán kính + bù vignette góc), thủ công,
       có UI slider + test. Đọc profile lensfun tự động CHƯA (cần database).
 - [x] **5.4** Perspective / Upright (`PerspectiveOp`, homography 3x3: Vertical/Horizontal keystone + Rotate +

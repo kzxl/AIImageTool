@@ -116,6 +116,9 @@ public class ThumbnailService : IThumbnailService, IDisposable
 
         using (image)
         {
+            // Áp EXIF orientation vào pixel (ảnh chụp dọc không bị nằm ngang trong thumbnail).
+            try { image.Mutate(x => x.AutoOrient()); } catch { }
+
             // Sau khi decode, có thể vẫn lớn hơn size → resize chính xác.
             if (image.Width > size || image.Height > size)
             {
