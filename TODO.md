@@ -190,8 +190,10 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 ## 7. RAW & ĐỊNH DẠNG (Darktable lõi là RAW)
 
-- [ ] **7.1** RAW decoder plugin cắm vào `ImageDecoderRegistry` (LibRaw qua P/Invoke hoặc managed).
-- [ ] **7.2** Demosaic + WB as-shot từ metadata RAW (đã chừa `DecodedImage.Metadata`).
+- [~] **7.1** RAW: `RawPreviewExtractor` + `RawPreviewDecoder` mở/xem/develop RAW qua JPEG preview nhúng
+      (CR2/CR3/NEF/ARW/DNG/RAF/RW2/ORF/PEF/SRW...), đăng ký vào `ImageDecoderRegistry`, có test. Demosaic
+      sensor thật (LibRaw native plugin) CHƯA — registry đã sẵn để plugin đè decoder.
+- [ ] **7.2** Demosaic + WB as-shot từ metadata RAW (cần LibRaw — preview hiện dùng JPEG máy tạo).
 - [ ] **7.3** Camera/input color profile (DCP/ICC) -> chuyển về working space linear.
 - [~] **7.4** 16-bit PNG/TIFF decode (`StandardImageDecoder` + IsHighBitDepth) + xuất 16-bit PNG + export TIFF. DNG CHƯA (cần RAW).
 - [ ] **7.5** Đọc/áp camera profile & picture style.
