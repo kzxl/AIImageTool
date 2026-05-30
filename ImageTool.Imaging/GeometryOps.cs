@@ -84,6 +84,41 @@ public sealed class OrientationOp : IResizingOp
 }
 
 /// <summary>
+/// Áp EXIF Orientation (giá trị 1..8 theo chuẩn TIFF/EXIF) vào pixel để ảnh hiển thị đúng chiều.
+/// Máy ảnh thường lưu ảnh theo chiều sensor + cờ orientation; nếu không "bake" cờ này, ảnh chụp
+/// dọc sẽ hiện nằm ngang. Map sang <see cref="OrientationOp"/> (rotate 90 + flip) rồi áp 1 lần lúc decode.
+///
+/// Bảng EXIF: 1=normal, 2=flipH, 3=rot180, 4=flipV, 5=transpose, 6=rot90CW, 7=transverse, 8=rot270CW.
+/// </summary>
+public static class ExifOrientation
+{
+    /// <summary>Trả OrientationOp tương ứng giá trị EXIF (identity nếu 1 hoặc ngoài 1..8).</summary>
+    public static OrientationOp ToOp(int exif) => exif switch
+    {
+        2 => new OrientationOp { FlipH = true },
+        3 => new OrientationOp { Rotate90 = 2 },
+        4 => new OrientationOp { FlipV = true },
+        // 5 (transpose) = lật theo đường chéo chính = rot90CW + flipH.
+        5 => new OrientationOp { Rotate90 = 1, FlipH = true },
+        6 => new OrientationOp { Rotate90 = 1 },
+        // 7 (transverse) = rot90CW + flipV.
+        7 => new OrientationOp { Rotate90 = 1, FlipV = true },
+        8 => new OrientationOp { Rotate90 = 3 },
+        _ => new OrientationOp(),
+    };
+
+    /// <summary>
+    /// Bake orientation vào ảnh linear: trả ảnh đã xoay/lật đúng chiều (ảnh mới nếu cần, hoặc chính nó
+    /// nếu orientation = normal). Dùng ngay sau decode để pixel luôn đúng chiều xem.
+    /// </summary>
+    public static LinearImage Bake(LinearImage img, int exif)
+    {
+        var op = ToOp(exif);
+        return op.IsIdentity ? img : op.ApplyResize(img, 1f);
+    }
+}
+
+/// <summary>
 /// Crop + Straighten. Cắt theo hình chữ nhật chuẩn hoá [0..1] (X,Y,W,H) và xoay tự do
 /// (Angle độ, quanh tâm crop) bằng nội suy song tuyến. Toạ độ chuẩn hoá nên khớp proxy/full-res.
 /// </summary>

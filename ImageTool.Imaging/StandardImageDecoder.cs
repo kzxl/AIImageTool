@@ -61,8 +61,8 @@ public sealed class StandardImageDecoder : IImageDecoder
 
         return new DecodedImage
         {
-            Image = linear,
-            Orientation = orientation,
+            Image = ExifOrientation.Bake(linear, orientation),
+            Orientation = 1, // đã bake vào pixel
             IsHighBitDepth = false,
             Metadata = new Dictionary<string, string>()
         };
@@ -98,8 +98,8 @@ public sealed class StandardImageDecoder : IImageDecoder
 
         return new DecodedImage
         {
-            Image = linear,
-            Orientation = orientation,
+            Image = ExifOrientation.Bake(linear, orientation),
+            Orientation = 1, // đã bake vào pixel
             IsHighBitDepth = true,
             Metadata = new Dictionary<string, string>()
         };

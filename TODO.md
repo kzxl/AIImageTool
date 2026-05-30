@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 471/471 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)** + **EXIF auto-orientation (5.2)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 477/477 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -168,7 +168,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [x] **5.1** Crop & Straighten (`CropOp`: crop chữ nhật + xoay, có test). UI crop chữ nhật kéo tay
       (`CenterPreview.Crop`: overlay khung + 8 tay nắm + thirds + shade, đồng bộ 2 chiều với DevelopPanel,
       phím R bật/tắt, ảnh hiển thị chưa-cắt khi đang chỉnh) + Straighten slider.
-- [x] **5.2** Rotate/Flip 90° (`OrientationOp`, IResizingOp, nút xoay/lật trong UI + test).
+- [x] **5.2** Rotate/Flip 90° (`OrientationOp`, IResizingOp, nút xoay/lật trong UI + test). **EXIF auto-orientation:
+      `ExifOrientation.Bake` áp cờ orientation (1..8) vào pixel lúc decode (ảnh chụp dọc không còn nằm ngang). + test.**
 - [~] **5.3** Lens Correction: `LensCorrectionOp` (distortion k1/k2 đa thức bán kính + bù vignette góc), thủ công,
       có UI slider + test. Đọc profile lensfun tự động CHƯA (cần database).
 - [x] **5.4** Perspective / Upright (`PerspectiveOp`, homography 3x3: Vertical/Horizontal keystone + Rotate +

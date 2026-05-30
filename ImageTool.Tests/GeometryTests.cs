@@ -117,4 +117,66 @@ public class GeometryTests
         Assert.True(reg.Has(OrientationOp.Type));
         Assert.True(reg.Has(CropOp.Type));
     }
+
+    // ---- EXIF Orientation baking ----
+
+    [Fact]
+    public void ExifOrientation_Normal_IsIdentity()
+    {
+        Assert.True(ExifOrientation.ToOp(1).IsIdentity);
+        var img = Marked(4, 6);
+        Assert.Same(img, ExifOrientation.Bake(img, 1));
+    }
+
+    [Fact]
+    public void ExifOrientation_6_RotatesPortraitToLandscape()
+    {
+        // EXIF 6 = rotate 90° CW. Ảnh 4x6 -> 6x4.
+        var img = Marked(4, 6);
+        var r = ExifOrientation.Bake(img, 6);
+        Assert.Equal(6, r.Width);
+        Assert.Equal(4, r.Height);
+        // pixel đỏ (0,0) sau rot90CW nằm góc trên-phải.
+        int tr = (0 * r.Width + (r.Width - 1)) * 4;
+        Assert.InRange(r.Pixels[tr], 0.99f, 1.01f);
+    }
+
+    [Fact]
+    public void ExifOrientation_8_Rotates270()
+    {
+        var img = Marked(4, 6);
+        var r = ExifOrientation.Bake(img, 8);
+        Assert.Equal(6, r.Width);
+        Assert.Equal(4, r.Height);
+        // rot270CW: pixel (0,0) -> góc dưới-trái.
+        int bl = ((r.Height - 1) * r.Width + 0) * 4;
+        Assert.InRange(r.Pixels[bl], 0.99f, 1.01f);
+    }
+
+    [Fact]
+    public void ExifOrientation_2_FlipsHorizontal()
+    {
+        var img = Marked(4, 6);
+        var r = ExifOrientation.Bake(img, 2);
+        Assert.Equal(4, r.Width);
+        Assert.Equal(6, r.Height);
+        // flipH: (0,0) -> (W-1,0).
+        int tr = (0 * 4 + 3) * 4;
+        Assert.InRange(r.Pixels[tr], 0.99f, 1.01f);
+    }
+
+    [Fact]
+    public void ExifOrientation_3_Rotates180()
+    {
+        var op = ExifOrientation.ToOp(3);
+        Assert.Equal(2, op.Rotate90);
+        Assert.False(op.FlipH);
+    }
+
+    [Fact]
+    public void ExifOrientation_OutOfRange_Identity()
+    {
+        Assert.True(ExifOrientation.ToOp(0).IsIdentity);
+        Assert.True(ExifOrientation.ToOp(99).IsIdentity);
+    }
 }

@@ -54,8 +54,8 @@ public sealed class RawPreviewDecoder : IImageDecoder
         var meta = new Dictionary<string, string> { ["source"] = "raw-embedded-jpeg" };
         return new DecodedImage
         {
-            Image = linear,
-            Orientation = orientation,
+            Image = ExifOrientation.Bake(linear, orientation),
+            Orientation = 1, // đã bake vào pixel
             IsHighBitDepth = false, // preview JPEG 8-bit
             Metadata = meta
         };
