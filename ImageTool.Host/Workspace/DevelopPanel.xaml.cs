@@ -58,6 +58,7 @@ public partial class DevelopPanel : UserControl
     // B&W + Invert toggles.
     private CheckBox? _chkBw;
     private CheckBox? _chkInvert;
+    private CheckBox? _chkFilmNeg;
     private CheckBox? _chkAiUpscale;
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
 
@@ -343,6 +344,19 @@ public partial class DevelopPanel : UserControl
         _chkInvert.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkInvert.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gFx.Children.Add(_chkInvert);
+
+        // Film Negative (negadoctor) — chuyển scan phim âm bản thành dương bản.
+        var gFilm = AddGroup("Film Negative", false);
+        _chkFilmNeg = new CheckBox { Content = "Bật Film Negative (scan phim âm bản)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
+        _chkFilmNeg.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _chkFilmNeg.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
+        gFilm.Children.Add(_chkFilmNeg);
+        AddSlider(gFilm, "film_rbase", "Base R", 0.02, 1, 0.50, "0.00");
+        AddSlider(gFilm, "film_gbase", "Base G", 0.02, 1, 0.30, "0.00");
+        AddSlider(gFilm, "film_bbase", "Base B", 0.02, 1, 0.18, "0.00");
+        AddSlider(gFilm, "film_gamma", "Contrast (gamma)", 0.3, 3, 1, "0.00");
+        AddSlider(gFilm, "film_exposure", "Exposure", 0.1, 4, 1, "0.00");
+        gFilm.Children.Add(new TextBlock { Text = "Mẹo: chọn Base bằng vùng mép phim trống (sáng nhất).", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
 
         // Black & White
         var gBw = AddGroup("Black & White", false);
@@ -696,6 +710,15 @@ public partial class DevelopPanel : UserControl
         var invP = FindOp(path!, InvertOp.Type);
         if (_chkInvert != null) _chkInvert.IsChecked = invP != null && invP.TryGetValue("enabled", out var ive) && ive == "true";
 
+        // Film Negative (negadoctor)
+        var filmP = FindOp(path!, FilmNegativeOp.Type);
+        if (_chkFilmNeg != null) _chkFilmNeg.IsChecked = filmP != null && filmP.TryGetValue("enabled", out var fve) && fve == "true";
+        SetVal("film_rbase", filmP != null ? Param(path!, FilmNegativeOp.Type, "rbase") : 0.50);
+        SetVal("film_gbase", filmP != null ? Param(path!, FilmNegativeOp.Type, "gbase") : 0.30);
+        SetVal("film_bbase", filmP != null ? Param(path!, FilmNegativeOp.Type, "bbase") : 0.18);
+        SetVal("film_gamma", filmP != null ? Param(path!, FilmNegativeOp.Type, "gamma") : 1);
+        SetVal("film_exposure", filmP != null ? Param(path!, FilmNegativeOp.Type, "exposure") : 1);
+
         // Input profile (D2.2)
         if (_cmbInputProfile != null)
         {
@@ -835,6 +858,15 @@ public partial class DevelopPanel : UserControl
             var ip = new InputProfileOp { Source = ipSpace };
             ops.Add(Op(InputProfileOp.Type, "Input Profile", ip.ToParams()));
         }
+
+        // 0c1) Film Negative (negadoctor) — sau input profile, trước WB/màu.
+        var filmNeg = new FilmNegativeOp
+        {
+            Enabled = _chkFilmNeg?.IsChecked == true,
+            RBase = (float)GetVal("film_rbase"), GBase = (float)GetVal("film_gbase"), BBase = (float)GetVal("film_bbase"),
+            Gamma = (float)GetVal("film_gamma"), Exposure = (float)GetVal("film_exposure"),
+        };
+        if (!filmNeg.IsIdentity) ops.Add(Op(FilmNegativeOp.Type, "Film Negative", filmNeg.ToParams()));
 
         // 0b) White balance Kelvin (trước Basic).
         var wbk = new WhiteBalanceKelvinOp { Kelvin = (float)GetVal("kelvin"), Tint = 0f };
@@ -1097,6 +1129,7 @@ public partial class DevelopPanel : UserControl
         // reset B&W / Invert / Auto WB
         if (_chkBw != null) _chkBw.IsChecked = false;
         if (_chkInvert != null) _chkInvert.IsChecked = false;
+        if (_chkFilmNeg != null) _chkFilmNeg.IsChecked = false;
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
         if (_cmbInputProfile != null) _cmbInputProfile.SelectedIndex = 0;
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;

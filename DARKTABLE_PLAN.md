@@ -20,7 +20,7 @@ Darktable module -> op của ta đã làm:
 - hot/dead pixel -> `HotPixelOp`
 - lens correction (thủ công) -> `LensCorrectionOp` (distortion k1/k2 + vignette)
 - crop / rotate / perspective (ashift) -> `CropOp` + `OrientationOp` + `PerspectiveOp`; liquify/warp -> `LiquifyOp` (handle đẩy/kéo)
-- lut 3D -> `LutCubeOp`; monochrome -> `BlackWhiteOp`; invert -> `InvertOp`
+- lut 3D -> `LutCubeOp`; monochrome -> `BlackWhiteOp`; invert -> `InvertOp`; film negative (negadoctor) -> `FilmNegativeOp`
 - retouch (1 phần: heal/clone) -> `HealingOp`; drawn+parametric mask -> `MaskedOp` + 8 loại mask
   (gradient/radial/brush/polygon/lum-range/color-range/sky/raster) + `ParametricMask` đa kênh (L/C/h/R/G/B)
   + mask combine (intersect/union/subtract) + AI subject/sky

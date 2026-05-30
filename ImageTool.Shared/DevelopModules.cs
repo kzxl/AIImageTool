@@ -32,6 +32,7 @@ public static class DevelopModules
     {
         CropOp.Type, OrientationOp.Type, PerspectiveOp.Type, LiquifyOp.Type, LensCorrectionOp.Type, HealingOp.Type,
         InputProfileOp.Type,
+        FilmNegativeOp.Type,
         WhiteBalanceKelvinOp.Type, ChannelGainOp.Type,
         DevelopBasicOp.Type,
         ParametricCurveOp.Type, ToneCurveOp.Type,
@@ -63,7 +64,7 @@ public static class DevelopModules
         new("detail", "Detail", ColorNoiseReductionOp.Type, LumaNoiseReductionOp.Type, ChromaDenoiseOp.Type, HotPixelOp.Type, CaCorrectOp.Type, DefringeOp.Type, ClarityOp.Type, TextureOp.Type, SharpenOp.Type, DiffuseOp.Type),
         new("effects", "Effects", VignetteOp.Type, GrainOp.Type, GlowOp.Type),
         new("bw", "Black & White", BlackWhiteOp.Type),
-        new("invert", "Negative / Invert", InvertOp.Type),
+        new("invert", "Negative / Invert", InvertOp.Type, FilmNegativeOp.Type),
         new("ai", "AI (Denoise/Upscale)", AiDenoiseOp.Type, AiUpscaleOp.Type),
         new("local", "Local Adjustments", MaskedOp.Type),
     };

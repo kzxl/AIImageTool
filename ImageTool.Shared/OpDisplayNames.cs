@@ -31,6 +31,7 @@ public static class OpDisplayNames
         ["Crop"] = "Crop / Straighten",
         ["Perspective"] = "Perspective",
         ["Liquify"] = "Liquify / Warp",
+        ["FilmNegative"] = "Film Negative",
         ["WBKelvin"] = "White Balance (K)",
         ["SelectiveColor"] = "Selective Color",
         ["ColorUnify"] = "Color Unify",
