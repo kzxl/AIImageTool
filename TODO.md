@@ -3,14 +3,15 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-31 — Nén sâu Squoosh-style (per-format encoder + target-size + strip meta),
-> Watermark vô hình (blind DCT+QIM), Smart Crop content-aware, UX pass (arrow-nav, Esc/Enter crop, empty
-> states, slider tooltips, cheat-sheet F1), ICC colorant matrix parse + Bradford D50→D65 + MatchSpace gamut.
+> Cập nhật lần cuối: 2026-05-31 — Output ICC profile khi export (IccProfileWriter), Watermark resize-resilient,
+> History thumbnail từng bước, Toolbar Tools menu. Nén sâu Squoosh-style (per-format encoder + target-size +
+> strip meta), Watermark vô hình (blind DCT+QIM), Smart Crop content-aware, UX pass (arrow-nav, Esc/Enter crop,
+> empty states, slider tooltips, cheat-sheet F1), ICC colorant matrix parse + Bradford D50→D65 + MatchSpace gamut.
 > 2026-05-30 — Healing brush, Lens correction, Sky mask, AI batch tag, AI Upscale op chuỗi,
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)** + **EXIF auto-orientation (5.2)** + **Tone Curve presets (2.2)** + **B&W color filters (13.1)** + **Grain Color/Size/Roughness UI (5.6)** + **WB preset nguồn sáng (3.1)** + **Auto Color khử ám (D2.5)** + **Export không ghi đè im lặng (9.4)** + **Waveform/RGB-Parade scope (11.3)** + **Catalog Collection tests (8.1)** + **Thumbnail cache-key tests (10.9)** + **Crop guides Thirds/Golden/Diagonal/Grid (5.1)** + **LR tone curve import tổng + per-channel (9.3)** + **LR Split Toning import (9.3)** + **LR HSL/Color Mixer import (9.3)** + **LR Color Grading + Texture import (9.3)** + **LR Grain import (9.3)** + **LibRaw RAW decoder scaffold (D5.1/D5.2, gated)** + **Light theme migration hoàn chỉnh (11.9)** + **LibRaw WB as-shot/demosaic (D5.2)** + **Lensfun auto lens-correction (5.3)** + **Đọc ICC nhúng + auto Input Profile (D2.2/7.3)** + **Parse ICC colorant matrix + Bradford D50→D65 + nhận diện gamut theo ma trận (D2.2/7.3)** + **Nén sâu Squoosh-style (EncoderFactory per-format + TargetSizeEncoder + strip metadata + UI)** + **Smart Crop content-aware** + **UX: arrow-nav/Esc-Enter crop/empty states/slider tooltips/cheat-sheet F1**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 620/620 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)** + **EXIF auto-orientation (5.2)** + **Tone Curve presets (2.2)** + **B&W color filters (13.1)** + **Grain Color/Size/Roughness UI (5.6)** + **WB preset nguồn sáng (3.1)** + **Auto Color khử ám (D2.5)** + **Export không ghi đè im lặng (9.4)** + **Waveform/RGB-Parade scope (11.3)** + **Catalog Collection tests (8.1)** + **Thumbnail cache-key tests (10.9)** + **Crop guides Thirds/Golden/Diagonal/Grid (5.1)** + **LR tone curve import tổng + per-channel (9.3)** + **LR Split Toning import (9.3)** + **LR HSL/Color Mixer import (9.3)** + **LR Color Grading + Texture import (9.3)** + **LR Grain import (9.3)** + **LibRaw RAW decoder scaffold (D5.1/D5.2, gated)** + **Light theme migration hoàn chỉnh (11.9)** + **LibRaw WB as-shot/demosaic (D5.2)** + **Lensfun auto lens-correction (5.3)** + **Đọc ICC nhúng + auto Input Profile (D2.2/7.3)** + **Parse ICC colorant matrix + Bradford D50→D65 + nhận diện gamut theo ma trận (D2.2/7.3)** + **Nén sâu Squoosh-style (EncoderFactory per-format + TargetSizeEncoder + strip metadata + UI)** + **Smart Crop content-aware** + **UX: arrow-nav/Esc-Enter crop/empty states/slider tooltips/cheat-sheet F1**. **Output ICC profile khi export (D2.2/9.8)** + **Watermark resize-resilient (9.7)** + **History thumbnail từng bước (11.11)** + **Toolbar Tools menu (Merge HDR/Focus Stack/Batch Rename)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 635/635 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -225,6 +226,7 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       **Đọc ICC nhúng ĐÃ XONG** (`IccProfileReader`: parse desc v2/v4, đoán gamut, tự gợi ý Input Profile).
       **Parse ICC colorant matrix ĐÃ XONG** (`TryReadRgbToXyzD65`: rXYZ/gXYZ/bXYZ s15Fixed16 -> ma trận thật,
       Bradford D50→D65; `ColorSpaces.MatchSpace` nhận diện gamut theo ma trận khi tên không khớp).
+      **Ghi output ICC ĐÃ XONG** (`IccProfileWriter`: dựng ICC v2 matrix profile để nhúng khi export — xem 9.8).
       DCP camera profile đầy đủ CHƯA (cần dữ liệu profile máy).
 - [~] **7.4** 16-bit PNG/TIFF decode (`StandardImageDecoder` + IsHighBitDepth) + xuất 16-bit PNG + export TIFF. DNG CHƯA (cần RAW).
 - [ ] **7.5** Đọc/áp camera profile & picture style.
@@ -272,8 +274,14 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       dung lượng theo tuỳ chọn (`EstimateBytesWithOptions`). + 17 test.
 - [x] **9.7** Watermark vô hình (blind, lấy cảm hứng blind_watermark) — `BlindWatermark` (DCT 8x8 + QIM
       nhúng chuỗi bit vào 2 hệ số tần trung của kênh luminance, lặp toàn ảnh + bộ phiếu đa số khi giải mã —
-      bền với nhiễu/JPEG nhẹ). Embed/Extract round-trip, gần như không nhìn thấy. Nối ExportBatchAdapter
-      (nhúng ở độ phân giải xuất, giữ EXIF/ICC) + ô nhập trong "Nén nâng cao". + 7 test.
+      bền với nhiễu/JPEG nhẹ). Embed/Extract round-trip, gần như không nhìn thấy. **+ Bản resize-resilient**
+      (`EmbedResilient`/`ExtractResilient`: chuẩn hoá luminance về lưới canonical 256px trước embed/extract +
+      QIM step lớn -> sống sót khi ảnh xuất bị phóng/thu đều). Nối ExportBatchAdapter (dùng resilient, nhúng
+      ở độ phân giải xuất, giữ EXIF/ICC) + ô nhập trong "Nén nâng cao". + 11 test.
+- [x] **9.8** Output color profile khi export (D2.2) — `IccProfileWriter` dựng ICC v2 RGB matrix profile
+      (header + desc/wtpt/rXYZ-gXYZ-bXYZ colorant D50 qua Bradford + TRC gamma + cprt) cho sRGB/AdobeRGB/
+      Rec2020/DisplayP3; round-trip qua `IccProfileReader` + sống sót PNG/JPG save-load. Nối ExportBatchAdapter
+      (nhúng `image.Metadata.IccProfile`) + ComboBox "Output Color Profile" trong ExportPanel + persist preset. + 10 test.
 
 ---
 
@@ -319,8 +327,10 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 - [~] **11.10** Responsive panel: kéo rộng/hẹp + **nhớ bề rộng panel trái/phải** (lưu `LeftPanelWidth`/
       `RightPanelWidth` vào AppSettings, khôi phục lúc khởi động); pop-out tools (đã có) ổn định đa màn hình.
 - [x] **11.11** Undo/redo có nhãn rõ ("Hoàn tác: Exposure" qua `OpDisplayNames`) + history panel nhãn thân thiện.
-      Thumbnail từng bước (tùy chọn) CHƯA. **Named Snapshots ĐÃ XONG**: lưu/áp/xoá mốc edit có tên (mục
-      SNAPSHOTS trong HistoryPanel, persist sidecar) — đường tắt tới virtual copies (D6.3).
+      **Thumbnail từng bước ĐÃ XONG** (`DevelopRenderer.RenderThumbnailAsync`: render mini-preview 44px mỗi mốc
+      history off-UI, gán dần qua INotifyPropertyChanged — xem trực quan từng bước edit). **Named Snapshots ĐÃ
+      XONG**: lưu/áp/xoá mốc edit có tên (mục SNAPSHOTS trong HistoryPanel, persist sidecar) — đường tắt tới
+      virtual copies (D6.3).
 - [x] **11.12** Badge "đã chỉnh sửa" (✎) trong grid + filmstrip, cập nhật theo history.
 - [x] **11.13** Toast không chặn ở đáy cửa sổ (báo batch/export xong/lỗi, tự ẩn 3s).
 - [x] **11.14** Fix nhảy tab panel phải: header TabControl luôn 1 hàng, cuộn ngang (template tùy biến).
