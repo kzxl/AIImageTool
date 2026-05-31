@@ -30,7 +30,8 @@ public static class LightroomXmpImporter
         Dictionary<string, string> crs;
         try { crs = ExtractCrs(xmpContent); }
         catch (Exception ex) { AppLog.Warn("LrXmp.Parse", ex.Message); return ops; }
-        if (crs.Count == 0) return ops;
+        // Không bail khi crs rỗng: tone curve nằm trong element lồng nhau (ExtractCrs bỏ qua),
+        // vẫn cần parse riêng. Chỉ các op dựa trên crs flat mới phụ thuộc dict này.
 
         // --- DevelopBasic ---
         var basic = new Dictionary<string, string>();
@@ -72,7 +73,57 @@ public static class LightroomXmpImporter
         if (crs.TryGetValue("ConvertToGrayscale", out var bw) && bw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase))
             ops.Add(Op("BlackWhite", "B&W (LR)", new() { ["enabled"] = "true" }));
 
+        // --- Tone Curve (point list, 0..255 -> 0..1) ---
+        try
+        {
+            var curve = ParseToneCurve(xmpContent);
+            if (curve != null)
+                ops.Add(Op("ToneCurve", "Tone Curve (LR)", new() { ["rgb"] = curve }));
+        }
+        catch (Exception ex) { AppLog.Warn("LrXmp.ToneCurve", ex.Message); }
+
         return ops;
+    }
+
+    /// <summary>
+    /// Trích đường cong tổng từ crs:ToneCurvePV2012 (hoặc ToneCurve cũ) — rdf:Seq các "x, y" trong thang
+    /// 0..255. Chuẩn hoá về 0..1, serialize "x,y;x,y" cho ToneCurveOp. Trả null nếu không có / là identity.
+    /// </summary>
+    private static string? ParseToneCurve(string xmp)
+    {
+        var doc = XDocument.Parse(xmp);
+        // Ưu tiên PV2012; fallback ToneCurve (Process 2010).
+        var el = FindCrsElement(doc, "ToneCurvePV2012") ?? FindCrsElement(doc, "ToneCurve");
+        if (el == null) return null;
+
+        var pts = new List<(double X, double Y)>();
+        foreach (var li in el.Descendants(Rdf + "li"))
+        {
+            var parts = li.Value.Split(',');
+            if (parts.Length != 2) continue;
+            if (double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var x) &&
+                double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+                pts.Add((Math.Clamp(x / 255.0, 0, 1), Math.Clamp(y / 255.0, 0, 1)));
+        }
+        if (pts.Count < 2) return null;
+        // Bỏ qua nếu là đường thẳng y=x (identity) -> không tạo op thừa.
+        bool identity = pts.TrueForAll(p => MathAbs(p.X - p.Y) < 0.004);
+        if (identity) return null;
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < pts.Count; i++)
+        {
+            if (i > 0) sb.Append(';');
+            sb.Append(Fmt(pts[i].X)).Append(',').Append(Fmt(pts[i].Y));
+        }
+        return sb.ToString();
+    }
+
+    private static XElement? FindCrsElement(XDocument doc, string localName)
+    {
+        foreach (var el in doc.Descendants(Crs + localName))
+            return el;
+        return null;
     }
 
     // map Temperature/Tint sang temp/tint [-1..1] của DevelopBasic (chỉ khi là thang nhỏ -100..100).

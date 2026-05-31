@@ -112,4 +112,53 @@ public class LightroomXmpImporterTests
         foreach (var op in ops)
             Assert.True(reg.Has(op.OpType), $"OpType {op.OpType} không đăng ký");
     }
+
+    private const string CurveSample = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+            <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/">
+              <crs:ToneCurvePV2012>
+                <rdf:Seq>
+                  <rdf:li>0, 0</rdf:li>
+                  <rdf:li>64, 40</rdf:li>
+                  <rdf:li>192, 216</rdf:li>
+                  <rdf:li>255, 255</rdf:li>
+                </rdf:Seq>
+              </crs:ToneCurvePV2012>
+            </rdf:Description>
+          </rdf:RDF>
+        </x:xmpmeta>
+        """;
+
+    [Fact]
+    public void Parse_ToneCurve_ExtractsNormalizedPoints()
+    {
+        var ops = LightroomXmpImporter.Parse(CurveSample);
+        var curve = ops.FirstOrDefault(o => o.OpType == "ToneCurve");
+        Assert.NotNull(curve);
+        var rgb = curve!.Params["rgb"];
+        // 64/255 ~ 0.251 -> 40/255 ~ 0.157 (điểm tối kéo xuống = S-curve).
+        Assert.Contains("0,0", rgb);
+        Assert.Contains("1,1", rgb);
+        var op = ImageTool.Imaging.ToneCurveOp.FromParams(curve.Params);
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void Parse_LinearToneCurve_Ignored()
+    {
+        const string linear = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/">
+                  <crs:ToneCurvePV2012>
+                    <rdf:Seq><rdf:li>0, 0</rdf:li><rdf:li>255, 255</rdf:li></rdf:Seq>
+                  </crs:ToneCurvePV2012>
+                </rdf:Description>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(linear);
+        Assert.DoesNotContain(ops, o => o.OpType == "ToneCurve"); // identity -> bỏ
+    }
 }
