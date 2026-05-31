@@ -63,6 +63,7 @@ public partial class DevelopPanel : UserControl
     private CheckBox? _chkAiUpscale;
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
     private TextBlock? _iccAutoInfo;    // hiển thị ICC nhúng phát hiện được (D2.2/7.3)
+    private ComboBox? _cmbGradientMap;  // #5 preset gradient map
 
     // Lensfun auto lens-correction (5.3).
     private LensfunService? _lensfun;
@@ -388,6 +389,19 @@ public partial class DevelopPanel : UserControl
         _chkInvert.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gFx.Children.Add(_chkInvert);
 
+        // Gradient Map (#5): preset dải màu + opacity. Map luminance -> gradient (grading/duotone).
+        var gradRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
+        gradRow.Children.Add(new TextBlock { Text = "Gradient Map", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 86 });
+        _cmbGradientMap = new ComboBox { Height = 22 };
+        foreach (var preset in GradientMapPresets.All)
+            _cmbGradientMap.Items.Add(new ComboBoxItem { Content = preset.Name });
+        _cmbGradientMap.SelectedIndex = 0;
+        _cmbGradientMap.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _cmbGradientMap.ToolTip = "Ánh xạ độ sáng sang dải màu (grading/duotone/cinematic). None = tắt.";
+        gradRow.Children.Add(_cmbGradientMap);
+        gFx.Children.Add(gradRow);
+        AddSlider(gFx, "gradmap_opacity", "Gradient Amount", 0, 1, 0, "0.00");
+
         // Film Negative (negadoctor) — chuyển scan phim âm bản thành dương bản.
         var gFilm = AddGroup("Film Negative", false);
         _chkFilmNeg = new CheckBox { Content = "Bật Film Negative (scan phim âm bản)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
@@ -708,6 +722,24 @@ public partial class DevelopPanel : UserControl
         SetVal("grain_rough", grainP != null ? Param(path!, GrainOp.Type, "roughness") : 0.5);
         SetVal("grain_color", Param(path!, GrainOp.Type, "color"));
         SetVal("glow", Param(path!, GlowOp.Type, "amount"));
+
+        // Gradient Map (#5): khôi phục preset (theo màu) + opacity.
+        var gmP = FindOp(path!, ImageTool.Imaging.GradientMapOp.Type);
+        SetVal("gradmap_opacity", gmP != null ? Param(path!, ImageTool.Imaging.GradientMapOp.Type, "opacity") : 0);
+        if (_cmbGradientMap != null)
+        {
+            int idx = 0;
+            if (gmP != null && gmP.TryGetValue("sh", out var sh) && gmP.TryGetValue("hi", out var hi))
+            {
+                for (int i = 1; i < ImageTool.Imaging.GradientMapPresets.All.Length; i++)
+                {
+                    var pr = ImageTool.Imaging.GradientMapPresets.All[i];
+                    if (string.Equals(pr.Shadow, sh, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(pr.High, hi, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
+                }
+            }
+            _cmbGradientMap.SelectedIndex = idx;
+        }
 
         SetVal("pc_hi", Param(path!, ParametricCurveOp.Type, "hi"));
         SetVal("pc_lt", Param(path!, ParametricCurveOp.Type, "lt"));
@@ -1228,6 +1260,21 @@ public partial class DevelopPanel : UserControl
         var glow = new GlowOp { Amount = (float)GetVal("glow") };
         if (!glow.IsIdentity) ops.Add(Op(GlowOp.Type, "Glow / Soften", glow.ToParams()));
 
+        // 8a) Gradient Map (#5): preset dải màu + opacity.
+        int gmIdx = _cmbGradientMap?.SelectedIndex ?? 0;
+        double gmOpacity = GetVal("gradmap_opacity");
+        if (gmIdx > 0 && gmOpacity > 0)
+        {
+            var preset = ImageTool.Imaging.GradientMapPresets.ByIndex(gmIdx);
+            var gm = ImageTool.Imaging.GradientMapOp.FromParams(new Dictionary<string, string>
+            {
+                ["sh"] = preset.Shadow, ["mid"] = preset.Mid, ["hi"] = preset.High,
+                ["midpoint"] = "0.5",
+                ["opacity"] = gmOpacity.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            });
+            if (!gm.IsIdentity) ops.Add(Op(ImageTool.Imaging.GradientMapOp.Type, "Gradient Map", gm.ToParams()));
+        }
+
         // 8b) Black & White (sau màu, trước local). Chuyển xám + nhuộm.
         var bw = new BlackWhiteOp
         {
@@ -1318,6 +1365,7 @@ public partial class DevelopPanel : UserControl
         if (_chkFilmNeg != null) _chkFilmNeg.IsChecked = false;
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
         if (_cmbInputProfile != null) _cmbInputProfile.SelectedIndex = 0;
+        if (_cmbGradientMap != null) _cmbGradientMap.SelectedIndex = 0;
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         ClearHealing();
