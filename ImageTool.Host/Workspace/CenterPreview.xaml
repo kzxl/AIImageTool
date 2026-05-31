@@ -1,7 +1,7 @@
 <UserControl x:Class="ImageTool.Host.Workspace.CenterPreview"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="#141414" Foreground="#DDD" Focusable="True"
+             Background="{DynamicResource BgBaseBrush}" Foreground="{DynamicResource TextPrimaryBrush}" Focusable="True"
              KeyDown="UserControl_KeyDown" KeyUp="UserControl_KeyUp">
     <Grid>
         <Grid.RowDefinitions>
@@ -11,52 +11,52 @@
         </Grid.RowDefinitions>
 
         <!-- Mode bar -->
-        <Border Grid.Row="0" Background="#1E1E1E" Padding="10,6">
+        <Border Grid.Row="0" Background="{DynamicResource BgPanelBrush}" Padding="10,6">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <Button x:Name="btnModeSingle" Content="◰  Single (E)" Padding="10,4" Margin="0,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnModeSingle_Click"/>
                     <Button x:Name="btnModeGrid" Content="▦  Grid (G)" Padding="10,4" Margin="0,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnModeGrid_Click"/>
                     <Button x:Name="btnModeCull" Content="❐  Cull (C)" Padding="10,4" Margin="0,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnModeCull_Click"/>
                     <Button x:Name="btnModeFull" Content="⛶  Full (F)" Padding="10,4" Margin="0,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnModeFull_Click"/>
                     <Button x:Name="btnCrop" Content="◳  Crop (R)" Padding="10,4" Margin="12,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnCrop_Click" ToolTip="Bật/tắt cắt ảnh (kéo khung)"/>
                     <Button x:Name="btnRotateLeft" Content="⟲" Padding="9,4" Margin="4,0,0,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnRotateLeft_Click" ToolTip="Xoay trái 90° ([)"/>
                     <Button x:Name="btnRotateRight" Content="⟳" Padding="9,4" Margin="2,0,0,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnRotateRight_Click" ToolTip="Xoay phải 90° (])"/>
                     <Button x:Name="btnFlipH" Content="⇋" Padding="9,4" Margin="2,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnFlipH_Click" ToolTip="Lật ngang"/>
                     <Button x:Name="btnCompare" Content="◫  Before/After (Y)" Padding="10,4" Margin="4,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnCompare_Click" ToolTip="So sánh ảnh gốc và ảnh đã chỉnh cạnh nhau"/>
                     <Button x:Name="btnStack" Content="⧉  Stack" Padding="10,4" Margin="4,0,4,0"
-                            Background="#2D2D30" Foreground="#DDD" BorderThickness="0" Cursor="Hand"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnStack_Click" ToolTip="Gom ảnh chụp liên tiếp (burst/bracket) thành nhóm trong Grid"/>
                     <ComboBox x:Name="cmbCropRatio" Width="110" Margin="4,0,0,0" Visibility="Collapsed"
                               VerticalAlignment="Center" SelectionChanged="CmbCropRatio_SelectionChanged"
                               ToolTip="Tỉ lệ khung cắt"/>
                 </StackPanel>
-                <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="#AAA"
+                <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="{DynamicResource TextSecondaryBrush}"
                            FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>
                 <TextBlock x:Name="txtMeta" DockPanel.Dock="Right" HorizontalAlignment="Right"
-                           Foreground="#666" FontSize="11" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource TextDimBrush}" FontSize="11" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
 
         <!-- Mode containers -->
-        <Grid Grid.Row="1" Background="#141414">
+        <Grid Grid.Row="1" Background="{DynamicResource BgBaseBrush}">
             <!-- SINGLE mode -->
             <Grid x:Name="paneSingle" Visibility="Visible" ClipToBounds="True"
                   Background="#01000000"
@@ -69,7 +69,7 @@
                 <TextBlock x:Name="txtPlaceholder"
                            Text="Chọn ảnh ở Browser hoặc bấm 📁  Open Folder"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="#555" FontSize="16"/>
+                           Foreground="{DynamicResource TextDimBrush}" FontSize="16"/>
                 <Image x:Name="imgPreview" Stretch="Uniform" Margin="20" RenderTransformOrigin="0,0">
                     <Image.RenderTransform>
                         <TransformGroup>
@@ -145,19 +145,19 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="200" Height="220" Margin="6" Background="#1E1E1E"
+                            <Border Width="200" Height="220" Margin="6" Background="{DynamicResource BgPanelBrush}"
                                     BorderThickness="2" CornerRadius="3" Cursor="Hand"
                                     MouseLeftButtonUp="GridItem_MouseLeftButtonUp"
                                     MouseRightButtonUp="GridItem_MouseRightButtonUp">
                                 <Border.Style>
                                     <Style TargetType="Border">
-                                        <Setter Property="BorderBrush" Value="#444"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderHoverBrush}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                <Setter Property="BorderBrush" Value="#FFD24E"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentWarmBrush}"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                <Setter Property="BorderBrush" Value="#55C1E7"/>
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -195,7 +195,7 @@
             </ScrollViewer>
 
             <!-- CULL mode (compare 2-4 selected) -->
-            <UniformGrid x:Name="paneCull" Visibility="Collapsed" Background="#141414"/>
+            <UniformGrid x:Name="paneCull" Visibility="Collapsed" Background="{DynamicResource BgBaseBrush}"/>
 
             <!-- FULL mode (no margin) -->
             <Grid x:Name="paneFull" Visibility="Collapsed" Background="#000">
@@ -203,7 +203,7 @@
             </Grid>
 
             <!-- COMPARE mode (side-by-side before/after) -->
-            <Grid x:Name="paneCompare" Visibility="Collapsed" Background="#141414"
+            <Grid x:Name="paneCompare" Visibility="Collapsed" Background="{DynamicResource BgBaseBrush}"
                   MouseWheel="PaneCompare_MouseWheel">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -237,12 +237,12 @@
                         <TextBlock Text="AFTER" Foreground="#000" FontSize="10" FontWeight="SemiBold"/>
                     </Border>
                 </Grid>
-                <Border Width="1" Background="#333" HorizontalAlignment="Center"/>
+                <Border Width="1" Background="{DynamicResource BorderBrush_}" HorizontalAlignment="Center"/>
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Background="#1E1E1E" Padding="8,4">
-            <TextBlock x:Name="txtSelection" Text="Selection: 0" Foreground="#888" FontSize="11"/>
+        <Border Grid.Row="2" Background="{DynamicResource BgPanelBrush}" Padding="8,4">
+            <TextBlock x:Name="txtSelection" Text="Selection: 0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
         </Border>
     </Grid>
 </UserControl>
