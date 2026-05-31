@@ -162,22 +162,16 @@ public static class IccProfileReader
         => Encoding.ASCII.GetString(b, o, len);
 
     /// <summary>
-    /// Đọc gamut từ ICC nhúng của 1 FILE (chỉ Identify metadata, không decode pixel -> nhanh). Trả null
-    /// nếu không có ICC / không nhận diện được. Dùng cho UI gợi ý Input Profile mà không cần decode cả ảnh.
+    /// Đọc gamut từ ICC nhúng của 1 FILE. Ưu tiên Identify (nhanh, chỉ metadata); fallback Load nếu
+    /// định dạng không lộ ICC qua Identify (vd PNG). Trả null nếu không có ICC / không nhận diện được.
     /// Ưu tiên tên mô tả; nếu không khớp, thử ma trận colorant THẬT (chính xác, không phụ thuộc tên).
     /// </summary>
     public static ColorSpaces.Space? DetectSpaceFromFile(string path)
     {
-        try
-        {
-            var info = SixLabors.ImageSharp.Image.Identify(path);
-            var icc = info?.Metadata?.IccProfile;
-            if (icc == null) return null;
-            byte[] bytes = icc.ToByteArray();
-            return GuessSpace(TryReadDescription(bytes))   // 1) theo tên mô tả
-                ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>()); // 2) theo ma trận
-        }
-        catch { return null; }
+        byte[]? bytes = ReadIccBytesFromFile(path);
+        if (bytes == null) return null;
+        return GuessSpace(TryReadDescription(bytes))   // 1) theo tên mô tả
+            ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>()); // 2) theo ma trận
     }
 
     /// <summary>
@@ -186,17 +180,34 @@ public static class IccProfileReader
     /// </summary>
     public static (string? Description, ColorSpaces.Space? Space) ReadInfoFromFile(string path)
     {
+        byte[]? bytes = ReadIccBytesFromFile(path);
+        if (bytes == null) return (null, null);
+        string? desc = TryReadDescription(bytes);
+        var space = GuessSpace(desc)
+            ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>());
+        return (desc, space);
+    }
+
+    /// <summary>
+    /// Lấy byte ICC nhúng của file. Thử <c>Image.Identify</c> trước (nhanh, chỉ metadata); nếu không
+    /// có ICC (một số định dạng như PNG không lộ ICC qua Identify) thì fallback <c>Image.Load</c>.
+    /// Trả null nếu không có ICC / lỗi.
+    /// </summary>
+    private static byte[]? ReadIccBytesFromFile(string path)
+    {
         try
         {
             var info = SixLabors.ImageSharp.Image.Identify(path);
             var icc = info?.Metadata?.IccProfile;
-            if (icc == null) return (null, null);
-            byte[] bytes = icc.ToByteArray();
-            string? desc = TryReadDescription(bytes);
-            var space = GuessSpace(desc)
-                ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>());
-            return (desc, space);
+            if (icc != null) return icc.ToByteArray();
         }
-        catch { return (null, null); }
+        catch { /* Identify lỗi -> thử Load */ }
+        try
+        {
+            using var img = SixLabors.ImageSharp.Image.Load(path);
+            var icc = img.Metadata?.IccProfile;
+            return icc?.ToByteArray();
+        }
+        catch { return null; }
     }
 }

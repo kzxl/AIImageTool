@@ -1,6 +1,10 @@
 using System;
+using System.IO;
 using System.Text;
 using ImageTool.Imaging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace ImageTool.Tests;
@@ -225,5 +229,55 @@ public class IccProfileReaderTests
         Assert.Null(IccProfileReader.TryReadRgbToXyzD65(BuildV2("sRGB"))); // chỉ có desc, không colorant
         Assert.Null(IccProfileReader.TryReadRgbToXyzD65(null));
         Assert.Null(IccProfileReader.TryReadRgbToXyzD65(new byte[10]));
+    }
+
+    // --- End-to-end qua file thật (ImageSharp save/load) ---
+
+    [Fact]
+    public void DetectSpaceFromFile_ColorantOnlyIcc_DetectsViaMatrix()
+    {
+        // Profile chỉ có colorant (không 'desc' nhận diện được) nhúng vào PNG -> detect qua ma trận.
+        float[] toD50 = ColorSpaces.BradfordAdaptation(D65White, D50White);
+        float[] srgbD50 = ColorSpaces.Mul3x3(toD50, SrgbD65);
+        var iccBytes = BuildColorants(srgbD50);
+
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_icc_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var path = Path.Combine(dir, "t.png");
+            using (var img = new Image<Rgba32>(4, 4, new Rgba32(100, 100, 100, 255)))
+            {
+                img.Metadata.IccProfile = new IccProfile(iccBytes);
+                img.SaveAsPng(path);
+            }
+
+            var detected = IccProfileReader.DetectSpaceFromFile(path);
+            Assert.Equal(ColorSpaces.Space.Srgb, detected);
+
+            var (desc, space) = IccProfileReader.ReadInfoFromFile(path);
+            Assert.Equal(ColorSpaces.Space.Srgb, space);
+            // desc có thể null (profile không có tag mô tả) -> chấp nhận.
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void DetectSpaceFromFile_NoIcc_ReturnsNull()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "imgtool_icc_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var path = Path.Combine(dir, "plain.png");
+            using (var img = new Image<Rgba32>(4, 4, new Rgba32(50, 60, 70, 255)))
+                img.SaveAsPng(path);
+
+            Assert.Null(IccProfileReader.DetectSpaceFromFile(path));
+            var (desc, space) = IccProfileReader.ReadInfoFromFile(path);
+            Assert.Null(desc);
+            Assert.Null(space);
+        }
+        finally { Directory.Delete(dir, true); }
     }
 }
