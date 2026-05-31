@@ -32,8 +32,49 @@ public partial class ExportPanel : UserControl
                 int n = e.Selection.Count;
                 btnExportSelection.Content = n > 1 ? $"Export {n} Images" : "Export Selection";
                 btnExportSelection.IsEnabled = n > 0;
+                UpdateEstimate();
             });
+        // Cập nhật ước lượng dung lượng khi đổi thông số.
+        cmbFormat.SelectionChanged += (_, _) => UpdateEstimate();
+        slQuality.ValueChanged += (_, _) => UpdateEstimate();
+        txtMaxLong.TextChanged += (_, _) => UpdateEstimate();
+        foreach (var chk in new[] { chkSize2048, chkSize1024, chkSize512, chkSize256 })
+        { chk.Checked += (_, _) => UpdateEstimate(); chk.Unchecked += (_, _) => UpdateEstimate(); }
         RefreshPresetList();
+    }
+
+    /// <summary>Ước lượng dung lượng file xuất cho ảnh active (xấp xỉ, hiển thị nhanh).</summary>
+    private void UpdateEstimate()
+    {
+        if (txtEstSize == null) return;
+        var path = _workspace?.ActiveImage;
+        if (string.IsNullOrEmpty(path)) { txtEstSize.Text = ""; return; }
+        try
+        {
+            var info = SixLabors.ImageSharp.Image.Identify(path);
+            if (info == null) { txtEstSize.Text = ""; return; }
+            int sw = info.Width, sh = info.Height;
+            string format = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
+            int quality = (int)slQuality.Value;
+
+            var sizes = new System.Collections.Generic.List<int>();
+            foreach (var chk in new[] { chkSize2048, chkSize1024, chkSize512, chkSize256 })
+                if (chk.IsChecked == true && int.TryParse((string)chk.Tag, out var sz)) sizes.Add(sz);
+
+            if (sizes.Count > 0)
+            {
+                long total = 0;
+                foreach (var sz in sizes) total += ExportSizeEstimator.EstimateBytes(format, sw, sh, sz, quality);
+                txtEstSize.Text = $"≈ {ExportSizeEstimator.Format(total)} / ảnh ({sizes.Count} bản)";
+            }
+            else
+            {
+                int maxLong = int.TryParse(txtMaxLong.Text, out var ml) ? ml : 0;
+                long b = ExportSizeEstimator.EstimateBytes(format, sw, sh, maxLong, quality);
+                txtEstSize.Text = $"≈ {ExportSizeEstimator.Format(b)} / ảnh";
+            }
+        }
+        catch { txtEstSize.Text = ""; }
     }
 
     private void RefreshPresetList()

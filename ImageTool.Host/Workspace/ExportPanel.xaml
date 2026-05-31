@@ -63,7 +63,8 @@
                           Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,0,12"/>
 
                 <Button x:Name="btnExportSelection" Content="Export Selection" Height="32" Background="{DynamicResource SuccessBrush}" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnExportSelection_Click"/>
-                <TextBlock x:Name="txtHint" Text="Chọn ảnh trong browser rồi bấm Export." FontSize="10" Foreground="{DynamicResource TextDimBrush}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                <TextBlock x:Name="txtEstSize" Text="" FontSize="10" Foreground="{DynamicResource AccentBrush}" Margin="0,6,0,0"/>
+                <TextBlock x:Name="txtHint" Text="Chọn ảnh trong browser rồi bấm Export." FontSize="10" Foreground="{DynamicResource TextDimBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
