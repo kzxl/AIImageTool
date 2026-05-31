@@ -376,6 +376,9 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "colorNR", "Color NR", 0, 1, 0);
         AddSlider(gDetail, "chromaNR", "Chroma NR (edge)", 0, 1, 0);
         AddSlider(gDetail, "diffuse", "Diffuse/Sharpen", -1, 1, 0);
+        AddSlider(gDetail, "fsep_smooth", "Skin Smooth", 0, 1, 0);
+        AddSlider(gDetail, "fsep_radius", "Skin Radius", 2, 30, 8, "0");
+        AddSlider(gDetail, "fsep_detail", "Skin Detail", 0.5, 2, 1, "0.00");
         AddSlider(gDetail, "defrPurple", "Defringe Purple", 0, 1, 0);
         AddSlider(gDetail, "defrGreen", "Defringe Green", 0, 1, 0);
         AddSlider(gDetail, "hotpix", "Hot Pixel", 0, 1, 0);
@@ -566,6 +569,9 @@ public partial class DevelopPanel : UserControl
         ["grain"] = "Thêm hạt phim.",
         ["vignette"] = "Tối/sáng 4 góc ảnh.",
         ["straighten"] = "Xoay thẳng đường chân trời (độ).",
+        ["fsep_smooth"] = "Làm mịn màu/đốm da (frequency separation), giữ kết cấu.",
+        ["fsep_radius"] = "Bán kính tách tần số (lớn = vùng mịn rộng hơn).",
+        ["fsep_detail"] = "Giữ/khuếch chi tiết tần cao (lỗ chân lông, kết cấu).",
     };
 
     private void AddSlider(Panel host, string key, string label, double min, double max, double def, string fmt = "0.00")
@@ -724,6 +730,11 @@ public partial class DevelopPanel : UserControl
         SetVal("colorNR", Param(path!, ColorNoiseReductionOp.Type, "amount"));
         SetVal("chromaNR", Param(path!, ChromaDenoiseOp.Type, "amount"));
         SetVal("diffuse", Param(path!, DiffuseOp.Type, "amount"));
+        // Frequency separation (#7): radius/detail có default khác 0 nên đọc theo op tồn tại.
+        var fsepP = FindOp(path!, ImageTool.Imaging.FrequencySeparationOp.Type);
+        SetVal("fsep_smooth", Param(path!, ImageTool.Imaging.FrequencySeparationOp.Type, "smooth"));
+        SetVal("fsep_radius", fsepP != null ? Param(path!, ImageTool.Imaging.FrequencySeparationOp.Type, "radius") : 8);
+        SetVal("fsep_detail", fsepP != null ? Param(path!, ImageTool.Imaging.FrequencySeparationOp.Type, "detail") : 1);
         SetVal("defrPurple", Param(path!, DefringeOp.Type, "purple"));
         SetVal("defrGreen", Param(path!, DefringeOp.Type, "green"));
         SetVal("hotpix", Param(path!, HotPixelOp.Type, "strength"));
@@ -1292,6 +1303,15 @@ public partial class DevelopPanel : UserControl
         if (!sharpen.IsIdentity) ops.Add(Op(SharpenOp.Type, "Sharpen", sharpen.ToParams()));
         var diffuse = new DiffuseOp { Amount = (float)GetVal("diffuse") };
         if (!diffuse.IsIdentity) ops.Add(Op(DiffuseOp.Type, "Diffuse/Sharpen", diffuse.ToParams()));
+
+        // Frequency Separation (#7): làm mịn da giữ kết cấu.
+        var fsep = new ImageTool.Imaging.FrequencySeparationOp
+        {
+            Radius = (float)GetVal("fsep_radius"),
+            Smoothing = (float)GetVal("fsep_smooth"),
+            DetailAmount = (float)GetVal("fsep_detail"),
+        };
+        if (!fsep.IsIdentity) ops.Add(Op(ImageTool.Imaging.FrequencySeparationOp.Type, "Skin Smoothing", fsep.ToParams()));
 
         // 8) Effects
         var vig = new VignetteOp

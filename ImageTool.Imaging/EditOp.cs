@@ -123,6 +123,7 @@ public sealed class EditOpRegistry
         LensProfileOp.Register(reg);
         GradientMapOp.Register(reg);
         ColorMatchOp.Register(reg);
+        FrequencySeparationOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;
