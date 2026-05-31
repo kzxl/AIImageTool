@@ -109,6 +109,9 @@ public class ExportBatchAdapter : IBatchCapable
             });
             // legacy token {id} (job id) vẫn hỗ trợ.
             fileName = fileName.Replace("{id}", job.Id);
+            // token {size} cho xuất đa kích thước (giá trị long-edge px của bản này).
+            if (job.Params.TryGetValue("sizeToken", out var szTok) && !string.IsNullOrEmpty(szTok))
+                fileName = fileName.Replace("{size}", szTok);
             if (!fileName.EndsWith("." + ext, StringComparison.OrdinalIgnoreCase)) fileName += "." + ext;
             string outPath = Path.Combine(outDir, fileName);
             // Không ghi đè im lặng: nếu file đích đã có, thêm hậu tố " (1)"... (trừ khi overwrite=true).

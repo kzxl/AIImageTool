@@ -33,6 +33,14 @@
                 <TextBlock Text="Max Long Edge (px, 0 = giữ nguyên)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="txtMaxLong" Text="0" Background="{DynamicResource BgInputBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"/>
 
+                <TextBlock Text="Xuất đa kích thước (tick = thêm bản, kèm hậu tố tên)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                <WrapPanel Margin="0,0,0,8">
+                    <CheckBox x:Name="chkSize2048" Content="2048" Tag="2048" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,10,0"/>
+                    <CheckBox x:Name="chkSize1024" Content="1024" Tag="1024" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,10,0"/>
+                    <CheckBox x:Name="chkSize512" Content="512" Tag="512" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,10,0"/>
+                    <CheckBox x:Name="chkSize256" Content="256" Tag="256" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11"/>
+                </WrapPanel>
+
                 <TextBlock Text="Output Sharpening" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                 <ComboBox x:Name="cmbSharpen" Height="22" SelectedIndex="0" Margin="0,0,0,8">
                     <ComboBoxItem Content="None" Tag="none"/>

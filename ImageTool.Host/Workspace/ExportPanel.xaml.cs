@@ -157,24 +157,62 @@ public partial class ExportPanel : UserControl
             : txtOutDir.Text;
         string pattern = string.IsNullOrWhiteSpace(txtPattern.Text) ? "{name}.{ext}" : txtPattern.Text;
         string outputSharpen = (cmbSharpen.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none";
+        string copyExif = chkCopyExif.IsChecked == true ? "true" : "false";
 
-        var jobs = paths.Select(p => new BatchJob
+        // Xuất đa kích thước: thu thập các size được tick. Rỗng -> dùng maxLong đơn (như cũ).
+        var sizes = new System.Collections.Generic.List<int>();
+        foreach (var chk in new[] { chkSize2048, chkSize1024, chkSize512, chkSize256 })
+            if (chk.IsChecked == true && int.TryParse((string)chk.Tag, out var sz)) sizes.Add(sz);
+
+        var jobs = new System.Collections.Generic.List<BatchJob>();
+        foreach (var p in paths)
+        {
+            if (sizes.Count > 0)
+            {
+                // 1 job/size; thêm hậu tố _{size} trước đuôi nếu pattern chưa có token để tránh ghi đè.
+                foreach (var sz in sizes)
+                {
+                    string pat = pattern.Contains("{size}") ? pattern : InsertSizeToken(pattern);
+                    jobs.Add(MakeJob(p, format, quality, sz, outDir, pat, outputSharpen, copyExif, sz));
+                }
+            }
+            else
+            {
+                jobs.Add(MakeJob(p, format, quality, maxLong, outDir, pattern, outputSharpen, copyExif, null));
+            }
+        }
+
+        _batch.EnqueueRange(jobs);
+    }
+
+    private static BatchJob MakeJob(string path, string format, int quality, int maxLong,
+        string outDir, string pattern, string outputSharpen, string copyExif, int? sizeToken)
+    {
+        var p = new Dictionary<string, string>
+        {
+            ["format"] = format,
+            ["quality"] = quality.ToString(),
+            ["maxLongEdge"] = maxLong.ToString(),
+            ["outDir"] = outDir,
+            ["pattern"] = pattern,
+            ["outputSharpen"] = outputSharpen,
+            ["copyExif"] = copyExif,
+        };
+        if (sizeToken.HasValue) p["sizeToken"] = sizeToken.Value.ToString();
+        return new BatchJob
         {
             PluginId = ExportBatchAdapter.Plugin,
             OpType = ExportBatchAdapter.OpExport,
-            InputPath = p,
-            Params = new Dictionary<string, string>
-            {
-                ["format"] = format,
-                ["quality"] = quality.ToString(),
-                ["maxLongEdge"] = maxLong.ToString(),
-                ["outDir"] = outDir,
-                ["pattern"] = pattern,
-                ["outputSharpen"] = outputSharpen,
-                ["copyExif"] = chkCopyExif.IsChecked == true ? "true" : "false"
-            }
-        });
+            InputPath = path,
+            Params = p,
+        };
+    }
 
-        _batch.EnqueueRange(jobs);
+    // Chèn token {size} vào pattern: "{name}.{ext}" -> "{name}_{size}.{ext}".
+    private static string InsertSizeToken(string pattern)
+    {
+        int dot = pattern.LastIndexOf(".{ext}", StringComparison.OrdinalIgnoreCase);
+        if (dot >= 0) return pattern.Insert(dot, "_{size}");
+        return pattern + "_{size}";
     }
 }
