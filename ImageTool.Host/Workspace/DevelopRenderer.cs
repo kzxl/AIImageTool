@@ -337,4 +337,21 @@ public sealed class DevelopRenderer
         }
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.Histogram", path, ex); return null; }
     }
+
+    /// <summary>Tính waveform/RGB-parade cho ảnh đã áp ops (trên proxy downscale). Null nếu lỗi.</summary>
+    public WaveformData? ComputeWaveform(string path, IReadOnlyList<EditOperation> ops, int pointer, int columns = 256)
+    {
+        try
+        {
+            var proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            int longEdge = Math.Max(proxy.Width, proxy.Height);
+            float wfScale = longEdge > 512 ? 512f / longEdge : 1f;
+            var small = wfScale < 1f ? Downscale(proxy, wfScale) : proxy;
+            int count = Math.Clamp(pointer, 0, ops.Count);
+            var rendered = _pipeline.RenderScaled(small, ops, _cachedScale * wfScale, count);
+            return WaveformData.Compute(rendered, columns);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.Waveform", path, ex); return null; }
+    }
 }
