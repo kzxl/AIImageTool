@@ -99,6 +99,8 @@ public partial class App : Application
         services.AddSingleton<ImageToolHostProvider>();
         services.AddSingleton<DevelopClipboard>();
         services.AddSingleton<LensfunService>();
+        // Auto-save (#12): tự ghi sidecar .xmp của history sau debounce -> khôi phục nếu app tắt đột ngột.
+        services.AddSingleton<AutoSaveService>(sp => new AutoSaveService(sp.GetRequiredService<IHistoryService>()));
 
         // Cấp IImageToolHost cho plugin (chỉ tham chiếu Core) resolve qua IServiceProvider.
         // Provider.Host được set ở MainWindow ctor trước khi LoadPlugins()/Initialize() chạy.
@@ -131,6 +133,8 @@ public partial class App : Application
             catch { }
 
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            // Khởi tạo AutoSaveService (singleton lazy) để nó bắt đầu lắng nghe HistoryChanged.
+            _ = _serviceProvider.GetRequiredService<AutoSaveService>();
             mainWindow.Show();
         }
         catch (Exception ex)
