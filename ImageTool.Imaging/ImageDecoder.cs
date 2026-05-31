@@ -80,7 +80,11 @@ public sealed class ImageDecoderRegistry
     {
         var reg = new ImageDecoderRegistry();
         reg.Register(new StandardImageDecoder());
-        reg.Register(new RawPreviewDecoder()); // RAW qua JPEG preview nhúng (plugin LibRaw có thể đè sau)
+        reg.Register(new RawPreviewDecoder()); // RAW qua JPEG preview nhúng (fallback)
+        // RAW demosaic THẬT qua LibRaw: đăng ký SAU nên ĐÈ preview cho đuôi RAW — chỉ khi có libraw.dll.
+        // Không có native -> giữ nguyên RawPreviewDecoder (fallback an toàn).
+        if (LibRawDecoder.Available)
+            reg.Register(new LibRawDecoder());
         return reg;
     }
 }

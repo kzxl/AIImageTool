@@ -87,8 +87,12 @@ Darktable module -> op của ta đã làm:
 
 ## F. PHASE D5 — RAW thật (cần native), tách riêng
 
-- [ ] **D5.1** Plugin LibRaw (P/Invoke) đăng ký đè `ImageDecoderRegistry` -> demosaic sensor 12-14 bit thật.
-- [ ] **D5.2** Demosaic chọn được (PPG/AMaZE/RCD) + WB as-shot từ metadata RAW.
+- [~] **D5.1** Plugin LibRaw (P/Invoke) đăng ký đè `ImageDecoderRegistry` -> demosaic sensor 12-14 bit thật.
+      **Scaffold ĐÃ XONG:** `LibRawNative` (P/Invoke gated bằng `NativeLibrary.TryLoad`, no-op khi thiếu DLL) +
+      `LibRawImageConverter` (buffer→LinearImage, linear-gamma, có test) + `LibRawDecoder` (đăng ký SAU
+      RawPreviewDecoder, tự fallback JPEG preview nếu native lỗi). Cần bundle `libraw.dll` + verify trên file RAW thật.
+- [~] **D5.2** Demosaic chọn được (PPG/AMaZE/RCD) + WB as-shot từ metadata RAW.
+      LibRaw mặc định dùng demosaic chất lượng cao + WB as-shot; chọn thuật toán cụ thể qua param CHƯA.
 - [~] **D5.3** Highlight reconstruction — `HighlightReconstructionOp` khử ám màu vùng cháy (kéo kênh đã clip
       về trung tính theo độ sáng đỉnh, giữ brightness), chạy trên ảnh thường + RAW preview. UI Tone Mapping +
       test. Phục hồi từ kênh RAW chưa bão hoà thật (cần dữ liệu sensor) CHƯA.
