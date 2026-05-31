@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IStyleService _styles;
     private readonly ImageToolHostProvider _hostProvider;
     private readonly DevelopClipboard _developClipboard;
+    private ImageTool.Shared.FolderWatcher? _folderWatcher;
     private readonly AiMaskService _aiMaskService;
     private List<PluginEntry> _pluginEntries = new();
     private ToolsWindow? _toolsWindow;
@@ -491,6 +492,14 @@ public partial class MainWindow : Window
         miUrl.Click += (_, _) => ImportFromUrl();
         menu.Items.Add(miUrl);
 
+        var miWatch = new System.Windows.Controls.MenuItem
+        {
+            Header = _folderWatcher?.IsWatching == true ? "Tắt theo dõi thư mục" : "Theo dõi thư mục (auto-import)",
+            IsEnabled = !string.IsNullOrEmpty(_workspace.CurrentFolder),
+        };
+        miWatch.Click += (_, _) => ToggleWatchFolder();
+        menu.Items.Add(miWatch);
+
         if (targets.Count == 0)
             menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(chọn ảnh trước)", IsEnabled = false });
 
@@ -578,6 +587,45 @@ public partial class MainWindow : Window
             MessageBox.Show($"Không tải được ảnh: {ex.Message}", "Import từ URL",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>Bật/tắt theo dõi thư mục hiện tại (#2): ảnh mới copy vào sẽ tự refresh + chọn.</summary>
+    private void ToggleWatchFolder()
+    {
+        if (_folderWatcher?.IsWatching == true)
+        {
+            _folderWatcher.Stop();
+            txtStatus.Text = "Đã tắt theo dõi thư mục.";
+            return;
+        }
+        var folder = _workspace.CurrentFolder;
+        if (string.IsNullOrEmpty(folder)) return;
+
+        _folderWatcher ??= new ImageTool.Shared.FolderWatcher();
+        _folderWatcher.ImageAdded -= OnWatchedImageAdded;
+        _folderWatcher.ImageAdded += OnWatchedImageAdded;
+        _folderWatcher.Start(folder);
+        txtStatus.Text = $"Đang theo dõi: {System.IO.Path.GetFileName(folder)} (ảnh mới sẽ tự nạp).";
+    }
+
+    private void OnWatchedImageAdded(object? sender, string path)
+    {
+        // FolderWatcher chạy ở thread nền -> đưa về UI thread.
+        Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                var folder = _folderWatcher?.Folder;
+                if (folder != null && string.Equals(_workspace.CurrentFolder, folder, StringComparison.OrdinalIgnoreCase))
+                {
+                    _workspace.OpenFolder(folder);          // refresh danh sách
+                    _workspace.SetActiveImage(path);
+                    _workspace.SetSelection(new[] { path });
+                    txtStatus.Text = $"Ảnh mới: {System.IO.Path.GetFileName(path)}";
+                }
+            }
+            catch (Exception ex) { AppLog.Warn("MainWindow.OnWatchedImageAdded", ex.Message); }
+        });
     }
 
     private void BtnRecent_Click(object sender, RoutedEventArgs e)
