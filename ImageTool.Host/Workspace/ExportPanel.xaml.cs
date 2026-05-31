@@ -42,6 +42,15 @@ public partial class ExportPanel : UserControl
         { chk.Checked += (_, _) => UpdateEstimate(); chk.Unchecked += (_, _) => UpdateEstimate(); }
         chkPngPalette.Checked += (_, _) => UpdatePngPaletteVisibility();
         chkPngPalette.Unchecked += (_, _) => UpdatePngPaletteVisibility();
+        // Tuỳ chọn nén nâng cao -> cập nhật ước lượng dung lượng.
+        txtTargetKB.TextChanged += (_, _) => UpdateEstimate();
+        cmbJpegSubsample.SelectionChanged += (_, _) => UpdateEstimate();
+        cmbWebpMode.SelectionChanged += (_, _) => UpdateEstimate();
+        cmbTiffCompression.SelectionChanged += (_, _) => UpdateEstimate();
+        slPngLevel.ValueChanged += (_, _) => UpdateEstimate();
+        slPngColors.ValueChanged += (_, _) => UpdateEstimate();
+        chkPngPalette.Checked += (_, _) => UpdateEstimate();
+        chkPngPalette.Unchecked += (_, _) => UpdateEstimate();
         UpdateAdvancedVisibility();
         UpdatePngPaletteVisibility();
         RefreshPresetList();
@@ -78,6 +87,14 @@ public partial class ExportPanel : UserControl
             int sw = info.Width, sh = info.Height;
             string format = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
             int quality = (int)slQuality.Value;
+            var opts = CollectAdvancedParams();
+
+            // Nếu đặt dung lượng mục tiêu -> hiển thị mục tiêu thay vì ước lượng theo quality.
+            if (int.TryParse(txtTargetKB.Text, out var tkb) && tkb > 0 && format is "jpg" or "jpeg" or "webp")
+            {
+                txtEstSize.Text = $"🎯 mục tiêu ≤ {tkb} KB / ảnh";
+                return;
+            }
 
             var sizes = new System.Collections.Generic.List<int>();
             foreach (var chk in new[] { chkSize2048, chkSize1024, chkSize512, chkSize256 })
@@ -86,13 +103,13 @@ public partial class ExportPanel : UserControl
             if (sizes.Count > 0)
             {
                 long total = 0;
-                foreach (var sz in sizes) total += ExportSizeEstimator.EstimateBytes(format, sw, sh, sz, quality);
+                foreach (var sz in sizes) total += ExportSizeEstimator.EstimateBytesWithOptions(format, sw, sh, sz, quality, opts);
                 txtEstSize.Text = $"≈ {ExportSizeEstimator.Format(total)} / ảnh ({sizes.Count} bản)";
             }
             else
             {
                 int maxLong = int.TryParse(txtMaxLong.Text, out var ml) ? ml : 0;
-                long b = ExportSizeEstimator.EstimateBytes(format, sw, sh, maxLong, quality);
+                long b = ExportSizeEstimator.EstimateBytesWithOptions(format, sw, sh, maxLong, quality, opts);
                 txtEstSize.Text = $"≈ {ExportSizeEstimator.Format(b)} / ảnh";
             }
         }
@@ -128,6 +145,21 @@ public partial class ExportPanel : UserControl
         txtPattern.Text = p.Pattern;
         SelectByTag(cmbSharpen, p.OutputSharpen);
         chkCopyExif.IsChecked = p.CopyExif;
+
+        // Nén nâng cao.
+        txtTargetKB.Text = p.TargetKB.ToString();
+        chkStripMeta.IsChecked = p.StripMetadata;
+        SelectByTag(cmbJpegSubsample, p.JpegSubsample);
+        chkJpegProgressive.IsChecked = p.JpegProgressive;
+        slPngLevel.Value = Math.Clamp(p.PngLevel, 0, 9);
+        chkPngPalette.IsChecked = p.PngPaletteColors > 0;
+        if (p.PngPaletteColors > 0) slPngColors.Value = Math.Clamp(p.PngPaletteColors, 2, 256);
+        SelectByTag(cmbWebpMode, p.WebpMode);
+        slWebpMethod.Value = Math.Clamp(p.WebpMethod, 0, 6);
+        SelectByTag(cmbTiffCompression, p.TiffCompression);
+        UpdateAdvancedVisibility();
+        UpdatePngPaletteVisibility();
+        UpdateEstimate();
     }
 
     private static void SelectByTag(ComboBox combo, string tag)
@@ -152,6 +184,16 @@ public partial class ExportPanel : UserControl
             OutputSharpen = (cmbSharpen.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none",
             OutDir = txtOutDir.Text,
             CopyExif = chkCopyExif.IsChecked == true,
+            // Nén nâng cao.
+            TargetKB = int.TryParse(txtTargetKB.Text, out var tkb) ? tkb : 0,
+            StripMetadata = chkStripMeta.IsChecked == true,
+            JpegSubsample = (cmbJpegSubsample.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "420",
+            JpegProgressive = chkJpegProgressive.IsChecked == true,
+            PngLevel = (int)slPngLevel.Value,
+            PngPaletteColors = chkPngPalette.IsChecked == true ? (int)slPngColors.Value : 0,
+            WebpMode = (cmbWebpMode.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lossy",
+            WebpMethod = (int)slWebpMethod.Value,
+            TiffCompression = (cmbTiffCompression.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lzw",
         };
         // thay nếu trùng tên.
         _settings.Current.ExportPresets.RemoveAll(x => string.Equals(x.Name, preset.Name, StringComparison.OrdinalIgnoreCase));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace ImageTool.Shared;
 
@@ -54,4 +55,67 @@ public static class ExportSizeEstimator
         if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0.#} KB";
         return $"{bytes / (1024.0 * 1024.0):0.##} MB";
     }
+
+    /// <summary>
+    /// Như <see cref="EstimateBytes(string,int,int,int,int)"/> nhưng nhân thêm HỆ SỐ theo tuỳ chọn nén
+    /// nâng cao (subsample, palette, webp mode, tiff compression...) để ước lượng sát hơn. Vẫn là xấp xỉ.
+    /// </summary>
+    public static long EstimateBytesWithOptions(string format, int srcW, int srcH, int maxLongEdge,
+        int quality, IReadOnlyDictionary<string, string>? opts)
+    {
+        long baseBytes = EstimateBytes(format, srcW, srcH, maxLongEdge, quality);
+        if (opts == null || opts.Count == 0) return baseBytes;
+
+        double factor = 1.0;
+        switch ((format ?? "").ToLowerInvariant())
+        {
+            case "jpg":
+            case "jpeg":
+                // 4:4:4 lớn hơn ~30%, 4:2:2 ~15%, 4:2:0 = chuẩn (base đã giả định ~4:2:0).
+                factor *= Get(opts, "jpegSubsample", "420") switch
+                {
+                    "444" => 1.30, "422" => 1.15, _ => 1.0,
+                };
+                break;
+            case "png":
+                if (string.Equals(Get(opts, "pngColorType", ""), "palette", StringComparison.OrdinalIgnoreCase))
+                {
+                    int colors = GetInt(opts, "pngPaletteColors", 256);
+                    // PNG-8: ~ bits/pixel = log2(colors), so với base 24bpp truecolor.
+                    double bits = Math.Max(1, Math.Ceiling(Math.Log2(Math.Max(2, colors))));
+                    factor *= bits / 24.0 + 0.10; // +overhead palette/filter.
+                }
+                else
+                {
+                    // Level cao nén tốt hơn chút (L0 ~1.6x, L9 ~0.9x quanh mặc định L6).
+                    int lvl = GetInt(opts, "pngLevel", 6);
+                    factor *= 1.0 - (lvl - 6) * 0.03;
+                }
+                break;
+            case "webp":
+                factor *= Get(opts, "webpMode", "lossy") switch
+                {
+                    "lossless" => 2.2,        // base webp là lossy -> lossless lớn hơn nhiều.
+                    "nearlossless" => 1.8,
+                    _ => 1.0,
+                };
+                break;
+            case "tif":
+            case "tiff":
+                factor *= Get(opts, "tiffCompression", "lzw") switch
+                {
+                    "none" => 1.0,            // base = 24bpp không nén.
+                    "deflate" => 0.55,
+                    "packbits" => 0.85,
+                    _ => 0.6,                 // lzw.
+                };
+                break;
+        }
+        return (long)(baseBytes * Math.Max(0.05, factor));
+    }
+
+    private static string Get(IReadOnlyDictionary<string, string> p, string k, string def)
+        => p.TryGetValue(k, out var v) && !string.IsNullOrEmpty(v) ? v : def;
+    private static int GetInt(IReadOnlyDictionary<string, string> p, string k, int def)
+        => p.TryGetValue(k, out var v) && int.TryParse(v, out var n) ? n : def;
 }

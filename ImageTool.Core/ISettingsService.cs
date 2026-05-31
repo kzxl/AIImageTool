@@ -15,6 +15,25 @@ public class ExportPreset
     public bool WriteXmp { get; set; }
     /// <summary>Giữ EXIF gốc (camera/lens/ngày/GPS) trên file xuất. Mặc định true.</summary>
     public bool CopyExif { get; set; } = true;
+
+    // --- Nén nâng cao (Squoosh-style) ---
+    /// <summary>Dung lượng mục tiêu KB (0 = bỏ qua, chỉ jpg/webp lossy).</summary>
+    public int TargetKB { get; set; }
+    /// <summary>Xoá toàn bộ metadata khi xuất (web).</summary>
+    public bool StripMetadata { get; set; }
+    /// <summary>JPEG chroma subsampling: "420"/"422"/"444".</summary>
+    public string JpegSubsample { get; set; } = "420";
+    public bool JpegProgressive { get; set; }
+    /// <summary>PNG deflate level 0..9.</summary>
+    public int PngLevel { get; set; } = 6;
+    /// <summary>PNG palette (PNG-8) + số màu (2..256). 0 = truecolor.</summary>
+    public int PngPaletteColors { get; set; }
+    /// <summary>WebP mode: "lossy"/"lossless"/"nearlossless".</summary>
+    public string WebpMode { get; set; } = "lossy";
+    /// <summary>WebP effort/method 0..6.</summary>
+    public int WebpMethod { get; set; } = 4;
+    /// <summary>TIFF compression: "lzw"/"deflate"/"packbits"/"none".</summary>
+    public string TiffCompression { get; set; } = "lzw";
 }
 
 public class AppSettings

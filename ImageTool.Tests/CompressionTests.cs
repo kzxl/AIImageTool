@@ -159,4 +159,53 @@ public class CompressionTests
         Assert.False(res.MetTarget);
         Assert.Equal(5, res.Quality);
     }
+
+    // --- ExportSizeEstimator (options-aware) ---
+
+    [Fact]
+    public void Estimate_JpegSubsample444_LargerThan420()
+    {
+        long s420 = ExportSizeEstimator.EstimateBytesWithOptions("jpg", 4000, 3000, 0, 85,
+            new Dictionary<string, string> { ["jpegSubsample"] = "420" });
+        long s444 = ExportSizeEstimator.EstimateBytesWithOptions("jpg", 4000, 3000, 0, 85,
+            new Dictionary<string, string> { ["jpegSubsample"] = "444" });
+        Assert.True(s444 > s420);
+    }
+
+    [Fact]
+    public void Estimate_PngPalette_SmallerThanTruecolor()
+    {
+        long full = ExportSizeEstimator.EstimateBytesWithOptions("png", 2000, 2000, 0, 90, null);
+        long pal = ExportSizeEstimator.EstimateBytesWithOptions("png", 2000, 2000, 0, 90,
+            new Dictionary<string, string> { ["pngColorType"] = "palette", ["pngPaletteColors"] = "64" });
+        Assert.True(pal < full);
+    }
+
+    [Fact]
+    public void Estimate_WebpLossless_LargerThanLossy()
+    {
+        long lossy = ExportSizeEstimator.EstimateBytesWithOptions("webp", 2000, 2000, 0, 80,
+            new Dictionary<string, string> { ["webpMode"] = "lossy" });
+        long lossless = ExportSizeEstimator.EstimateBytesWithOptions("webp", 2000, 2000, 0, 80,
+            new Dictionary<string, string> { ["webpMode"] = "lossless" });
+        Assert.True(lossless > lossy);
+    }
+
+    [Fact]
+    public void Estimate_TiffDeflate_SmallerThanNone()
+    {
+        long none = ExportSizeEstimator.EstimateBytesWithOptions("tiff", 2000, 2000, 0, 90,
+            new Dictionary<string, string> { ["tiffCompression"] = "none" });
+        long deflate = ExportSizeEstimator.EstimateBytesWithOptions("tiff", 2000, 2000, 0, 90,
+            new Dictionary<string, string> { ["tiffCompression"] = "deflate" });
+        Assert.True(deflate < none);
+    }
+
+    [Fact]
+    public void Estimate_NoOptions_EqualsBaseEstimate()
+    {
+        long baseB = ExportSizeEstimator.EstimateBytes("jpg", 3000, 2000, 0, 85);
+        long withNull = ExportSizeEstimator.EstimateBytesWithOptions("jpg", 3000, 2000, 0, 85, null);
+        Assert.Equal(baseB, withNull);
+    }
 }
