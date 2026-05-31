@@ -361,6 +361,9 @@ public partial class DevelopPanel : UserControl
         AddSlider(gDetail, "hotpixThr", "Hot Pixel Thr", 0, 1, 0.5);
         AddSlider(gDetail, "caRed", "CA Red/Cyan", -1, 1, 0);
         AddSlider(gDetail, "caBlue", "CA Blue/Yellow", -1, 1, 0);
+        var btnAutoCa = new Button { Content = "Auto CA", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Tự khử quang sai màu trục (ước lượng dịch R/B theo cạnh ở mép)." };
+        btnAutoCa.Click += BtnAutoCa_Click;
+        gDetail.Children.Add(btnAutoCa);
         AddSlider(gDetail, "aiDenoise", "AI Denoise", 0, 1, 0);
         _chkAiUpscale = new CheckBox { Content = "AI Upscale 4x (khi export)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2), ToolTip = "Phóng to 4x bằng AI lúc export (cần model Upscaler)" };
         _chkAiUpscale.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
@@ -1333,6 +1336,19 @@ public partial class DevelopPanel : UserControl
         var angle = _renderer.AnalyzeStraightenAngle(_currentPath);
         if (angle == null) return;
         SetVal("straighten", Math.Clamp(-angle.Value, -45f, 45f));
+        Commit();
+    }
+
+    /// <summary>Auto CA: ước lượng dịch R/B ở mép rồi nạp vào slider CA Correct.</summary>
+    private void BtnAutoCa_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var ca = _renderer.AnalyzeCaCorrect(_currentPath);
+        if (ca == null) return;
+        _loading = true;
+        SetVal("caRed", ca.Value.Red);
+        SetVal("caBlue", ca.Value.Blue);
+        _loading = false;
         Commit();
     }
 

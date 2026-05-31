@@ -235,6 +235,18 @@ public sealed class DevelopRenderer
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoStraighten", path, ex); return null; }
     }
 
+    /// <summary>Ước lượng (Red, Blue) khử CA tự động trên proxy. Null nếu lỗi.</summary>
+    public (float Red, float Blue)? AnalyzeCaCorrect(string path)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return AutoCaCorrect.Estimate(proxy);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoCa", path, ex); return null; }
+    }
+
     /// <summary>Phân tích Auto Levels (D2.5) trên proxy. Trả black/white/gamma; null nếu lỗi.</summary>
     public AutoTone.LevelsSuggestion? AnalyzeAutoLevels(string path)
     {
