@@ -256,4 +256,35 @@ public partial class ExportPanel : UserControl
         if (dot >= 0) return pattern.Insert(dot, "_{size}");
         return pattern + "_{size}";
     }
+
+    private void BtnContactSheet_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        var paths = _workspace.Selection.ToList();
+        if (paths.Count < 2)
+        {
+            MessageBox.Show("Chọn ít nhất 2 ảnh để tạo contact sheet.", "Contact Sheet", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        string outDir = string.IsNullOrWhiteSpace(txtOutDir.Text)
+            ? System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output")
+            : txtOutDir.Text;
+        string outPath = FileNameTokenizer.EnsureUniquePath(System.IO.Path.Combine(outDir, "contact_sheet.jpg"));
+
+        // Cột theo số ảnh: ~căn bậc 2, tối thiểu 3, tối đa 6.
+        int cols = Math.Clamp((int)Math.Ceiling(Math.Sqrt(paths.Count)), 3, 6);
+        var opt = new ContactSheet.Options { Columns = cols, SheetWidth = 2000, ShowFileName = true };
+
+        try
+        {
+            int drawn = ContactSheet.Render(paths, outPath, opt);
+            MessageBox.Show(drawn > 0 ? $"Đã tạo contact sheet ({drawn} ảnh):\n{outPath}" : "Không ghép được ảnh nào.",
+                "Contact Sheet", MessageBoxButton.OK, drawn > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Error("ExportPanel.ContactSheet", outPath, ex);
+            MessageBox.Show("Lỗi tạo contact sheet (xem app.log).", "Contact Sheet", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }
