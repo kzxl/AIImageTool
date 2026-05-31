@@ -145,11 +145,18 @@ public class ThumbnailService : IThumbnailService, IDisposable
     private string GetThumbPath(string imagePath, int size)
     {
         var fi = new FileInfo(imagePath);
-        var key = $"{imagePath.ToLowerInvariant()}|{fi.LastWriteTimeUtc.Ticks}|{fi.Length}|{size}";
-        var hash = Sha1Hex(key);
+        var hash = Sha1Hex(ComposeCacheKey(imagePath, fi.LastWriteTimeUtc.Ticks, fi.Length, size));
         var sub = hash.Substring(0, 2);
         return Path.Combine(_cacheDir, sub, hash + ".jpg");
     }
+
+    /// <summary>
+    /// Khoá cache thumbnail: gồm path (lowercase) + mtime + dung lượng + kích thước đích. Nhờ có mtime
+    /// và dung lượng, file thay đổi -> khoá đổi -> tự sinh lại thumbnail (không phục vụ ảnh cũ). Tách
+    /// thuần để unit test logic invalidate.
+    /// </summary>
+    public static string ComposeCacheKey(string imagePath, long mtimeTicks, long length, int size)
+        => $"{imagePath.ToLowerInvariant()}|{mtimeTicks}|{length}|{size}";
 
     private static string Sha1Hex(string s)
     {
