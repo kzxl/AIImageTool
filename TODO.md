@@ -7,7 +7,7 @@
 > Space-to-pan, Light theme, PipelineProfiler. Darktable Đợt 1+2 HOÀN TẤT: blend modes (D4.5), Sigmoid +
 > Filmic RGB + Tone Equalizer (D1), Color Balance RGB + Color Contrast + Levels + Velvia (D2), Parametric
 > mask đa kênh (D4.1), Hot Pixel (D3.3) + CA Correct (D3.4) + Chroma denoise edge-aware (D3.2), Selective
-> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)** + **EXIF auto-orientation (5.2)** + **Tone Curve presets (2.2)** + **B&W color filters (13.1)** + **Grain Color/Size/Roughness UI (5.6)** + **WB preset nguồn sáng (3.1)** + **Auto Color khử ám (D2.5)** + **Export không ghi đè im lặng (9.4)** + **Waveform/RGB-Parade scope (11.3)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 496/496 test pass, build 0 warning, 3 plugin.
+> paste module (D6.1) + Style append (D6.2). Đợt 3: Diffuse-or-sharpen PDE (D3.1) + Input color profile matrix (D2.2) + Glow/Soften (Orton) + Tone Curve preserve-hue (D1.4) + Mask combine intersect/union/subtract (D4.2) + Polygon mask (D4.3) + Highlight reconstruction (D5.3) + **Liquify/Warp (D3.5: engine + UI kéo handle)** + **Cull nâng cao (D6.5: flag/rating/label hàng loạt + lọc Pick/Reject/Hide-rejected)** + **Tag dictionary/recent + Keyword editor (D6.4)** + **Histogram kéo chỉnh tone (13.10)** + **Sharpen Radius/Masking (4.1)** + **Nhớ bề rộng panel (11.10)** + **Auto Levels (D2.5)** + **Per-channel Levels (D2.5)** + **Film Negative/negadoctor (13.3)** + **Giữ EXIF khi export (9.4)** + **Vignette Roundness/Highlights (5.5)** + **Named Snapshots (D6.3 một phần)** + **Nhân bản mask (D4.4 một phần)** + **EXIF auto-orientation (5.2)** + **Tone Curve presets (2.2)** + **B&W color filters (13.1)** + **Grain Color/Size/Roughness UI (5.6)** + **WB preset nguồn sáng (3.1)** + **Auto Color khử ám (D2.5)** + **Export không ghi đè im lặng (9.4)** + **Waveform/RGB-Parade scope (11.3)** + **Catalog Collection tests (8.1)**. Dynamic range: Exposure Fusion (HDR merge) + Focus measure/stacking. 500/500 test pass, build 0 warning, 3 plugin.
 
 ---
 
@@ -219,7 +219,8 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 
 ## 8. CATALOG / THƯ VIỆN (Lightroom Library module)
 
-- [ ] **8.1** Đồng bộ/khẳng định CatalogService (SQLite) đã hoạt động đầy đủ với UI hiện tại.
+- [x] **8.1** Đồng bộ/khẳng định CatalogService (SQLite) đã hoạt động đầy đủ với UI hiện tại.
+      Collection (tạo/đổi tên/xoá + add/remove ảnh, bỏ qua ảnh chưa import + trùng) đã có test xác nhận.
 - [x] **8.2** Keywords / tags phân cấp + tích hợp VisionTagger (`KeywordHelper` phân cấp + VisionTagger
       "Lưu vào Keywords" + search workspace khớp keyword). + test. **D6.4:** trình sửa Keywords trong InfoPanel
       (chip thêm/gỡ, nhập phân cấp, gợi ý từ điển + recently-used qua `AppSettings.TagDictionary/RecentTags`).
