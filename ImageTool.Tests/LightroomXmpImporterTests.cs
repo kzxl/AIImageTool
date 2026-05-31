@@ -225,4 +225,42 @@ public class LightroomXmpImporterTests
         var ops = LightroomXmpImporter.Parse(st);
         Assert.DoesNotContain(ops, o => o.OpType == "SplitToning"); // sat=0 -> bỏ
     }
+
+    [Fact]
+    public void Parse_Hsl_ExtractsBandAdjustments()
+    {
+        const string h = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:SaturationAdjustmentBlue="-60"
+                    crs:LuminanceAdjustmentBlue="-30"
+                    crs:HueAdjustmentRed="20"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(h);
+        var hsl = ops.FirstOrDefault(o => o.OpType == "HslMixer");
+        Assert.NotNull(hsl);
+        Assert.Equal(-0.6, double.Parse(hsl!.Params["s_blue"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(-0.3, double.Parse(hsl.Params["l_blue"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(0.2, double.Parse(hsl.Params["h_red"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        var op = ImageTool.Imaging.HslMixerOp.FromParams(hsl.Params);
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void Parse_Hsl_AllZero_Ignored()
+    {
+        const string h = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:SaturationAdjustmentBlue="0" crs:HueAdjustmentRed="0"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(h);
+        Assert.DoesNotContain(ops, o => o.OpType == "HslMixer");
+    }
 }

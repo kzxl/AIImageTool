@@ -86,6 +86,24 @@ public static class LightroomXmpImporter
         if (hasSplit)
             ops.Add(Op("SplitToning", "Split Toning (LR)", split));
 
+        // --- HSL / Color Mixer (8 dải, -100..100 -> -1..1) ---
+        var hsl = new Dictionary<string, string>();
+        // Tên dải LR (camera-raw) -> tên dải nội bộ.
+        var bands = new (string Lr, string Key)[]
+        {
+            ("Red", "red"), ("Orange", "orange"), ("Yellow", "yellow"), ("Green", "green"),
+            ("Aqua", "aqua"), ("Blue", "blue"), ("Purple", "purple"), ("Magenta", "magenta"),
+        };
+        bool hasHsl = false;
+        foreach (var (lr, key) in bands)
+        {
+            if (TryNum(crs, "HueAdjustment" + lr, out var hv) && MathAbs(hv) > 1e-4) { hsl[$"h_{key}"] = Fmt(hv / 100.0); hasHsl = true; }
+            if (TryNum(crs, "SaturationAdjustment" + lr, out var sv) && MathAbs(sv) > 1e-4) { hsl[$"s_{key}"] = Fmt(sv / 100.0); hasHsl = true; }
+            if (TryNum(crs, "LuminanceAdjustment" + lr, out var lv) && MathAbs(lv) > 1e-4) { hsl[$"l_{key}"] = Fmt(lv / 100.0); hasHsl = true; }
+        }
+        if (hasHsl)
+            ops.Add(Op("HslMixer", "HSL / Color Mixer (LR)", hsl));
+
         // --- Tone Curve (point list, 0..255 -> 0..1): tổng + per-channel R/G/B ---
         try
         {
