@@ -480,6 +480,9 @@ public partial class DevelopPanel : UserControl
         var btnAutoStraighten = new Button { Content = "Auto Straighten", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Tự cân bằng đường chân trời (phát hiện góc nghiêng cạnh dominant)." };
         btnAutoStraighten.Click += BtnAutoStraighten_Click;
         gGeo.Children.Add(btnAutoStraighten);
+        var btnAutoUpright = new Button { Content = "Auto Upright", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Tự hiệu chỉnh phối cảnh (keystone) theo cạnh dọc/ngang hội tụ." };
+        btnAutoUpright.Click += BtnAutoUpright_Click;
+        gGeo.Children.Add(btnAutoUpright);
         AddSlider(gGeo, "persp_v", "Perspective V", -1, 1, 0);
         AddSlider(gGeo, "persp_h", "Perspective H", -1, 1, 0);
         AddSlider(gGeo, "persp_scale", "Persp Scale", 0.5, 2, 1, "0.00");
@@ -1479,6 +1482,19 @@ public partial class DevelopPanel : UserControl
         var angle = _renderer.AnalyzeStraightenAngle(_currentPath);
         if (angle == null) return;
         SetVal("straighten", Math.Clamp(-angle.Value, -45f, 45f));
+        Commit();
+    }
+
+    /// <summary>Auto Upright (#6): ước lượng keystone V/H rồi nạp vào slider Perspective.</summary>
+    private void BtnAutoUpright_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var sug = _renderer.AnalyzeUpright(_currentPath);
+        if (sug == null) return;
+        _loading = true;
+        SetVal("persp_v", Math.Clamp(sug.Value.Vertical, -1f, 1f));
+        SetVal("persp_h", Math.Clamp(sug.Value.Horizontal, -1f, 1f));
+        _loading = false;
         Commit();
     }
 

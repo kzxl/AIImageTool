@@ -263,6 +263,19 @@ public sealed class DevelopRenderer
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoStraighten", path, ex); return null; }
     }
 
+    /// <summary>Auto-Upright (#6): ước lượng keystone Vertical/Horizontal trên proxy. Null nếu lỗi/không rõ.</summary>
+    public AutoUpright.Suggestion? AnalyzeUpright(string path)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            var s = AutoUpright.Estimate(proxy);
+            return s.HasResult ? s : (AutoUpright.Suggestion?)null;
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoUpright", path, ex); return null; }
+    }
+
     /// <summary>Smart Crop (content-aware): khung cắt tốt nhất cho tỉ lệ ratioW:ratioH trên proxy. Null nếu lỗi.</summary>
     public SmartCrop.Rect? AnalyzeSmartCrop(string path, double ratioW, double ratioH)
     {
