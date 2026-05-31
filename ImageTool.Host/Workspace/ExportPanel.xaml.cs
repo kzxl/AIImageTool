@@ -429,4 +429,35 @@ public partial class ExportPanel : UserControl
             MessageBox.Show("Lỗi tạo contact sheet (xem app.log).", "Contact Sheet", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    private async void BtnWebGallery_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        var paths = _workspace.Selection.ToList();
+        if (paths.Count < 1)
+        {
+            MessageBox.Show("Chọn ít nhất 1 ảnh để tạo web gallery.", "Web Gallery", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        string baseDir = string.IsNullOrWhiteSpace(txtOutDir.Text)
+            ? System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output")
+            : txtOutDir.Text;
+        string galleryDir = System.IO.Path.Combine(baseDir, "gallery_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+
+        try
+        {
+            int count = 0;
+            string index = await System.Threading.Tasks.Task.Run(() =>
+                WebGallery.Render(paths, galleryDir, new WebGallery.Options { Title = "Gallery", Columns = 4 }, out count));
+            var open = MessageBox.Show($"Đã tạo gallery ({count} ảnh):\n{index}\n\nMở trong trình duyệt?",
+                "Web Gallery", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (open == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(index) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Error("ExportPanel.WebGallery", galleryDir, ex);
+            MessageBox.Show("Lỗi tạo web gallery (xem app.log).", "Web Gallery", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }
