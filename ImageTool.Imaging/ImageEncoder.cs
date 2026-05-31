@@ -73,6 +73,32 @@ public static class ImageEncoder
         return outImg;
     }
 
+    /// <summary>Chuyển Image&lt;Rgba32&gt; (sRGB 8-bit) -> LinearImage (linear float). Đảo của ToRgba32.</summary>
+    public static LinearImage FromRgba32(Image<Rgba32> src)
+    {
+        int w = src.Width, h = src.Height;
+        var img = new LinearImage(w, h);
+        float[] dst = img.Pixels;
+        src.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < accessor.Height; y++)
+            {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                int baseOff = y * w * 4;
+                for (int x = 0; x < row.Length; x++)
+                {
+                    int o = baseOff + x * 4;
+                    ref Rgba32 p = ref row[x];
+                    dst[o] = ColorSpace.DecodeByte(p.R);
+                    dst[o + 1] = ColorSpace.DecodeByte(p.G);
+                    dst[o + 2] = ColorSpace.DecodeByte(p.B);
+                    dst[o + 3] = p.A / 255f;
+                }
+            }
+        });
+        return img;
+    }
+
     private static void SavePng16(LinearImage img, string path)
     {
         int w = img.Width, h = img.Height;

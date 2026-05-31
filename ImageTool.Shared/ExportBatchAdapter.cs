@@ -48,6 +48,8 @@ public class ExportBatchAdapter : IBatchCapable
             string outputSharpen = job.Params.GetValueOrDefault("outputSharpen", "none").ToLowerInvariant();
             // Bảo toàn EXIF gốc (camera/lens/ISO/ngày/GPS) trên file xuất (mặc định bật).
             bool copyExif = !string.Equals(job.Params.GetValueOrDefault("copyExif", "true"), "false", StringComparison.OrdinalIgnoreCase);
+            // Watermark vô hình (blind, DCT) — nhúng chuỗi vào pixel, không nhìn thấy.
+            string blindWm = job.Params.GetValueOrDefault("blindWatermark", "");
 
             if (string.IsNullOrEmpty(outDir))
                 outDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
@@ -119,6 +121,10 @@ public class ExportBatchAdapter : IBatchCapable
             if (copyExif)
                 ExifWriter.PreserveExif(job.InputPath, image);
 
+            // Watermark vô hình (blind, DCT+QIM): nhúng ở ĐỘ PHÂN GIẢI XUẤT cuối (sau resize) để bền.
+            if (!string.IsNullOrEmpty(blindWm))
+                image = ApplyBlindWatermark(image, blindWm);
+
             // Nén sâu: dựng encoder từ params (Squoosh-style), hỗ trợ dung lượng mục tiêu (target KB).
             long targetBytes = long.TryParse(job.Params.GetValueOrDefault("targetKB", "0"), out var tkb) && tkb > 0
                 ? tkb * 1024L : 0L;
@@ -178,6 +184,32 @@ public class ExportBatchAdapter : IBatchCapable
                 Color.FromRgba(255, 255, 255, 180), new PointF(x, y)));
         }
         catch (Exception ex) { AppLog.Warn("Export.Watermark", $"bỏ qua watermark: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Nhúng watermark vô hình (blind, DCT+QIM) vào ảnh: chuyển sang LinearImage, embed, chuyển lại
+    /// Rgba32. Giữ metadata (EXIF/ICC) từ ảnh nguồn. Trả ảnh mới (đã dispose ảnh cũ).
+    /// </summary>
+    private static Image ApplyBlindWatermark(Image image, string message)
+    {
+        try
+        {
+            using var rgba = image.CloneAs<Rgba32>();
+            var linear = ImageEncoder.FromRgba32(rgba);
+            int blocks = BlindWatermark.Embed(linear, message);
+            if (blocks <= 0) return image; // ảnh quá nhỏ -> giữ nguyên.
+            var watermarked = ImageEncoder.ToRgba32(linear);
+            // Giữ metadata gốc (EXIF/ICC) để bước PreserveExif/encode sau không mất.
+            watermarked.Metadata.ExifProfile = image.Metadata.ExifProfile;
+            watermarked.Metadata.IccProfile = image.Metadata.IccProfile;
+            image.Dispose();
+            return watermarked;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Export.BlindWatermark", $"bỏ qua watermark vô hình: {ex.Message}");
+            return image;
+        }
     }
 
     /// <summary>Load ảnh; nếu có history active và decode được -> bake edits ở full-res.</summary>

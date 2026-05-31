@@ -91,6 +91,10 @@
                         </StackPanel>
 
                         <CheckBox x:Name="chkStripMeta" Content="Xoá metadata (giảm dung lượng cho web)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+
+                        <TextBlock Text="Watermark vô hình (blind, không nhìn thấy)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
+                        <TextBox x:Name="txtBlindWm" Background="{DynamicResource BgInputBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,2" Height="22"
+                                 ToolTip="Nhúng chuỗi ẩn vào pixel (DCT) — không thấy bằng mắt, dùng chứng minh bản quyền. Để trống = tắt."/>
                     </StackPanel>
                 </Expander>
 

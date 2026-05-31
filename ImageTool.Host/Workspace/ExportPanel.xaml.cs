@@ -297,6 +297,7 @@ public partial class ExportPanel : UserControl
         var d = new Dictionary<string, string>();
         if (int.TryParse(txtTargetKB.Text, out var tkb) && tkb > 0) d["targetKB"] = tkb.ToString();
         if (chkStripMeta.IsChecked == true) d["stripMetadata"] = "true";
+        if (!string.IsNullOrWhiteSpace(txtBlindWm.Text)) d["blindWatermark"] = txtBlindWm.Text.Trim();
 
         string fmt = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
         switch (fmt)
