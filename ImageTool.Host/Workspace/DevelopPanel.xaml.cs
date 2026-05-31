@@ -527,7 +527,50 @@ public partial class DevelopPanel : UserControl
         // Liquify / Warp (D3.5)
         var gLiquify = AddGroup("Liquify / Warp", false);
         BuildLiquifyUI(gLiquify);
+
+        // Quét cây 1 lần: chuyển các foreground literal Gainsboro/Gray (đặt inline lúc dựng) sang
+        // theme brush để hiển thị đúng trong cả Light theme (Gainsboro near-white -> vô hình trên nền sáng).
+        ThemeizeLiteralForegrounds(panelSliders);
     }
+
+    /// <summary>Đệ quy đổi Foreground = Gainsboro/Gray (literal) sang DynamicResource theme brush.</summary>
+    private static void ThemeizeLiteralForegrounds(DependencyObject root)
+    {
+        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        // VisualTree chưa dựng lúc này -> đi theo logical/property. Dùng các control đã add.
+        if (root is Panel panel)
+        {
+            foreach (var child in panel.Children) ThemeizeOne(child);
+        }
+    }
+
+    private static void ThemeizeOne(object element)
+    {
+        switch (element)
+        {
+            case TextBlock tb when IsGrayish(tb.Foreground):
+                tb.SetResourceReference(TextBlock.ForegroundProperty,
+                    tb.FontSize <= 10.5 ? "TextDimBrush" : "TextSecondaryBrush");
+                break;
+            case CheckBox cb when IsGrayish(cb.Foreground):
+                cb.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+                break;
+            case Expander ex when IsGrayish(ex.Foreground):
+                ex.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+                break;
+        }
+        // Đệ quy vào container con (DockPanel/StackPanel/Grid... trong nhóm).
+        if (element is Panel p)
+            foreach (var c in p.Children) ThemeizeOne(c);
+        else if (element is Expander e2 && e2.Content is DependencyObject)
+            ThemeizeLiteralForegrounds(e2.Content as DependencyObject ?? e2);
+        else if (element is ContentControl cc && cc.Content is Panel cp)
+            foreach (var c in cp.Children) ThemeizeOne(c);
+    }
+
+    private static bool IsGrayish(System.Windows.Media.Brush? b)
+        => b is System.Windows.Media.SolidColorBrush s &&
+           (s.Color == System.Windows.Media.Colors.Gainsboro || s.Color == System.Windows.Media.Colors.Gray);
 
     /// <summary>Tạo 1 nhóm thu gọn được (Expander) và trả về panel con để thêm slider.</summary>
     private StackPanel AddGroup(string header, bool expanded)

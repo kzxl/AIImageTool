@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource BgPanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
     <DockPanel>
-        <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource BgPanelBrush}">
+        <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource BgPanelAltBrush}">
             <DockPanel>
-                <TextBlock Text="DEVELOP" FontWeight="Bold" FontSize="12"
-                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="DEVELOP" FontWeight="SemiBold" FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                 <Button x:Name="btnReset" DockPanel.Dock="Right" Content="Reset" Padding="8,3"
                         Click="BtnReset_Click" ToolTip="Đưa tất cả về 0"/>
                 <Button x:Name="btnAuto" DockPanel.Dock="Right" Content="Auto" Padding="8,3" Margin="0,0,6,0"
