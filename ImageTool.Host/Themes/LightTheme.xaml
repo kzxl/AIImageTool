@@ -20,6 +20,7 @@
     <Color x:Key="AccentWarm">#FFD09000</Color>
     <Color x:Key="Success">#FF1E6E43</Color>
     <Color x:Key="Danger">#FFA31515</Color>
+    <Color x:Key="Selection">#FF1184C4</Color>
 
     <SolidColorBrush x:Key="BgBaseBrush" Color="{StaticResource BgBase}"/>
     <SolidColorBrush x:Key="BgPanelBrush" Color="{StaticResource BgPanel}"/>
@@ -33,6 +34,9 @@
     <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDim}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}"/>
     <SolidColorBrush x:Key="AccentWarmBrush" Color="{StaticResource AccentWarm}"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Danger}"/>
+    <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource Selection}"/>
 
     <!-- Text -->
     <Style TargetType="{x:Type TextBlock}">
