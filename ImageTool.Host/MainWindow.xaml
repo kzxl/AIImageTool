@@ -67,7 +67,7 @@
                         </ComboBox>
                         <Border Width="1" Background="{DynamicResource BorderBrush_}" Margin="8,2"/>
                         <Button Tag="None"   Width="16" Height="16" Background="Transparent"
-                                BorderBrush="#666" BorderThickness="1" Margin="2,0" Click="QuickLabel_Click"
+                                BorderBrush="{DynamicResource BorderHoverBrush}" BorderThickness="1" Margin="2,0" Click="QuickLabel_Click"
                                 ToolTip="Tất cả label"/>
                         <Button Tag="Red"    Width="16" Height="16" Background="Red"          BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
                         <Button Tag="Yellow" Width="16" Height="16" Background="Gold"         BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
@@ -171,7 +171,7 @@
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="Foreground" Value="#AAA"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                         <Setter Property="Padding" Value="0"/>
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                         <Setter Property="Cursor" Value="Hand"/>
@@ -187,7 +187,7 @@
                                                             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                         </Trigger>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="bd" Property="Background" Value="#262626"/>
+                                                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource BgPanelAltBrush}"/>
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>

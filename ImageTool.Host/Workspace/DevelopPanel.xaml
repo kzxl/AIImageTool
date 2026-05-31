@@ -1,7 +1,7 @@
 <UserControl x:Class="ImageTool.Host.Workspace.DevelopPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource BgPanelBrush}" Foreground="#DDD">
+             Background="{DynamicResource BgPanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource BgPanelBrush}">
             <DockPanel>
@@ -22,7 +22,7 @@
         <Border DockPanel.Dock="Top" Padding="10,4" Background="{DynamicResource BgPanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
             <DockPanel>
-                <TextBlock Text="Preset" FontSize="11" Foreground="#999" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="Preset" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <Button x:Name="btnSavePreset" DockPanel.Dock="Right" Content="＋ Lưu" Padding="6,2"
                         Click="BtnSavePreset_Click" ToolTip="Lưu settings hiện tại thành preset"/>
                 <ComboBox x:Name="cmbPreset" Height="22" SelectionChanged="CmbPreset_SelectionChanged"
@@ -31,7 +31,7 @@
         </Border>
 
         <TextBlock x:Name="txtNoImage" DockPanel.Dock="Top" Text="Chọn 1 ảnh để bắt đầu chỉnh"
-                   Foreground="#777" Margin="12,8" Visibility="Collapsed"/>
+                   Foreground="{DynamicResource TextDimBrush}" Margin="12,8" Visibility="Collapsed"/>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="panelSliders" Margin="8,4"/>
