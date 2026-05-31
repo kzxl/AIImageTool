@@ -483,6 +483,10 @@ public partial class MainWindow : Window
         miDup.Click += (_, _) => FindDuplicates();
         menu.Items.Add(miDup);
 
+        var miUrl = new System.Windows.Controls.MenuItem { Header = "Import ảnh từ URL..." };
+        miUrl.Click += (_, _) => ImportFromUrl();
+        menu.Items.Add(miUrl);
+
         if (targets.Count == 0)
             menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(chọn ảnh trước)", IsEnabled = false });
 
@@ -523,6 +527,51 @@ public partial class MainWindow : Window
             txtStatus.Text = "";
             AppLog.Error("MainWindow.FindDuplicates", "quét trùng lỗi", ex);
             MessageBox.Show($"Lỗi quét ảnh trùng: {ex.Message}", "Tìm ảnh trùng",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static System.Net.Http.HttpClient? _urlHttp;
+
+    /// <summary>Import ảnh từ URL (dán link): tải an toàn về thư mục hiện tại rồi chọn ảnh.</summary>
+    private async void ImportFromUrl()
+    {
+        var dlg = new Workspace.InputDialog("Import từ URL", "Dán link ảnh (http/https):", "https://");
+        dlg.Owner = this;
+        if (dlg.ShowDialog() != true || string.IsNullOrWhiteSpace(dlg.Result)) return;
+        string url = dlg.Result.Trim();
+
+        if (!ImageTool.Shared.UrlImageImporter.IsValidImageUrl(url, out _))
+        {
+            MessageBox.Show("URL không hợp lệ (chỉ chấp nhận http/https).", "Import từ URL",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        string destFolder = !string.IsNullOrEmpty(_workspace.CurrentFolder) && System.IO.Directory.Exists(_workspace.CurrentFolder)
+            ? _workspace.CurrentFolder!
+            : System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Downloads");
+
+        txtStatus.Text = "Đang tải ảnh từ URL...";
+        try
+        {
+            _urlHttp ??= new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+            string saved = await ImageTool.Shared.UrlImageImporter.DownloadAsync(url, destFolder, _urlHttp);
+            txtStatus.Text = $"Đã tải: {System.IO.Path.GetFileName(saved)}";
+
+            // Nếu đang ở đúng thư mục tải về -> refresh + chọn ảnh mới; nếu không -> mở thư mục đó.
+            if (string.Equals(_workspace.CurrentFolder, destFolder, StringComparison.OrdinalIgnoreCase))
+                _workspace.OpenFolder(destFolder);
+            else
+                _workspace.OpenFolder(destFolder);
+            _workspace.SetActiveImage(saved);
+            _workspace.SetSelection(new[] { saved });
+        }
+        catch (Exception ex)
+        {
+            txtStatus.Text = "";
+            AppLog.Warn("MainWindow.ImportFromUrl", $"{url}: {ex.Message}");
+            MessageBox.Show($"Không tải được ảnh: {ex.Message}", "Import từ URL",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
