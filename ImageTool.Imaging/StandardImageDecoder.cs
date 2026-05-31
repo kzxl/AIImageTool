@@ -64,7 +64,7 @@ public sealed class StandardImageDecoder : IImageDecoder
             Image = ExifOrientation.Bake(linear, orientation),
             Orientation = 1, // đã bake vào pixel
             IsHighBitDepth = false,
-            Metadata = new Dictionary<string, string>()
+            Metadata = ReadIccMetadata(src)
         };
     }
 
@@ -101,7 +101,7 @@ public sealed class StandardImageDecoder : IImageDecoder
             Image = ExifOrientation.Bake(linear, orientation),
             Orientation = 1, // đã bake vào pixel
             IsHighBitDepth = true,
-            Metadata = new Dictionary<string, string>()
+            Metadata = ReadIccMetadata(src)
         };
     }
 
@@ -112,5 +112,29 @@ public sealed class StandardImageDecoder : IImageDecoder
             && ov?.Value != null)
             return ov.Value;
         return 1;
+    }
+
+    /// <summary>
+    /// Đọc ICC profile nhúng (nếu có) -> metadata "iccDesc" (mô tả) + "iccSpace" (gamut đoán được:
+    /// sRGB/AdobeRGB/Rec2020/DisplayP3). UI dùng để gợi ý Input Profile. Không áp gì lên pixel.
+    /// </summary>
+    private static Dictionary<string, string> ReadIccMetadata(Image src)
+    {
+        var meta = new Dictionary<string, string>();
+        try
+        {
+            var icc = src.Metadata?.IccProfile;
+            if (icc == null) return meta;
+            byte[] bytes = icc.ToByteArray();
+            var desc = IccProfileReader.TryReadDescription(bytes);
+            if (!string.IsNullOrWhiteSpace(desc))
+            {
+                meta["iccDesc"] = desc!;
+                var space = IccProfileReader.GuessSpace(desc);
+                if (space.HasValue) meta["iccSpace"] = ColorSpaces.Name(space.Value);
+            }
+        }
+        catch { /* ICC lỗi -> bỏ qua, không metadata */ }
+        return meta;
     }
 }
