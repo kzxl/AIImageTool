@@ -104,12 +104,9 @@ public static class LibRawNative
             lr = libraw_init(0);
             if (lr == IntPtr.Zero) return null;
 
-            // Cấu hình: gamma tuyến tính (1/1), output sRGB, 16-bit, tắt auto-bright (giữ tuyến tính).
-            libraw_set_gamma(lr, 0, 1.0f);
-            libraw_set_gamma(lr, 1, 1.0f);
-            libraw_set_output_color(lr, 1); // 1 = sRGB
-            libraw_set_output_bps(lr, 16);
-            libraw_set_no_auto_bright(lr, 1);
+            // Cấu hình best-effort: gamma tuyến tính (1/1), output sRGB, 16-bit, tắt auto-bright.
+            // Bọc riêng vì 1 vài build LibRaw thiếu setter -> bỏ qua, vẫn decode bằng mặc định.
+            TryConfigure(lr);
 
             if (libraw_open_file(lr, path) != 0) return null;
             if (libraw_unpack(lr) != 0) return null;
@@ -145,6 +142,16 @@ public static class LibRawNative
             try { if (img != IntPtr.Zero) libraw_dcraw_clear_mem(img); } catch { }
             try { if (lr != IntPtr.Zero) libraw_close(lr); } catch { }
         }
+    }
+
+    // Đặt tham số xuất linear-gamma/sRGB/16-bit. Mỗi setter bọc riêng: build LibRaw thiếu 1 export
+    // (EntryPointNotFoundException) không làm hỏng cả decode — chỉ dùng mặc định cho mục đó.
+    private static void TryConfigure(IntPtr lr)
+    {
+        try { libraw_set_gamma(lr, 0, 1.0f); libraw_set_gamma(lr, 1, 1.0f); } catch { }
+        try { libraw_set_output_color(lr, 1); } catch { } // 1 = sRGB
+        try { libraw_set_output_bps(lr, 16); } catch { }
+        try { libraw_set_no_auto_bright(lr, 1); } catch { }
     }
 
     /// <summary>Kết quả decode RAW thô từ LibRaw.</summary>
