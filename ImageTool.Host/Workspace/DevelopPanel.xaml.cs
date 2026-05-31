@@ -62,6 +62,7 @@ public partial class DevelopPanel : UserControl
     private CheckBox? _chkFilmNeg;
     private CheckBox? _chkAiUpscale;
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
+    private TextBlock? _iccAutoInfo;    // hiển thị ICC nhúng phát hiện được (D2.2/7.3)
 
     // Lensfun auto lens-correction (5.3).
     private LensfunService? _lensfun;
@@ -471,6 +472,9 @@ public partial class DevelopPanel : UserControl
         _cmbInputProfile.ToolTip = "Diễn giải ảnh theo gamut này rồi quy về working sRGB (D65). sRGB = không đổi.";
         cmRow.Children.Add(_cmbInputProfile);
         gCm.Children.Add(cmRow);
+        _iccAutoInfo = new TextBlock { FontSize = 10, Margin = new Thickness(0, 0, 0, 2), TextWrapping = TextWrapping.Wrap };
+        _iccAutoInfo.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+        gCm.Children.Add(_iccAutoInfo);
 
         // Local Adjustments / Masking (6.4 brush + 6.7 full slider set)
         var gMask = AddGroup("Local Adjustments", false);
@@ -814,6 +818,20 @@ public partial class DevelopPanel : UserControl
                 // Chưa có profile lưu -> tự gợi ý theo ICC nhúng (chỉ chọn trong dropdown, áp khi user chỉnh).
                 var detected = ImageTool.Imaging.IccProfileReader.DetectSpaceFromFile(path!);
                 _cmbInputProfile.SelectedIndex = detected.HasValue ? (int)detected.Value : 0;
+            }
+            // Minh bạch ICC nhúng phát hiện được (tên + gamut, theo tên hoặc ma trận colorant).
+            if (_iccAutoInfo != null)
+            {
+                var (desc, space) = ImageTool.Imaging.IccProfileReader.ReadInfoFromFile(path!);
+                if (desc == null && space == null)
+                    _iccAutoInfo.Text = "";
+                else
+                {
+                    string g = space.HasValue ? ColorSpaces.Name(space.Value) : "không xác định";
+                    _iccAutoInfo.Text = string.IsNullOrWhiteSpace(desc)
+                        ? $"ICC nhúng → gamut {g}"
+                        : $"ICC: {desc} → {g}";
+                }
             }
         }
 

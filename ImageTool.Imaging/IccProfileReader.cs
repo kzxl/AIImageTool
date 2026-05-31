@@ -179,4 +179,24 @@ public static class IccProfileReader
         }
         catch { return null; }
     }
+
+    /// <summary>
+    /// Đọc thông tin ICC nhúng để HIỂN THỊ cho người dùng: tên mô tả (nếu có) + gamut phát hiện
+    /// (theo tên, fallback ma trận colorant). Trả (null, null) nếu không có ICC. Dùng cho UI minh bạch.
+    /// </summary>
+    public static (string? Description, ColorSpaces.Space? Space) ReadInfoFromFile(string path)
+    {
+        try
+        {
+            var info = SixLabors.ImageSharp.Image.Identify(path);
+            var icc = info?.Metadata?.IccProfile;
+            if (icc == null) return (null, null);
+            byte[] bytes = icc.ToByteArray();
+            string? desc = TryReadDescription(bytes);
+            var space = GuessSpace(desc)
+                ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>());
+            return (desc, space);
+        }
+        catch { return (null, null); }
+    }
 }
