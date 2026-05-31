@@ -85,6 +85,7 @@ public partial class CenterPreview
             cropOverlay.Visibility = Visibility.Visible;
             btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF));
             cmbCropRatio.Visibility = Visibility.Visible;
+            btnSmartCrop.Visibility = Visibility.Visible;
             // render ảnh chưa cắt rồi vẽ overlay (DrawCropOverlay được gọi cuối RenderDevelopAsync).
             _ = RenderDevelopAsync(path);
         }
@@ -93,9 +94,42 @@ public partial class CenterPreview
             cropOverlay.Visibility = Visibility.Collapsed;
             cropOverlay.Children.Clear();
             cmbCropRatio.Visibility = Visibility.Collapsed;
+            btnSmartCrop.Visibility = Visibility.Collapsed;
             btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30));
             // render lại có áp crop.
             _ = RenderDevelopAsync(path);
+        }
+    }
+
+    /// <summary>
+    /// Smart Crop (content-aware): phân tích ảnh proxy, tìm khung cắt tốt nhất cho tỉ lệ đang chọn
+    /// (vùng nổi bật theo saliency + skin + bias trung tâm), rồi gán vào crop rectangle.
+    /// </summary>
+    private void BtnSmartCrop_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_cropMode) return;
+        var path = _workspace?.ActiveImage;
+        if (string.IsNullOrEmpty(path) || !_renderer.CanDecode(path)) return;
+
+        // Tỉ lệ mục tiêu từ combo (Original/Free -> 0,0 = giữ tỉ lệ ảnh).
+        double rw = 0, rh = 0;
+        if (cmbCropRatio.SelectedItem is System.Windows.Controls.ComboBoxItem item &&
+            item.Tag is ValueTuple<string, double, double> preset)
+        {
+            rw = preset.Item2; rh = preset.Item3;
+        }
+
+        try
+        {
+            var r = _renderer.AnalyzeSmartCrop(path, rw, rh);
+            if (r == null) return;
+            _cropX = r.Value.X; _cropY = r.Value.Y; _cropW = r.Value.W; _cropH = r.Value.H;
+            DrawCropOverlay();
+            _developPanel?.SetCropRect(_cropX, _cropY, _cropW, _cropH);
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Warn("CenterPreview.SmartCrop", $"{path}: {ex.Message}");
         }
     }
 

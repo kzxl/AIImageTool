@@ -235,6 +235,18 @@ public sealed class DevelopRenderer
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoStraighten", path, ex); return null; }
     }
 
+    /// <summary>Smart Crop (content-aware): khung cắt tốt nhất cho tỉ lệ ratioW:ratioH trên proxy. Null nếu lỗi.</summary>
+    public SmartCrop.Rect? AnalyzeSmartCrop(string path, double ratioW, double ratioH)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return SmartCrop.Best(proxy, ratioW, ratioH);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.SmartCrop", path, ex); return null; }
+    }
+
     /// <summary>Ước lượng (Red, Blue) khử CA tự động trên proxy. Null nếu lỗi.</summary>
     public (float Red, float Blue)? AnalyzeCaCorrect(string path)
     {

@@ -47,6 +47,9 @@
                     <ComboBox x:Name="cmbCropRatio" Width="110" Margin="4,0,0,0" Visibility="Collapsed"
                               VerticalAlignment="Center" SelectionChanged="CmbCropRatio_SelectionChanged"
                               ToolTip="Tỉ lệ khung cắt"/>
+                    <Button x:Name="btnSmartCrop" Content="✨ Smart" Padding="8,4" Margin="4,0,0,0" Visibility="Collapsed"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
+                            Click="BtnSmartCrop_Click" ToolTip="Tự đặt khung cắt theo nội dung nổi bật (content-aware) cho tỉ lệ đang chọn"/>
                 </StackPanel>
                 <TextBlock x:Name="txtFile" DockPanel.Dock="Left" Text="(chưa chọn ảnh)" Foreground="{DynamicResource TextSecondaryBrush}"
                            FontSize="12" VerticalAlignment="Center" Margin="20,0,0,0"/>

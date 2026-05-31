@@ -259,6 +259,13 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
       reset orientation về Normal, bỏ kích thước cũ; checkbox "Giữ EXIF gốc" mặc định bật). + test.
       **Không ghi đè im lặng**: `FileNameTokenizer.EnsureUniquePath` thêm hậu tố " (1)"... khi trùng tên đích. + test.
 - [x] **9.5** XMP sidecar (`XmpSidecar`, namespace imgtool:, tùy chọn writeXmp khi export + test).
+- [x] **9.6** Nén sâu (Squoosh-style) — `EncoderFactory` map params → encoder ImageSharp thật cho từng định dạng:
+      PNG (CompressionLevel 0–9 + palette PNG-8 Wu-quantizer 2–256 màu + interlace), JPEG (chroma subsample
+      4:2:0/4:2:2/4:4:4 + progressive), WebP (lossy/lossless/near-lossless + effort 0–6), TIFF (LZW/Deflate/
+      PackBits/None + horizontal predictor). **Dung lượng mục tiêu** (`TargetSizeEncoder`: binary-search quality
+      để file ≤ target KB cho jpg/webp). **Strip metadata** (SkipMetadata) cho web. Nối ExportBatchAdapter +
+      Expander "Nén nâng cao" trong ExportPanel (hiện theo định dạng), persist trong ExportPreset, ước lượng
+      dung lượng theo tuỳ chọn (`EstimateBytesWithOptions`). + 17 test.
 
 ---
 
