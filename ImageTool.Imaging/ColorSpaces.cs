@@ -87,6 +87,71 @@ public static class ColorSpaces
         _ => "sRGB",
     };
 
+    // --- Phân loại gamut từ ma trận RGB->XYZ thật (D2.2/7.3: parse colorant ICC) ---
+    // White point chuẩn (XYZ, Y=1). ICC PCS dùng D50; các ma trận trong file này dùng D65.
+    private static readonly float[] D50White = { 0.96422f, 1.00000f, 0.82521f };
+    private static readonly float[] D65White = { 0.95047f, 1.00000f, 1.08883f };
+    // Ma trận Bradford (cone response) + nghịch đảo.
+    private static readonly float[] Bradford =
+    {
+         0.8951000f,  0.2664000f, -0.1614000f,
+        -0.7502000f,  1.7135000f,  0.0367000f,
+         0.0389000f, -0.0685000f,  1.0296000f,
+    };
+
+    /// <summary>
+    /// Ma trận chromatic adaptation Bradford từ white point <paramref name="srcWhite"/> sang
+    /// <paramref name="dstWhite"/> (XYZ, Y=1). Áp cho 1 ma trận RGB->XYZ để đổi white point.
+    /// </summary>
+    public static float[] BradfordAdaptation(float[] srcWhite, float[] dstWhite)
+    {
+        float[] bInv = Invert3x3(Bradford);
+        float[] src = Mul3x1(Bradford, srcWhite);  // cone response nguồn
+        float[] dst = Mul3x1(Bradford, dstWhite);  // cone response đích
+        float[] diag =
+        {
+            dst[0] / src[0], 0, 0,
+            0, dst[1] / src[1], 0,
+            0, 0, dst[2] / src[2],
+        };
+        return Mul3x3(bInv, Mul3x3(diag, Bradford));
+    }
+
+    /// <summary>
+    /// Quy ma trận RGB->XYZ tham chiếu D50 (colorant ICC, PCS D50) về D65 (working space của pipeline).
+    /// </summary>
+    public static float[] AdaptD50ToD65(float[] rgbToXyzD50)
+        => Mul3x3(BradfordAdaptation(D50White, D65White), rgbToXyzD50);
+
+    /// <summary>
+    /// Tìm không gian màu quen thuộc khớp NHẤT với ma trận RGB->XYZ (D65) đã cho, theo tổng sai số
+    /// tuyệt đối từng phần tử. Trả null nếu sai số nhỏ nhất vẫn vượt <paramref name="tolerance"/>
+    /// (profile lạ -> để người dùng tự chọn). Dùng khi ICC không có tên nhận diện được nhưng có
+    /// colorant matrix.
+    /// </summary>
+    public static Space? MatchSpace(float[] rgbToXyzD65, float tolerance = 0.02f)
+    {
+        if (rgbToXyzD65 == null || rgbToXyzD65.Length != 9) return null;
+        Space best = Space.Srgb;
+        float bestErr = float.MaxValue;
+        foreach (Space s in new[] { Space.Srgb, Space.AdobeRgb, Space.Rec2020, Space.DisplayP3 })
+        {
+            float[] @ref = RgbToXyz(s);
+            float err = 0f;
+            for (int i = 0; i < 9; i++) err += MathF.Abs(rgbToXyzD65[i] - @ref[i]);
+            if (err < bestErr) { bestErr = err; best = s; }
+        }
+        return bestErr <= tolerance ? best : (Space?)null;
+    }
+
+    /// <summary>Nhân ma trận 3x3 (row-major) với vector 3.</summary>
+    public static float[] Mul3x1(float[] m, float[] v) => new float[]
+    {
+        m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+        m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
+        m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
+    };
+
     private static float[] Identity() => new float[] { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 
     /// <summary>Nhân 2 ma trận 3x3 (row-major): a*b.</summary>

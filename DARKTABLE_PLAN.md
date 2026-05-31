@@ -43,10 +43,13 @@ Darktable module -> op của ta đã làm:
 - [x] **D2.1** `ColorBalanceRgbOp` mở rộng — 4-way (lift/gamma/gain + offset) + global chroma/contrast/brilliance,
       perceptual (nâng `ColorGradingOp`).
 - [~] **D2.2** Working color space + input/output profile: `ColorSpaces` (ma trận RGB↔XYZ D65 cho
-      sRGB/AdobeRGB/Rec2020/DisplayP3 + invert/mul 3x3) + `InputProfileOp` quy ảnh nguồn gamut rộng về
-      working linear sRGB bằng ma trận 3x3, nối UI "Color Management" + test. **Đọc ICC nhúng ĐÃ XONG:**
-      `IccProfileReader` (parse header + tag 'desc' v2/v4 mluc, đoán gamut) -> tự gợi ý Input Profile theo
-      ICC ảnh (`DetectSpaceFromFile`), có test. Output ICC profile khi export + parse ICC -> ma trận đầy đủ CHƯA.
+      sRGB/AdobeRGB/Rec2020/DisplayP3 + invert/mul 3x3 + **Bradford D50↔D65 adaptation** + `MatchSpace`
+      nhận diện gamut theo ma trận) + `InputProfileOp` quy ảnh nguồn gamut rộng về working linear sRGB bằng
+      ma trận 3x3, nối UI "Color Management" + test. **Đọc ICC nhúng ĐÃ XONG:** `IccProfileReader` (parse
+      header + tag 'desc' v2/v4 mluc, đoán gamut). **Parse colorant matrix ĐÃ XONG:** `TryReadRgbToXyzD65`
+      đọc tag rXYZ/gXYZ/bXYZ (s15Fixed16) -> ma trận RGB→XYZ thật, adapt D50→D65; `DetectSpaceFromFile` ưu
+      tiên tên mô tả, fallback so khớp ma trận (nhận diện profile KHÔNG có tên quen thuộc, vd "Camera RGB").
+      Output ICC profile khi export CHƯA.
 - [x] **D2.3** `VelviaOp` / saturation thông minh theo độ rực + luminance (giống module velvia).
 - [x] **D2.4** `ColorContrastOp` — chỉnh tương phản trục a*/b* (green-magenta, blue-yellow) trong Lab.
 - [x] **D2.5** `RgbLevelsOp` — levels (black/gray/white point per-channel + auto). Auto Levels:
@@ -142,7 +145,7 @@ Thứ tự khuyến nghị (giá trị / công sức / rủi ro):
 8. ✅ D6.1 selective paste module + ✅ D6.2 style append.
 
 **Đợt 3 — nặng / cần native / phức tạp (cân nhắc):**
-9. [~] D2.2 ICC color management — matrix gamut (sRGB/AdobeRGB/Rec2020/P3) ✅; parse ICC nhúng + output profile còn lại.
+9. [~] D2.2 ICC color management — matrix gamut (sRGB/AdobeRGB/Rec2020/P3) ✅; parse ICC colorant matrix (rXYZ/gXYZ/bXYZ) + Bradford D50→D65 + nhận diện gamut theo ma trận ✅; output profile khi export còn lại.
 10. ✅ D3.1 Diffuse-or-sharpen (PDE); D6.3 virtual copies (còn lại).
 11. **D5.x RAW thật qua LibRaw** — bước nhảy lớn nhất; cần bundle native + verify trên máy thật.
 12. D3.5 Liquify ✅ (engine warp + UI kéo handle + test), D4.4 instance UI.

@@ -94,6 +94,67 @@ public static class IccProfileReader
         return null;
     }
 
+    /// <summary>
+    /// Đọc ma trận RGB(linear)->XYZ THẬT từ colorant tag của ICC (D2.2/7.3): rXYZ/gXYZ/bXYZ
+    /// (mỗi tag 'XYZ ' chứa 3 số s15Fixed16 = giá trị *65536). 3 cột ghép thành ma trận, đã quy
+    /// về D65 (PCS ICC là D50 -> Bradford adapt). Trả null nếu thiếu tag / không phải matrix profile.
+    /// Đây là cách nhận diện gamut CHÍNH XÁC, không phụ thuộc tên mô tả.
+    /// </summary>
+    public static float[]? TryReadRgbToXyzD65(byte[]? icc)
+    {
+        if (icc == null || icc.Length < 132) return null;
+        if (icc[36] != (byte)'a' || icc[37] != (byte)'c' || icc[38] != (byte)'s' || icc[39] != (byte)'p')
+            return null;
+        int tagCount = ReadU32(icc, 128);
+        if (tagCount <= 0 || tagCount > 4096) return null;
+        int tableStart = 132;
+        if (tableStart + tagCount * 12 > icc.Length) return null;
+
+        float[]? r = null, g = null, b = null;
+        for (int i = 0; i < tagCount; i++)
+        {
+            int e = tableStart + i * 12;
+            string sig = Ascii(icc, e, 4);
+            if (sig != "rXYZ" && sig != "gXYZ" && sig != "bXYZ") continue;
+            int off = ReadU32(icc, e + 4);
+            int size = ReadU32(icc, e + 8);
+            if (off <= 0 || size < 20 || (long)off + 20 > icc.Length) continue;
+            var xyz = ParseXyzTag(icc, off);
+            if (xyz == null) continue;
+            if (sig == "rXYZ") r = xyz;
+            else if (sig == "gXYZ") g = xyz;
+            else b = xyz;
+        }
+        if (r == null || g == null || b == null) return null;
+
+        // Cột r/g/b -> ma trận RGB->XYZ (D50), row-major.
+        float[] d50 =
+        {
+            r[0], g[0], b[0],
+            r[1], g[1], b[1],
+            r[2], g[2], b[2],
+        };
+        return ColorSpaces.AdaptD50ToD65(d50);
+    }
+
+    /// <summary>Parse 1 tag 'XYZ ' (type(4)+reserved(4)+ 3*s15Fixed16). Trả [X,Y,Z] hoặc null.</summary>
+    private static float[]? ParseXyzTag(byte[] b, int off)
+    {
+        string type = Ascii(b, off, 4);
+        if (type != "XYZ ") return null;
+        float x = ReadS15Fixed16(b, off + 8);
+        float y = ReadS15Fixed16(b, off + 12);
+        float z = ReadS15Fixed16(b, off + 16);
+        return new[] { x, y, z };
+    }
+
+    /// <summary>Số s15Fixed16 (big-endian, có dấu): giá trị thực = raw / 65536.</summary>
+    private static float ReadS15Fixed16(byte[] b, int o)
+    {
+        int raw = (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+        return raw / 65536f;
+    }
+
     private static int ReadU32(byte[] b, int o)
         => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
 
@@ -103,6 +164,7 @@ public static class IccProfileReader
     /// <summary>
     /// Đọc gamut từ ICC nhúng của 1 FILE (chỉ Identify metadata, không decode pixel -> nhanh). Trả null
     /// nếu không có ICC / không nhận diện được. Dùng cho UI gợi ý Input Profile mà không cần decode cả ảnh.
+    /// Ưu tiên tên mô tả; nếu không khớp, thử ma trận colorant THẬT (chính xác, không phụ thuộc tên).
     /// </summary>
     public static ColorSpaces.Space? DetectSpaceFromFile(string path)
     {
@@ -111,7 +173,9 @@ public static class IccProfileReader
             var info = SixLabors.ImageSharp.Image.Identify(path);
             var icc = info?.Metadata?.IccProfile;
             if (icc == null) return null;
-            return GuessSpace(TryReadDescription(icc.ToByteArray()));
+            byte[] bytes = icc.ToByteArray();
+            return GuessSpace(TryReadDescription(bytes))   // 1) theo tên mô tả
+                ?? ColorSpaces.MatchSpace(TryReadRgbToXyzD65(bytes) ?? Array.Empty<float>()); // 2) theo ma trận
         }
         catch { return null; }
     }

@@ -118,4 +118,112 @@ public class IccProfileReaderTests
         var sp = IccProfileReader.GuessSpace(desc);
         Assert.Equal(ColorSpaces.Space.AdobeRgb, sp);
     }
+
+    // --- D2.2/7.3: parse colorant matrix (rXYZ/gXYZ/bXYZ) + match space ---
+
+    // White points (XYZ, Y=1) — hằng số chuẩn để dựng dữ liệu test D50.
+    private static readonly float[] D50White = { 0.96422f, 1.00000f, 0.82521f };
+    private static readonly float[] D65White = { 0.95047f, 1.00000f, 1.08883f };
+
+    // sRGB RGB(linear)->XYZ D65 (hằng số chuẩn, khớp ColorSpaces nội bộ).
+    private static readonly float[] SrgbD65 =
+    {
+        0.4124564f, 0.3575761f, 0.1804375f,
+        0.2126729f, 0.7151522f, 0.0721750f,
+        0.0193339f, 0.1191920f, 0.9503041f,
+    };
+
+    // Dựng ICC có 3 tag colorant rXYZ/gXYZ/bXYZ từ ma trận RGB->XYZ (D50), mỗi tag = type 'XYZ '(4)
+    // + reserved(4) + 3 s15Fixed16. 3 cột của ma trận.
+    private static byte[] BuildColorants(float[] rgbToXyzD50)
+    {
+        int tagCount = 3;
+        int tableStart = 132;
+        int dataStart = tableStart + tagCount * 12;
+        int xyzSize = 20; // 4 type + 4 reserved + 12 (3 * s15Fixed16)
+        int total = dataStart + tagCount * xyzSize;
+        var b = new byte[total];
+        b[36] = (byte)'a'; b[37] = (byte)'c'; b[38] = (byte)'s'; b[39] = (byte)'p';
+        WriteU32(b, 128, tagCount);
+
+        string[] sigs = { "rXYZ", "gXYZ", "bXYZ" };
+        for (int col = 0; col < 3; col++)
+        {
+            int e = tableStart + col * 12;
+            WriteAscii(b, e, sigs[col]);
+            int off = dataStart + col * xyzSize;
+            WriteU32(b, e + 4, off);
+            WriteU32(b, e + 8, xyzSize);
+            // tag data
+            WriteAscii(b, off, "XYZ ");
+            WriteU32(b, off + 4, 0);
+            // cột col: X=row0, Y=row1, Z=row2
+            WriteS15Fixed16(b, off + 8, rgbToXyzD50[0 * 3 + col]);
+            WriteS15Fixed16(b, off + 12, rgbToXyzD50[1 * 3 + col]);
+            WriteS15Fixed16(b, off + 16, rgbToXyzD50[2 * 3 + col]);
+        }
+        return b;
+    }
+
+    private static void WriteS15Fixed16(byte[] b, int o, float v)
+        => WriteU32(b, o, (int)MathF.Round(v * 65536f));
+
+    [Fact]
+    public void ReadRgbToXyz_RoundTripsThroughBradford()
+    {
+        // D50 colorants = adapt sRGB D65 -> D50; parse phải adapt ngược về ~= D65 gốc.
+        float[] toD50 = ColorSpaces.BradfordAdaptation(D65White, D50White);
+        float[] srgbD50 = ColorSpaces.Mul3x3(toD50, SrgbD65);
+
+        var icc = BuildColorants(srgbD50);
+        var parsed = IccProfileReader.TryReadRgbToXyzD65(icc);
+        Assert.NotNull(parsed);
+        for (int i = 0; i < 9; i++)
+            Assert.InRange(parsed![i] - SrgbD65[i], -1e-3f, 1e-3f);
+    }
+
+    [Fact]
+    public void MatchSpace_RecognizesKnownGamutsFromMatrix()
+    {
+        Assert.Equal(ColorSpaces.Space.Srgb, ColorSpaces.MatchSpace(SrgbD65));
+
+        float[] adobeD65 =
+        {
+            0.5767309f, 0.1855540f, 0.1881852f,
+            0.2973769f, 0.6273491f, 0.0752741f,
+            0.0270343f, 0.0706872f, 0.9911085f,
+        };
+        Assert.Equal(ColorSpaces.Space.AdobeRgb, ColorSpaces.MatchSpace(adobeD65));
+    }
+
+    [Fact]
+    public void MatchSpace_RejectsFarMatrixAndBadInput()
+    {
+        // Ma trận lệch xa mọi gamut quen thuộc -> null.
+        float[] weird = { 0.9f, 0.05f, 0.05f, 0.1f, 0.8f, 0.1f, 0.2f, 0.2f, 0.6f };
+        Assert.Null(ColorSpaces.MatchSpace(weird));
+        Assert.Null(ColorSpaces.MatchSpace(Array.Empty<float>()));
+        Assert.Null(ColorSpaces.MatchSpace(new float[5]));
+    }
+
+    [Fact]
+    public void EndToEnd_ColorantOnlyProfile_DetectsViaMatrix()
+    {
+        // Profile không có 'desc' nhận diện được, chỉ có colorant -> phải nhận ra qua ma trận.
+        float[] toD50 = ColorSpaces.BradfordAdaptation(D65White, D50White);
+        float[] srgbD50 = ColorSpaces.Mul3x3(toD50, SrgbD65);
+        var icc = BuildColorants(srgbD50);
+
+        Assert.Null(IccProfileReader.TryReadDescription(icc)); // không có desc tag
+        var matched = ColorSpaces.MatchSpace(IccProfileReader.TryReadRgbToXyzD65(icc)!);
+        Assert.Equal(ColorSpaces.Space.Srgb, matched);
+    }
+
+    [Fact]
+    public void ReadRgbToXyz_MissingColorant_ReturnsNull()
+    {
+        Assert.Null(IccProfileReader.TryReadRgbToXyzD65(BuildV2("sRGB"))); // chỉ có desc, không colorant
+        Assert.Null(IccProfileReader.TryReadRgbToXyzD65(null));
+        Assert.Null(IccProfileReader.TryReadRgbToXyzD65(new byte[10]));
+    }
 }
