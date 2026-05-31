@@ -98,6 +98,7 @@ public partial class App : Application
         services.AddSingleton<AiMaskService>();
         services.AddSingleton<ImageToolHostProvider>();
         services.AddSingleton<DevelopClipboard>();
+        services.AddSingleton<LensfunService>();
 
         // Cấp IImageToolHost cho plugin (chỉ tham chiếu Core) resolve qua IServiceProvider.
         // Provider.Host được set ở MainWindow ctor trước khi LoadPlugins()/Initialize() chạy.

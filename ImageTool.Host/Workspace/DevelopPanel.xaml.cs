@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ImageTool.Core;
 using ImageTool.Imaging;
+using ImageTool.Shared;
 
 namespace ImageTool.Host.Workspace;
 
@@ -62,6 +63,11 @@ public partial class DevelopPanel : UserControl
     private CheckBox? _chkAiUpscale;
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
 
+    // Lensfun auto lens-correction (5.3).
+    private LensfunService? _lensfun;
+    private TextBlock? _lensAutoInfo;
+    private LensProfileOp? _autoLensOp; // op lensfun đã dựng, được BuildOps phát ra (rỗng nếu chưa auto)
+
     // Auto WB gains (áp qua ChannelGainOp). 1,1,1 = không.
     private float _wbGainR = 1f, _wbGainG = 1f, _wbGainB = 1f;
 
@@ -79,13 +85,14 @@ public partial class DevelopPanel : UserControl
     }
 
     public void Bind(IWorkspaceService workspace, IHistoryService history, DevelopRenderer? renderer = null,
-                     DevelopClipboard? clipboard = null, IStyleService? styles = null)
+                     DevelopClipboard? clipboard = null, IStyleService? styles = null, LensfunService? lensfun = null)
     {
         _workspace = workspace;
         _history = history;
         _renderer = renderer;
         _clipboard = clipboard;
         _styles = styles;
+        _lensfun = lensfun;
         _workspace.ActiveImageChanged += (s, e) => Dispatcher.BeginInvoke(() => LoadFor(e.CurrentPath));
         RefreshPresetList();
         LoadFor(_workspace.ActiveImage);
@@ -439,6 +446,12 @@ public partial class DevelopPanel : UserControl
         AddSlider(gGeo, "lens_k1", "Lens Distortion", -0.5, 0.5, 0, "0.00");
         AddSlider(gGeo, "lens_k2", "Lens Distortion 2", -0.5, 0.5, 0, "0.00");
         AddSlider(gGeo, "lens_vig", "Lens Vignette Fix", 0, 1, 0);
+        var btnAutoLens = new Button { Content = "Auto Lens (lensfun)", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Hiệu chỉnh méo/tối góc tự động theo ống kính (EXIF) + tiêu cự, dùng database lensfun." };
+        btnAutoLens.Click += BtnAutoLens_Click;
+        gGeo.Children.Add(btnAutoLens);
+        _lensAutoInfo = new TextBlock { FontSize = 10, Margin = new Thickness(0, 0, 0, 2), TextWrapping = TextWrapping.Wrap };
+        _lensAutoInfo.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+        gGeo.Children.Add(_lensAutoInfo);
 
         // Color Management (D2.2): input/working color space.
         var gCm = AddGroup("Color Management", false);
@@ -695,6 +708,12 @@ public partial class DevelopPanel : UserControl
         SetVal("lens_k2", Param(path!, LensCorrectionOp.Type, "k2"));
         SetVal("lens_vig", Param(path!, LensCorrectionOp.Type, "vig"));
 
+        // Lens profile tự động (lensfun): dựng lại từ history nếu có.
+        var lensProfP = FindOp(path!, LensProfileOp.Type);
+        _autoLensOp = lensProfP != null ? LensProfileOp.FromParams(lensProfP) : null;
+        if (_lensAutoInfo != null)
+            _lensAutoInfo.Text = _autoLensOp != null ? "Đã áp profile lensfun (lưu trong history)." : "";
+
         // Color Unify
         SetVal("uni_hue", Param(path!, ColorUnifyOp.Type, "hue"));
         var uniSat = FindOp(path!, ColorUnifyOp.Type);
@@ -939,6 +958,10 @@ public partial class DevelopPanel : UserControl
             VignetteCorrection = (float)GetVal("lens_vig"),
         };
         if (!lens.IsIdentity) ops.Add(Op(LensCorrectionOp.Type, "Lens Correction", lens.ToParams()));
+
+        // 0a3) Lens profile tự động (lensfun, 5.3) — sau lens correction thủ công.
+        if (_autoLensOp != null && !_autoLensOp.IsIdentity)
+            ops.Add(Op(LensProfileOp.Type, "Lens Profile (auto)", _autoLensOp.ToParams()));
 
         // 0c) Healing/Clone (sau geometry để toạ độ chấm khớp ảnh đã cắt/sửa méo).
         AppendHealingOp(ops);
@@ -1238,6 +1261,8 @@ public partial class DevelopPanel : UserControl
         ClearMasks();
         ClearHealing();
         ClearLiquify();
+        _autoLensOp = null;
+        if (_lensAutoInfo != null) _lensAutoInfo.Text = "";
         _loading = false;
         _history.UpsertGroup(_currentPath, "Develop", Array.Empty<EditOperation>());
     }
@@ -1287,6 +1312,42 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_blackB", v.BlackB); SetVal("lvl_whiteB", v.WhiteB);
         _loading = false;
         Commit();
+    }
+
+    /// <summary>Auto Lens (lensfun, 5.3): đọc EXIF lens + tiêu cự, dựng LensProfileOp tự động.</summary>
+    private void BtnAutoLens_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null) return;
+        if (_lensfun == null || !_lensfun.HasDatabase)
+        {
+            if (_lensAutoInfo != null) _lensAutoInfo.Text = "Chưa có database lensfun (thả XML vào lensfun/).";
+            return;
+        }
+        try
+        {
+            var meta = ImageTool.Shared.ExifReader.ReadMetadata(_currentPath);
+            float focal = (float)(meta.FocalLength ?? 0);
+            var op = _lensfun.BuildOpFor(meta.LensModel, focal);
+            if (op == null)
+            {
+                if (_lensAutoInfo != null)
+                    _lensAutoInfo.Text = string.IsNullOrWhiteSpace(meta.LensModel)
+                        ? "Ảnh không có thông tin ống kính (EXIF)."
+                        : $"Không tìm thấy profile cho: {meta.LensModel}";
+                return;
+            }
+            _autoLensOp = op;
+            if (_lensAutoInfo != null)
+            {
+                string name = _lensfun.MatchLensName(meta.LensModel) ?? meta.LensModel ?? "?";
+                _lensAutoInfo.Text = $"Đã áp profile: {name} @ {focal:0}mm";
+            }
+            Commit();
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Warn("DevelopPanel.AutoLens", ex.Message);
+        }
     }
 
     /// <summary>Đặt Kelvin theo preset nguồn sáng. 0 = không đổi.</summary>
