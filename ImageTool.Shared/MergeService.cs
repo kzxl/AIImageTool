@@ -15,7 +15,7 @@ namespace ImageTool.Shared;
 /// </summary>
 public static class MergeService
 {
-    public enum Mode { Hdr, FocusStack }
+    public enum Mode { Hdr, FocusStack, Panorama }
 
     /// <summary>
     /// Ghép danh sách file. Trả đường dẫn output, hoặc ném nếu &lt;2 ảnh / kích thước khác nhau / decode lỗi.
@@ -31,6 +31,21 @@ public static class MergeService
         {
             if (!decoders.CanDecode(p)) throw new NotSupportedException($"Không decode được: {p}");
             images.Add(decoders.Decode(p).Image);
+        }
+
+        // Panorama: ghép tuần tự 2 ảnh một (KHÔNG yêu cầu cùng kích thước).
+        if (mode == Mode.Panorama)
+        {
+            var pano = images[0];
+            for (int i = 1; i < images.Count; i++)
+            {
+                var r = PanoramaStitcher.Stitch(pano, images[i]);
+                if (!r.Success) throw new InvalidOperationException(r.Error ?? "Ghép panorama thất bại.");
+                pano = r.Image!;
+            }
+            string panoOut = outputPath ?? DefaultOutputPath(inputPaths[0], mode);
+            ImageEncoder.Save(pano, panoOut, ImageEncoder.BitDepth.Sixteen);
+            return panoOut;
         }
 
         int w = images[0].Width, h = images[0].Height;
@@ -53,7 +68,12 @@ public static class MergeService
     {
         string dir = Path.GetDirectoryName(firstInput) ?? ".";
         string name = Path.GetFileNameWithoutExtension(firstInput);
-        string suffix = mode == Mode.FocusStack ? "_focusstack" : "_hdr";
+        string suffix = mode switch
+        {
+            Mode.FocusStack => "_focusstack",
+            Mode.Panorama => "_panorama",
+            _ => "_hdr",
+        };
         string outPath = Path.Combine(dir, name + suffix + ".png");
         // tránh ghi đè.
         int n = 1;

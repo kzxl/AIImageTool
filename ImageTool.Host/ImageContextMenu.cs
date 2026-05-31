@@ -155,6 +155,9 @@ public static class ImageContextMenu
         miFocus.Click += (_, _) => RunMerge(Targets(), MergeService.Mode.FocusStack);
         miMerge.Items.Add(miHdr);
         miMerge.Items.Add(miFocus);
+        var miPano = new MenuItem { Header = "Panorama (ghép ảnh chồng lấn)" };
+        miPano.Click += (_, _) => RunMerge(Targets(), MergeService.Mode.Panorama);
+        miMerge.Items.Add(miPano);
         menu.Items.Add(miMerge);
 
         return menu;

@@ -471,6 +471,10 @@ public partial class MainWindow : Window
         miFocus.Click += (_, _) => ImageContextMenu.RunMerge(targets, ImageTool.Shared.MergeService.Mode.FocusStack);
         menu.Items.Add(miFocus);
 
+        var miPano = new System.Windows.Controls.MenuItem { Header = "Panorama (ghép ảnh chồng lấn)", IsEnabled = targets.Count >= 2 };
+        miPano.Click += (_, _) => ImageContextMenu.RunMerge(targets, ImageTool.Shared.MergeService.Mode.Panorama);
+        menu.Items.Add(miPano);
+
         menu.Items.Add(new System.Windows.Controls.Separator());
 
         var miRename = new System.Windows.Controls.MenuItem { Header = "Batch Rename...", IsEnabled = targets.Count >= 1 };

@@ -23,7 +23,8 @@ public static class Homography
     }
 
     // Uoc luong H sao cho H*src ~ dst (toi thieu 4 cap). Tra null neu suy bien.
-    // Dung DLT: dung he 2N x 9, giai vector null bang power-iteration tren A^T A.
+    // Cach lam: co dinh h33 = 1, dung he tuyen tinh 8 an. Tao normal equations (A^T A) 8x8 + (A^T b)
+    // tu 2N phuong trinh roi giai bang khu Gauss co pivot -> on dinh cho ca minimal (4) lan overdetermined.
     public static double[]? EstimateDlt(IReadOnlyList<Pt> src, IReadOnlyList<Pt> dst)
     {
         int n = Math.Min(src.Count, dst.Count);
@@ -34,28 +35,36 @@ public static class Homography
             !Normalize(dst, n, out double[] T2, out Pt[] d))
             return null;
 
-        // A (2n x 9).
-        var A = new double[2 * n][];
+        // 2N phuong trinh dang: [row] . h(0..7) = rhs, voi h = (h11..h32), h33 = 1.
+        //   x*h11 + y*h12 + h13 - u*x*h31 - u*y*h32 = u
+        //   x*h21 + y*h22 + h23 - v*x*h31 - v*y*h32 = v
+        var ata = new double[8 * 8];
+        var atb = new double[8];
+        var row = new double[8];
         for (int i = 0; i < n; i++)
         {
             double x = s[i].X, y = s[i].Y, u = d[i].X, v = d[i].Y;
-            A[2 * i] = new double[] { -x, -y, -1, 0, 0, 0, u * x, u * y, u };
-            A[2 * i + 1] = new double[] { 0, 0, 0, -x, -y, -1, v * x, v * y, v };
+
+            // Phuong trinh cho u.
+            row[0] = x; row[1] = y; row[2] = 1; row[3] = 0; row[4] = 0; row[5] = 0;
+            row[6] = -u * x; row[7] = -u * y;
+            Accumulate(ata, atb, row, u);
+
+            // Phuong trinh cho v.
+            row[0] = 0; row[1] = 0; row[2] = 0; row[3] = x; row[4] = y; row[5] = 1;
+            row[6] = -v * x; row[7] = -v * y;
+            Accumulate(ata, atb, row, v);
         }
 
-        // A^T A (9x9).
-        var ata = new double[9 * 9];
-        for (int r = 0; r < 9; r++)
-            for (int c = 0; c < 9; c++)
-            {
-                double sum = 0;
-                for (int k = 0; k < 2 * n; k++) sum += A[k][r] * A[k][c];
-                ata[r * 9 + c] = sum;
-            }
+        double[]? hsol = Solve8(ata, atb);
+        if (hsol == null) return null;
 
-        // Vector rieng ung voi tri rieng nho nhat = null-space. Inverse power iteration tren (A^T A).
-        double[]? hN = SmallestEigenVector(ata);
-        if (hN == null) return null;
+        double[] hN =
+        {
+            hsol[0], hsol[1], hsol[2],
+            hsol[3], hsol[4], hsol[5],
+            hsol[6], hsol[7], 1.0,
+        };
 
         // Giai chuan hoa: H = T2^-1 * Hn * T1.
         double[] t2inv = Invert3x3(T2);
@@ -120,6 +129,53 @@ public static class Homography
         return bestH;
     }
 
+    // Cong dong 1 phuong trinh (row . h = rhs) vao normal equations A^T A (8x8) + A^T b (8).
+    private static void Accumulate(double[] ata, double[] atb, double[] row, double rhs)
+    {
+        for (int r = 0; r < 8; r++)
+        {
+            for (int c = 0; c < 8; c++) ata[r * 8 + c] += row[r] * row[c];
+            atb[r] += row[r] * rhs;
+        }
+    }
+
+    // Giai he 8x8 (A^T A) h = (A^T b) bang khu Gauss-Jordan co pivot. Tra null neu suy bien.
+    private static double[]? Solve8(double[] ata, double[] atb)
+    {
+        const int N = 8;
+        var m = new double[N * (N + 1)];
+        for (int r = 0; r < N; r++)
+        {
+            for (int c = 0; c < N; c++) m[r * (N + 1) + c] = ata[r * N + c];
+            m[r * (N + 1) + N] = atb[r];
+        }
+        for (int col = 0; col < N; col++)
+        {
+            int piv = col; double best = Math.Abs(m[col * (N + 1) + col]);
+            for (int r = col + 1; r < N; r++)
+            {
+                double a = Math.Abs(m[r * (N + 1) + col]);
+                if (a > best) { best = a; piv = r; }
+            }
+            if (best < 1e-14) return null;
+            if (piv != col)
+                for (int c = 0; c <= N; c++)
+                    (m[col * (N + 1) + c], m[piv * (N + 1) + c]) = (m[piv * (N + 1) + c], m[col * (N + 1) + c]);
+
+            double diag = m[col * (N + 1) + col];
+            for (int r = 0; r < N; r++)
+            {
+                if (r == col) continue;
+                double f = m[r * (N + 1) + col] / diag;
+                if (f == 0) continue;
+                for (int c = col; c <= N; c++) m[r * (N + 1) + c] -= f * m[col * (N + 1) + c];
+            }
+        }
+        var x = new double[N];
+        for (int r = 0; r < N; r++) x[r] = m[r * (N + 1) + N] / m[r * (N + 1) + r];
+        return x;
+    }
+
     private static bool Pick4(Random rng, int n, int[] outIdx)
     {
         if (n < 4) return false;
@@ -158,49 +214,6 @@ public static class Homography
         T = new double[] { scale, 0, -scale * cx, 0, scale, -scale * cy, 0, 0, 1 };
         for (int i = 0; i < n; i++)
             outPts[i] = new Pt((pts[i].X - cx) * scale, (pts[i].Y - cy) * scale);
-        return true;
-    }
-
-    // Eigenvector ung voi tri rieng NHO NHAT cua ma tran doi xung 9x9 (semi-pos-def A^T A):
-    // dung shift: B = mu*I - M (mu = trace), power-iter tren B -> eigenvector lon nhat cua B = nho nhat cua M.
-    private static double[]? SmallestEigenVector(double[] m)
-    {
-        const int N = 9;
-        double trace = 0; for (int i = 0; i < N; i++) trace += m[i * N + i];
-        double mu = trace + 1.0;
-        var B = new double[N * N];
-        for (int i = 0; i < N * N; i++) B[i] = -m[i];
-        for (int i = 0; i < N; i++) B[i * N + i] += mu;
-
-        var v = new double[N];
-        var rngLocal = new Random(7);
-        for (int i = 0; i < N; i++) v[i] = rngLocal.NextDouble() - 0.5;
-        Normalize9(v);
-
-        var next = new double[N];
-        for (int iter = 0; iter < 300; iter++)
-        {
-            for (int r = 0; r < N; r++)
-            {
-                double sum = 0;
-                for (int c = 0; c < N; c++) sum += B[r * N + c] * v[c];
-                next[r] = sum;
-            }
-            if (!Normalize9(next)) return null;
-            double diff = 0;
-            for (int i = 0; i < N; i++) diff += Math.Abs(next[i] - v[i]);
-            Array.Copy(next, v, N);
-            if (diff < 1e-12) break;
-        }
-        return (double[])v.Clone();
-    }
-
-    private static bool Normalize9(double[] v)
-    {
-        double norm = 0; for (int i = 0; i < v.Length; i++) norm += v[i] * v[i];
-        norm = Math.Sqrt(norm);
-        if (norm < 1e-15) return false;
-        for (int i = 0; i < v.Length; i++) v[i] /= norm;
         return true;
     }
 
