@@ -157,6 +157,7 @@ public partial class ExportPanel : UserControl
         SelectByTag(cmbWebpMode, p.WebpMode);
         slWebpMethod.Value = Math.Clamp(p.WebpMethod, 0, 6);
         SelectByTag(cmbTiffCompression, p.TiffCompression);
+        SelectByTag(cmbOutputProfile, string.IsNullOrEmpty(p.OutputProfile) ? "none" : p.OutputProfile);
         UpdateAdvancedVisibility();
         UpdatePngPaletteVisibility();
         UpdateEstimate();
@@ -194,6 +195,7 @@ public partial class ExportPanel : UserControl
             WebpMode = (cmbWebpMode.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lossy",
             WebpMethod = (int)slWebpMethod.Value,
             TiffCompression = (cmbTiffCompression.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lzw",
+            OutputProfile = (cmbOutputProfile.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none",
         };
         // thay nếu trùng tên.
         _settings.Current.ExportPresets.RemoveAll(x => string.Equals(x.Name, preset.Name, StringComparison.OrdinalIgnoreCase));
@@ -298,6 +300,8 @@ public partial class ExportPanel : UserControl
         if (int.TryParse(txtTargetKB.Text, out var tkb) && tkb > 0) d["targetKB"] = tkb.ToString();
         if (chkStripMeta.IsChecked == true) d["stripMetadata"] = "true";
         if (!string.IsNullOrWhiteSpace(txtBlindWm.Text)) d["blindWatermark"] = txtBlindWm.Text.Trim();
+        string outProf = (cmbOutputProfile.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none";
+        if (outProf != "none") d["outputProfile"] = outProf;
 
         string fmt = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
         switch (fmt)

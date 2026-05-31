@@ -125,6 +125,12 @@ public class ExportBatchAdapter : IBatchCapable
             if (!string.IsNullOrEmpty(blindWm))
                 image = ApplyBlindWatermark(image, blindWm);
 
+            // Output color profile (D2.2): nhúng ICC để màu hiển thị đúng trên web/máy khác.
+            // "none" (mặc định) = không nhúng; "srgb"/"adobergb"/"rec2020"/"displayp3" = nhúng profile tương ứng.
+            string outProfile = job.Params.GetValueOrDefault("outputProfile", "none").ToLowerInvariant();
+            if (outProfile != "none" && ColorSpaces.TryParse(outProfile, out var space))
+                EmbedIccProfile(image, space);
+
             // Nén sâu: dựng encoder từ params (Squoosh-style), hỗ trợ dung lượng mục tiêu (target KB).
             long targetBytes = long.TryParse(job.Params.GetValueOrDefault("targetKB", "0"), out var tkb) && tkb > 0
                 ? tkb * 1024L : 0L;
@@ -184,6 +190,20 @@ public class ExportBatchAdapter : IBatchCapable
                 Color.FromRgba(255, 255, 255, 180), new PointF(x, y)));
         }
         catch (Exception ex) { AppLog.Warn("Export.Watermark", $"bỏ qua watermark: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Nhúng ICC profile đầu ra vào metadata ảnh (sRGB/AdobeRGB/Rec2020/DisplayP3). Encoder ImageSharp
+    /// sẽ ghi profile này vào file (PNG iCCP / JPEG APP2 / WebP). Bỏ qua nếu stripMetadata bật ở encoder.
+    /// </summary>
+    private static void EmbedIccProfile(Image image, ColorSpaces.Space space)
+    {
+        try
+        {
+            byte[] iccBytes = IccProfileWriter.Build(space);
+            image.Metadata.IccProfile = new SixLabors.ImageSharp.Metadata.Profiles.Icc.IccProfile(iccBytes);
+        }
+        catch (Exception ex) { AppLog.Warn("Export.EmbedIcc", $"bỏ qua nhúng ICC: {ex.Message}"); }
     }
 
     /// <summary>

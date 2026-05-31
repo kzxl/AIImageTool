@@ -34,6 +34,8 @@ public class ExportPreset
     public int WebpMethod { get; set; } = 4;
     /// <summary>TIFF compression: "lzw"/"deflate"/"packbits"/"none".</summary>
     public string TiffCompression { get; set; } = "lzw";
+    /// <summary>Output ICC profile nhúng: "none"/"srgb"/"adobergb"/"rec2020"/"displayp3".</summary>
+    public string OutputProfile { get; set; } = "none";
 }
 
 public class AppSettings

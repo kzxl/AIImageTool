@@ -92,6 +92,16 @@
 
                         <CheckBox x:Name="chkStripMeta" Content="Xoá metadata (giảm dung lượng cho web)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,2,0,0"/>
 
+                        <TextBlock Text="Output Color Profile (ICC nhúng)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
+                        <ComboBox x:Name="cmbOutputProfile" Height="22" SelectedIndex="0"
+                                  ToolTip="Nhúng ICC để màu hiển thị đúng trên web/máy khác. sRGB an toàn nhất cho web.">
+                            <ComboBoxItem Content="Không nhúng" Tag="none"/>
+                            <ComboBoxItem Content="sRGB (khuyên dùng cho web)" Tag="srgb"/>
+                            <ComboBoxItem Content="Adobe RGB" Tag="adobergb"/>
+                            <ComboBoxItem Content="Display P3" Tag="displayp3"/>
+                            <ComboBoxItem Content="Rec. 2020" Tag="rec2020"/>
+                        </ComboBox>
+
                         <TextBlock Text="Watermark vô hình (blind, không nhìn thấy)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
                         <TextBox x:Name="txtBlindWm" Background="{DynamicResource BgInputBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,2" Height="22"
                                  ToolTip="Nhúng chuỗi ẩn vào pixel (DCT) — không thấy bằng mắt, dùng chứng minh bản quyền. Để trống = tắt."/>

@@ -54,6 +54,12 @@ public static class ColorSpaces
         _ => SrgbToXyz,
     };
 
+    /// <summary>Ma trận RGB(linear)->XYZ (D65, row-major) của không gian <paramref name="s"/>. Dùng để ghi ICC.</summary>
+    public static float[] RgbToXyzD65(Space s) => (float[])RgbToXyz(s).Clone();
+
+    /// <summary>Ma trận RGB(linear)->XYZ quy về D50 (PCS của ICC) bằng Bradford adaptation. Dùng ghi colorant ICC.</summary>
+    public static float[] RgbToXyzD50(Space s) => Mul3x3(BradfordAdaptation(D65White, D50White), RgbToXyz(s));
+
     /// <summary>Ma trận 3x3 (row-major) chuyển linear RGB từ <paramref name="from"/> sang <paramref name="to"/>.</summary>
     public static float[] ConversionMatrix(Space from, Space to)
     {
