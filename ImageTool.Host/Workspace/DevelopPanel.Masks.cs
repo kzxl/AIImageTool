@@ -153,8 +153,9 @@ public partial class DevelopPanel
                 HorizontalContentAlignment = HorizontalAlignment.Left, FontSize = 11,
                 Padding = new Thickness(6, 2, 6, 2),
                 Background = m == _activeMask ? new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF)) : Brushes.Transparent,
-                Foreground = Brushes.Gainsboro, BorderThickness = new Thickness(0)
+                BorderThickness = new Thickness(0)
             };
+            sel.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
             sel.Click += (_, _) => { SelectMask(mm); RefreshMaskList(); };
             row.Children.Add(del);
             row.Children.Add(dup);
@@ -312,11 +313,13 @@ public partial class DevelopPanel
     /// <summary>1 hàng parametric: 3 slider gọn Min/Max/Feather cho 1 kênh (prefix l/c/h/r/g/b).</summary>
     private void AddParamChannel(LocalMask m, string prefix, string label)
     {
-        _maskEditPanel!.Children.Add(new TextBlock
+        var head = new TextBlock
         {
-            Text = label, Foreground = Brushes.Gainsboro, FontSize = 11, FontWeight = System.Windows.FontWeights.SemiBold,
+            Text = label, FontSize = 11, FontWeight = System.Windows.FontWeights.SemiBold,
             Margin = new Thickness(0, 4, 0, 0)
-        });
+        };
+        head.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
+        _maskEditPanel!.Children.Add(head);
         AddMaskGeomSlider(m, prefix + "Min", "  Min", 0, 1, 0);
         AddMaskGeomSlider(m, prefix + "Max", "  Max", 0, 1, 1);
         AddMaskGeomSlider(m, prefix + "Feather", "  Feather", 0.001, 0.5, 0.1);
@@ -326,9 +329,10 @@ public partial class DevelopPanel
     {
         var chk = new CheckBox
         {
-            Content = "Invert mask", Foreground = Brushes.Gainsboro, FontSize = 11, Margin = new Thickness(0, 2, 0, 2),
+            Content = "Invert mask", FontSize = 11, Margin = new Thickness(0, 2, 0, 2),
             IsChecked = m.MaskParams.TryGetValue("invert", out var iv) && iv == "true"
         };
+        chk.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
         chk.Checked += (_, _) => { m.MaskParams["invert"] = "true"; if (!_loading) ScheduleCommit(); };
         chk.Unchecked += (_, _) => { m.MaskParams["invert"] = "false"; if (!_loading) ScheduleCommit(); };
         _maskEditPanel!.Children.Add(chk);
@@ -354,7 +358,8 @@ public partial class DevelopPanel
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
 
-        var lbl = new TextBlock { Text = label, Foreground = Brushes.Gainsboro, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        var lbl = new TextBlock { Text = label, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
         Grid.SetColumn(lbl, 0);
         slider = new Slider { Minimum = min, Maximum = max, Value = Math.Clamp(cur, min, max), VerticalAlignment = VerticalAlignment.Center, IsMoveToPointEnabled = true };
         Grid.SetColumn(slider, 1);

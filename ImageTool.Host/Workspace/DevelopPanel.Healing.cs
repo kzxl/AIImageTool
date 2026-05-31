@@ -27,9 +27,10 @@ public partial class DevelopPanel
     {
         _chkHealActive = new CheckBox
         {
-            Content = "Bật Healing (click vào vết để xoá)", Foreground = Brushes.Gainsboro, FontSize = 11,
+            Content = "Bật Healing (click vào vết để xoá)", FontSize = 11,
             Margin = new Thickness(0, 2, 0, 4)
         };
+        _chkHealActive.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
         _chkHealActive.Checked += (_, _) => HealingModeChanged?.Invoke(this, true);
         _chkHealActive.Unchecked += (_, _) => HealingModeChanged?.Invoke(this, false);
         host.Children.Add(_chkHealActive);

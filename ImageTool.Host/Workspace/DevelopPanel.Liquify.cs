@@ -29,9 +29,10 @@ public partial class DevelopPanel
     {
         _chkLiquifyActive = new CheckBox
         {
-            Content = "Bật Liquify (kéo trên ảnh để đẩy/kéo)", Foreground = Brushes.Gainsboro, FontSize = 11,
+            Content = "Bật Liquify (kéo trên ảnh để đẩy/kéo)", FontSize = 11,
             Margin = new Thickness(0, 2, 0, 4)
         };
+        _chkLiquifyActive.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
         _chkLiquifyActive.Checked += (_, _) => LiquifyActivated?.Invoke(this, true);
         _chkLiquifyActive.Unchecked += (_, _) => LiquifyActivated?.Invoke(this, false);
         host.Children.Add(_chkLiquifyActive);
