@@ -217,13 +217,59 @@
 
     <!-- Toast notification (overlay, không chặn) -->
     <Border x:Name="toastBorder" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-            Margin="0,0,0,40" Background="#E6222222" CornerRadius="6" Padding="16,10"
+            Margin="0,0,0,40" Background="{DynamicResource BgPanelAltBrush}" CornerRadius="6" Padding="16,10"
             BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
             Visibility="Collapsed" Panel.ZIndex="100">
         <Border.Effect>
             <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="0" Opacity="0.6"/>
         </Border.Effect>
-        <TextBlock x:Name="txtToast" Foreground="#EEE" FontSize="13"/>
+        <TextBlock x:Name="txtToast" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13"/>
+    </Border>
+
+    <!-- Bảng phím tắt (F1 hoặc ? để bật/tắt) -->
+    <Border x:Name="shortcutOverlay" Background="#CC000000" Visibility="Collapsed" Panel.ZIndex="200"
+            MouseLeftButtonDown="ShortcutOverlay_Click">
+        <Border Background="{DynamicResource BgPanelBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="1"
+                CornerRadius="8" Padding="24,18" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="640">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="0" Opacity="0.7"/>
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock Text="Phím tắt" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,12"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="ĐIỀU HƯỚNG &amp; XEM" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="← →   Ảnh trước / kế tiếp" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="E / G / C / F   Single / Grid / Cull / Full" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Z   Zoom 100% / fit     + / −   Zoom" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Space   Giữ để kéo (pan)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Y   So sánh   \   Giữ xem ảnh gốc" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="J   Cảnh báo clip   Esc   Thoát" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="CẮT / HÌNH HỌC" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
+                        <TextBlock Text="R   Bật/tắt cắt   O   Đổi lưới guide" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Enter   Áp cắt   Esc   Huỷ cắt" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="[ / ]   Xoay trái / phải" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="ĐÁNH GIÁ / CỜ" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="0–5   Rating sao" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="P / X / U   Pick / Reject / Bỏ cờ" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="6 / 7 / 8 / 9   Nhãn màu" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="CHỈNH SỬA" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
+                        <TextBlock Text="D   Develop   M   Masking" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Ctrl+Z / Ctrl+Y   Undo / Redo" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="Ctrl+Shift+C / V   Copy / Paste chỉnh" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="Nhấn F1, ? hoặc Esc để đóng" FontSize="10" Foreground="{DynamicResource TextDimBrush}"
+                           HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            </StackPanel>
+        </Border>
     </Border>
     </Grid>
 </Window>

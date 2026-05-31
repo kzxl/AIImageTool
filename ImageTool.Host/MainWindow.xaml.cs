@@ -208,6 +208,25 @@ public partial class MainWindow : Window
 
     private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        bool ctrlMod = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
+        bool typingNow = System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.TextBox
+            || System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase;
+
+        // Bảng phím tắt: F1 hoặc ? (Shift+/) bật/tắt; Esc đóng. Hoạt động cả khi chưa chọn ảnh.
+        if (!typingNow && (e.Key == System.Windows.Input.Key.F1
+            || (e.Key == System.Windows.Input.Key.OemQuestion && !ctrlMod)))
+        {
+            ToggleShortcutOverlay();
+            e.Handled = true;
+            return;
+        }
+        if (shortcutOverlay.Visibility == Visibility.Visible && e.Key == System.Windows.Input.Key.Escape)
+        {
+            shortcutOverlay.Visibility = Visibility.Collapsed;
+            e.Handled = true;
+            return;
+        }
+
         if (_workspace.ActiveImage == null) return;
         var path = _workspace.ActiveImage;
         bool ctrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
@@ -275,6 +294,12 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.Right: if (!typing) { NavigateActiveImage(+1); e.Handled = true; } break;
         }
     }
+
+    private void ToggleShortcutOverlay()
+        => shortcutOverlay.Visibility = shortcutOverlay.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+
+    private void ShortcutOverlay_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        => shortcutOverlay.Visibility = Visibility.Collapsed;
 
     /// <summary>Chuyển ảnh active sang ảnh kế tiếp (+1) / trước đó (-1) trong danh sách hiện tại.</summary>
     private void NavigateActiveImage(int delta)
