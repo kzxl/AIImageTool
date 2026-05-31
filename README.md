@@ -31,8 +31,9 @@ một **pipeline Develop linear-light** trong lõi và một lớp **Plugin mở
   (negadoctor)** cho scan phim âm bản.
 - **Detail:** Sharpen (+ Radius/**Masking** edge-aware), Luminance/Color/Chroma Noise Reduction,
   Diffuse-or-sharpen (PDE), Hot Pixel, CA Correct, Defringe, Texture, Clarity, **Grain (mono + màu)**.
-- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9...), Straighten, Rotate/Flip + **EXIF
-  auto-orientation**, **Perspective/Upright**, **Liquify/Warp** (kéo handle), Lens Correction.
+- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9... + guide bố cục), Straighten, Rotate/Flip + **EXIF
+  auto-orientation**, **Perspective/Upright**, **Liquify/Warp** (kéo handle), Lens Correction (thủ công +
+  **lensfun tự động** theo EXIF).
 - **Effects:** Vignette (+ Roundness/Highlights), Glow/Orton.
 - **Local Adjustments:** mask Gradient / Radial / Brush / Polygon / Luminance & Color Range / Parametric
   đa kênh / AI Subject / Sky, blend modes + opacity, mask combine, **nhân bản mask**; mỗi mask đầy đủ slider.
@@ -73,7 +74,7 @@ Vào [Releases](../../releases):
 
 ## Phát triển
 - Build: `dotnet build ImageTool.slnx -c Debug`
-- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (490 test, build 0 warning)
+- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (544 test, build 0 warning)
 - Publish: `pwsh ./publish.ps1` (Lite + Full + plugins)
 - Hướng dẫn viết op Develop mới: `ImageTool.Imaging/WRITING_OPS.md`
 
