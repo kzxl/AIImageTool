@@ -224,6 +224,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             txtMeta.Text = $"{bmp.PixelWidth} x {bmp.PixelHeight}  |  edit · {pointer} bước";
             if (_cropMode) DrawCropOverlay();
             RefreshClipOverlayIfActive();
+            RefreshPeakOverlayIfActive();
         }
         catch { }
     }
@@ -301,6 +302,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.R: ToggleCropMode(); e.Handled = true; break;
             case Key.O: if (_cropMode) { CycleCropGuide(); e.Handled = true; } break;
             case Key.J: ToggleClipOverlay(); e.Handled = true; break;
+            case Key.K: TogglePeakOverlay(); e.Handled = true; break; // focus peaking
             case Key.OemOpenBrackets: _developPanel?.RotateActive(-1); e.Handled = true; break; // [
             case Key.OemCloseBrackets: _developPanel?.RotateActive(1); e.Handled = true; break;  // ]
             case Key.Y: // Y: bật/tắt so sánh before/after cạnh nhau (không khi giữ Ctrl = redo)
@@ -588,6 +590,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
         zoomPanAfter.X = zoomPan.X;
         zoomPanAfter.Y = zoomPan.Y;
         if (_clipOverlay) SyncClipTransform();
+        if (_peakOverlay) SyncPeakTransform();
     }
 
     private void UpdateZoomBadge()

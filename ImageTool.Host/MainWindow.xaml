@@ -254,7 +254,7 @@
                         <TextBlock Text="Z   Zoom 100% / fit     + / −   Zoom" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
                         <TextBlock Text="Space   Giữ để kéo (pan)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
                         <TextBlock Text="Y   So sánh   \   Giữ xem ảnh gốc" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
-                        <TextBlock Text="J   Cảnh báo clip   Esc   Thoát" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
+                        <TextBlock Text="J   Cảnh báo clip   K   Focus peaking" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
                         <TextBlock Text="CẮT / HÌNH HỌC" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,4"/>
                         <TextBlock Text="R   Bật/tắt cắt   O   Đổi lưới guide" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
                         <TextBlock Text="Enter   Áp cắt   Esc   Huỷ cắt" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,1"/>
