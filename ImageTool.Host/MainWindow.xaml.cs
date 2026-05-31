@@ -477,12 +477,54 @@ public partial class MainWindow : Window
         miRename.Click += (_, _) => ImageContextMenu.RunBatchRename(targets);
         menu.Items.Add(miRename);
 
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        var miDup = new System.Windows.Controls.MenuItem { Header = "Tìm ảnh trùng/gần trùng", IsEnabled = _workspace.Images.Count >= 2 };
+        miDup.Click += (_, _) => FindDuplicates();
+        menu.Items.Add(miDup);
+
         if (targets.Count == 0)
             menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(chọn ảnh trước)", IsEnabled = false });
 
         menu.PlacementTarget = btnMore;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         menu.IsOpen = true;
+    }
+
+    /// <summary>Tìm ảnh gần trùng (#1) trong danh sách hiện tại, chọn toàn bộ nhóm trùng để xem/cull.</summary>
+    private async void FindDuplicates()
+    {
+        var paths = _workspace.Images.ToList();
+        if (paths.Count < 2) return;
+        txtStatus.Text = "Đang quét ảnh trùng...";
+        try
+        {
+            var decoders = ImageTool.Imaging.ImageDecoderRegistry.CreateDefault();
+            var groups = await System.Threading.Tasks.Task.Run(
+                () => ImageTool.Shared.DuplicateFinder.FindGroups(paths, decoders, 10));
+
+            if (groups.Count == 0)
+            {
+                txtStatus.Text = "";
+                MessageBox.Show("Không tìm thấy ảnh trùng/gần trùng.", "Tìm ảnh trùng",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            // Chọn toàn bộ ảnh thuộc các nhóm trùng -> user xem/lọc/xoá.
+            var selection = new List<string>();
+            int dupCount = 0;
+            foreach (var g in groups) { selection.AddRange(g); dupCount += g.Count - 1; }
+            _workspace.SetSelection(selection);
+            if (selection.Count > 0) _workspace.SetActiveImage(selection[0]);
+            txtStatus.Text = $"Tìm thấy {groups.Count} nhóm, {dupCount} ảnh trùng (đã chọn {selection.Count}).";
+        }
+        catch (Exception ex)
+        {
+            txtStatus.Text = "";
+            AppLog.Error("MainWindow.FindDuplicates", "quét trùng lỗi", ex);
+            MessageBox.Show($"Lỗi quét ảnh trùng: {ex.Message}", "Tìm ảnh trùng",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void BtnRecent_Click(object sender, RoutedEventArgs e)
