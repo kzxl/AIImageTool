@@ -440,6 +440,9 @@ public partial class DevelopPanel : UserControl
         rotRow.Children.Add(btnFlipV);
         gGeo.Children.Add(rotRow);
         AddSlider(gGeo, "straighten", "Straighten", -45, 45, 0, "0.0");
+        var btnAutoStraighten = new Button { Content = "Auto Straighten", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, ToolTip = "Tự cân bằng đường chân trời (phát hiện góc nghiêng cạnh dominant)." };
+        btnAutoStraighten.Click += BtnAutoStraighten_Click;
+        gGeo.Children.Add(btnAutoStraighten);
         AddSlider(gGeo, "persp_v", "Perspective V", -1, 1, 0);
         AddSlider(gGeo, "persp_h", "Perspective H", -1, 1, 0);
         AddSlider(gGeo, "persp_scale", "Persp Scale", 0.5, 2, 1, "0.00");
@@ -1320,6 +1323,16 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_blackG", v.BlackG); SetVal("lvl_whiteG", v.WhiteG);
         SetVal("lvl_blackB", v.BlackB); SetVal("lvl_whiteB", v.WhiteB);
         _loading = false;
+        Commit();
+    }
+
+    /// <summary>Auto Straighten: ước lượng góc nghiêng rồi nạp vào slider Straighten (xoay bù).</summary>
+    private void BtnAutoStraighten_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentPath == null || _renderer == null) return;
+        var angle = _renderer.AnalyzeStraightenAngle(_currentPath);
+        if (angle == null) return;
+        SetVal("straighten", Math.Clamp(-angle.Value, -45f, 45f));
         Commit();
     }
 

@@ -223,6 +223,18 @@ public sealed class DevelopRenderer
         catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AnalyzeAuto", path, ex); return null; }
     }
 
+    /// <summary>Ước lượng góc nghiêng (auto-straighten) trên proxy. Trả góc độ; null nếu lỗi.</summary>
+    public float? AnalyzeStraightenAngle(string path)
+    {
+        try
+        {
+            LinearImage? proxy = GetOrBuildProxy(path, CancellationToken.None);
+            if (proxy == null) return null;
+            return AutoStraighten.EstimateAngle(proxy);
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.AutoStraighten", path, ex); return null; }
+    }
+
     /// <summary>Phân tích Auto Levels (D2.5) trên proxy. Trả black/white/gamma; null nếu lỗi.</summary>
     public AutoTone.LevelsSuggestion? AnalyzeAutoLevels(string path)
     {
