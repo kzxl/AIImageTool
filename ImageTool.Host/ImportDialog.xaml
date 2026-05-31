@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Import Photos" Height="620" Width="960"
-        Background="#1E1E1E" Foreground="#DDD"
+        Background="{DynamicResource BgPanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResize">
     <Grid>
         <Grid.RowDefinitions>
@@ -16,22 +16,22 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left: Source -->
-        <Border Grid.Column="0" Background="#252526" BorderBrush="#333" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource BgPanelAltBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,1,0">
             <DockPanel Margin="10">
                 <TextBlock DockPanel.Dock="Top" Text="SOURCE" FontSize="11" FontWeight="SemiBold"
-                           Foreground="#888" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
                 <Button x:Name="btnBrowseSource" DockPanel.Dock="Top" Content="📁  Choose Folder..."
-                        Height="30" Background="#333" Foreground="#DDD" BorderThickness="0"
+                        Height="30" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0"
                         Click="BtnBrowseSource_Click" Margin="0,0,0,8"/>
                 <TextBlock x:Name="txtSourcePath" DockPanel.Dock="Top" Text="(chưa chọn)"
-                           Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
                 <CheckBox x:Name="chkIncludeSubfolders" Content="Include subfolders"
-                          Foreground="#CCC" FontSize="11" IsChecked="True" Margin="0,0,0,8"/>
-                <Border DockPanel.Dock="Top" Background="#333" CornerRadius="3" Padding="10"
+                          Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" IsChecked="True" Margin="0,0,0,8"/>
+                <Border DockPanel.Dock="Top" Background="{DynamicResource BgHoverBrush}" CornerRadius="3" Padding="10"
                         Margin="0,8,0,0" AllowDrop="True" Drop="DropZone_Drop"
                         DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave">
                     <TextBlock x:Name="txtDropZone" Text="or drag files here"
-                               Foreground="#666" FontSize="11" HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextDimBrush}" FontSize="11" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center"/>
                 </Border>
                 <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom"/>
@@ -42,15 +42,15 @@
         <DockPanel Grid.Column="1" Margin="10">
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                 <TextBlock Text="PREVIEW" FontSize="11" FontWeight="SemiBold"
-                           Foreground="#888" VerticalAlignment="Center"/>
-                <TextBlock x:Name="txtFileCount" Text="0 files" Foreground="#AAA" FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="txtFileCount" Text="0 files" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
                            VerticalAlignment="Center" Margin="12,0,0,0"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" DockPanel.Dock="Right">
                     <Button x:Name="btnCheckAll" Content="Check All" Padding="8,3"
-                            Background="#333" Foreground="#CCC" BorderThickness="0" FontSize="11"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" FontSize="11"
                             Click="BtnCheckAll_Click" Margin="0,0,4,0"/>
                     <Button x:Name="btnUncheckAll" Content="Uncheck All" Padding="8,3"
-                            Background="#333" Foreground="#CCC" BorderThickness="0" FontSize="11"
+                            Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" FontSize="11"
                             Click="BtnUncheckAll_Click"/>
                 </StackPanel>
             </DockPanel>
@@ -65,14 +65,14 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Width="100" Height="120" Margin="4" Background="#2D2D2D"
+                        <Border Width="100" Height="120" Margin="4" Background="{DynamicResource BgInputBrush}"
                                 CornerRadius="3" Padding="4">
                             <StackPanel>
                                 <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Left"
                                           Margin="0,0,0,4"/>
                                 <Image Source="{Binding Thumbnail}" Width="80" Height="70"
                                        Stretch="Uniform"/>
-                                <TextBlock Text="{Binding FileName}" FontSize="9" Foreground="#AAA"
+                                <TextBlock Text="{Binding FileName}" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
@@ -82,53 +82,53 @@
         </DockPanel>
 
         <!-- Right: Options -->
-        <Border Grid.Column="2" Background="#252526" BorderBrush="#333" BorderThickness="1,0,0,0">
+        <Border Grid.Column="2" Background="{DynamicResource BgPanelAltBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="1,0,0,0">
             <StackPanel Margin="12">
                 <TextBlock Text="OPTIONS" FontSize="11" FontWeight="SemiBold"
-                           Foreground="#888" Margin="0,0,0,12"/>
+                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,12"/>
 
-                <TextBlock Text="Import Mode" Foreground="#AAA" FontSize="11" Margin="0,0,0,6"/>
+                <TextBlock Text="Import Mode" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"/>
                 <RadioButton x:Name="rbAddInPlace" Content="Add in Place" IsChecked="True"
-                             Foreground="#CCC" FontSize="11" Margin="0,0,0,4" GroupName="ImportMode"/>
-                <TextBlock Text="Reference files at current location" Foreground="#666"
+                             Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,0,4" GroupName="ImportMode"/>
+                <TextBlock Text="Reference files at current location" Foreground="{DynamicResource TextDimBrush}"
                            FontSize="10" Margin="16,0,0,8" TextWrapping="Wrap"/>
                 <RadioButton x:Name="rbCopyToLibrary" Content="Copy to Library"
-                             Foreground="#CCC" FontSize="11" Margin="0,0,0,4" GroupName="ImportMode"
+                             Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,0,4" GroupName="ImportMode"
                              Checked="RbCopyToLibrary_Checked" Unchecked="RbCopyToLibrary_Unchecked"/>
-                <TextBlock Text="Copy files to managed library folder" Foreground="#666"
+                <TextBlock Text="Copy files to managed library folder" Foreground="{DynamicResource TextDimBrush}"
                            FontSize="10" Margin="16,0,0,8" TextWrapping="Wrap"/>
 
                 <StackPanel x:Name="pnlLibraryOptions" Visibility="Collapsed" Margin="16,0,0,12">
-                    <TextBlock Text="Library Folder" Foreground="#AAA" FontSize="10" Margin="0,0,0,4"/>
+                    <TextBlock Text="Library Folder" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="10" Margin="0,0,0,4"/>
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Content="..." Width="28" Height="24"
-                                Background="#333" Foreground="#CCC" BorderThickness="0"
+                                Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0"
                                 Click="BtnBrowseLibrary_Click"/>
-                        <TextBox x:Name="txtLibraryPath" Height="24" Background="#333"
-                                 Foreground="#CCC" BorderThickness="0" Padding="4,3"
+                        <TextBox x:Name="txtLibraryPath" Height="24" Background="{DynamicResource BgInputBrush}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,3"
                                  FontSize="11" IsReadOnly="True"/>
                     </DockPanel>
                     <CheckBox x:Name="chkOrganizeByDate" Content="Organize by date (yyyy/yyyy-MM-dd)"
-                              Foreground="#CCC" FontSize="10" IsChecked="True" Margin="0,8,0,0"/>
+                              Foreground="{DynamicResource TextPrimaryBrush}" FontSize="10" IsChecked="True" Margin="0,8,0,0"/>
                 </StackPanel>
 
-                <Border Height="1" Background="#444" Margin="0,8,0,12"/>
+                <Border Height="1" Background="{DynamicResource BorderHoverBrush}" Margin="0,8,0,12"/>
 
-                <TextBlock Text="Summary" Foreground="#AAA" FontSize="11" Margin="0,0,0,6"/>
-                <TextBlock x:Name="txtSummary" Text="No files selected" Foreground="#CCC"
+                <TextBlock Text="Summary" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"/>
+                <TextBlock x:Name="txtSummary" Text="No files selected" Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="11" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
         <!-- Bottom: Actions -->
-        <Border Grid.Row="1" Grid.ColumnSpan="3" Background="#252526"
-                BorderBrush="#333" BorderThickness="0,1,0,0" Padding="12,8">
+        <Border Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource BgPanelAltBrush}"
+                BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,1,0,0" Padding="12,8">
             <DockPanel>
                 <Button x:Name="btnCancel" DockPanel.Dock="Right" Content="Cancel" Width="80"
-                        Height="30" Background="#444" Foreground="#CCC" BorderThickness="0"
+                        Height="30" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0"
                         Click="BtnCancel_Click" Margin="8,0,0,0"/>
                 <Button x:Name="btnImport" DockPanel.Dock="Right" Content="Import" Width="100"
-                        Height="30" Background="#007ACC" Foreground="White" BorderThickness="0"
+                        Height="30" Background="{DynamicResource AccentBrush}" Foreground="White" BorderThickness="0"
                         FontWeight="SemiBold" Click="BtnImport_Click" IsEnabled="False"/>
                 <ProgressBar x:Name="pbImport" Height="6" Minimum="0" Maximum="100" Value="0"
                              Visibility="Hidden" VerticalAlignment="Center" Margin="0,0,12,0"/>
