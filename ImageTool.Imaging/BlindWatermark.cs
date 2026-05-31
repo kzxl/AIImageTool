@@ -98,18 +98,22 @@ public static class BlindWatermark
     }
 
     // === QIM nhung/giai 1 bit vao 1 he so ===
-    private static float QimEmbed(float coef, bool bit)
+    private static float QimEmbed(float coef, bool bit) => QimEmbed(coef, bit, Step);
+    private static float QimEmbed(float coef, bool bit, float step)
     {
-        // luong tu ve boi cua Step, dich nua buoc theo bit.
-        float q = MathF.Round(coef / Step) * Step;
-        float offset = bit ? Step * 0.25f : -Step * 0.25f;
+        // luong tu ve boi cua step, dich nua buoc theo bit.
+        float q = MathF.Round(coef / step) * step;
+        float offset = bit ? step * 0.25f : -step * 0.25f;
         return q + offset;
     }
-    private static bool QimExtract(float coef)
+    private static bool QimExtract(float coef) => QimExtract(coef, Step);
+    private static bool QimExtract(float coef, float step)
     {
-        float r = coef - MathF.Round(coef / Step) * Step; // phan du quanh boi gan nhat
+        float r = coef - MathF.Round(coef / step) * step; // phan du quanh boi gan nhat
         return r >= 0f;
     }
+    // Buoc luong tu LON hon cho resilient (chiu duoc resample 2 lan).
+    private const float ResilientStep = 28f;
 
     // === API cong khai ===
 
@@ -177,6 +181,119 @@ public static class BlindWatermark
             }
 
         return DecodeWithVoting(raw);
+    }
+
+    // === Resize-resilient API ===
+    // Embed/Extract chuan hoa luminance ve 1 LUOI CANONICAL co dinh (CanonicalEdge) truoc khi xu ly.
+    // Vi vay neu anh bi RESIZE (phong/thu deu) giua embed va extract, ca hai van quy ve cung luoi ->
+    // watermark song sot. (Crop/xoay van lam lech luoi -> khong bao dam; resize la truong hop pho bien nhat.)
+    private const int CanonicalEdge = 256; // boi cua 8; nho hon -> ben hon voi downscale (it dung luong hon)
+
+    // Embed resilient: nhung len luoi canonical roi up-sample DELTA luminance tro lai kich thuoc goc.
+    public static int EmbedResilient(LinearImage image, string message)
+    {
+        if (image == null) return 0;
+        bool[] bits = MessageToBits(message);
+        if (bits.Length == 0) return 0;
+
+        int w = image.Width, h = image.Height;
+        // Luong tu canonical theo ti le khung hinh (giu boi cua 8).
+        int cw = CanonRound(w, h, true);
+        int ch = CanonRound(w, h, false);
+        if (cw < N || ch < N) return 0;
+
+        float[] lumFull = ExtractLumByte(image);
+        float[] lumC = ResampleBilinear(lumFull, w, h, cw, ch);
+        float[] lumC0 = (float[])lumC.Clone();
+
+        int bx = cw / N, by = ch / N;
+        int bitIdx = 0, blocks = 0;
+        var blk = new float[N, N];
+        var coef = new float[N, N];
+        for (int byi = 0; byi < by; byi++)
+            for (int bxi = 0; bxi < bx; bxi++)
+            {
+                LoadBlock(lumC, cw, bxi * N, byi * N, blk);
+                Dct2(blk, coef);
+                coef[Cv1, Cu1] = QimEmbed(coef[Cv1, Cu1], bits[bitIdx % bits.Length], ResilientStep);
+                coef[Cv2, Cu2] = QimEmbed(coef[Cv2, Cu2], bits[(bitIdx + 1) % bits.Length], ResilientStep);
+                Idct2(coef, blk);
+                StoreBlock(lumC, cw, bxi * N, byi * N, blk);
+                bitIdx += 2; blocks++;
+            }
+
+        // Delta tren luoi canonical -> up-sample ve full -> cong vao luminance goc.
+        var deltaC = new float[cw * ch];
+        for (int i = 0; i < deltaC.Length; i++) deltaC[i] = lumC[i] - lumC0[i];
+        var deltaFull = ResampleBilinear(deltaC, cw, ch, w, h);
+        var newLum = new float[w * h];
+        for (int i = 0; i < newLum.Length; i++) newLum[i] = lumFull[i] + deltaFull[i];
+
+        ApplyLumByte(image, newLum);
+        return blocks;
+    }
+
+    // Extract resilient: resample ve canonical roi giai nhu Extract thuong.
+    public static string? ExtractResilient(LinearImage image)
+    {
+        if (image == null) return null;
+        int w = image.Width, h = image.Height;
+        int cw = CanonRound(w, h, true);
+        int ch = CanonRound(w, h, false);
+        if (cw < N || ch < N) return null;
+
+        float[] lumFull = ExtractLumByte(image);
+        float[] lumC = ResampleBilinear(lumFull, w, h, cw, ch);
+
+        int bx = cw / N, by = ch / N;
+        var raw = new bool[bx * by * 2];
+        int ri = 0;
+        var blk = new float[N, N];
+        var coef = new float[N, N];
+        for (int byi = 0; byi < by; byi++)
+            for (int bxi = 0; bxi < bx; bxi++)
+            {
+                LoadBlock(lumC, cw, bxi * N, byi * N, blk);
+                Dct2(blk, coef);
+                raw[ri++] = QimExtract(coef[Cv1, Cu1], ResilientStep);
+                raw[ri++] = QimExtract(coef[Cv2, Cu2], ResilientStep);
+            }
+        return DecodeWithVoting(raw);
+    }
+
+    // Kich thuoc canonical giu ti le khung hinh, lam tron boi cua 8, cap CanonicalEdge canh dai.
+    private static int CanonRound(int w, int h, bool wantWidth)
+    {
+        double scale = (double)CanonicalEdge / Math.Max(w, h);
+        int target = (int)Math.Round((wantWidth ? w : h) * scale);
+        target = Math.Max(N, (target / N) * N);
+        return target;
+    }
+
+    // Resample song tuyen 1 kenh float (lum/delta) tu (sw x sh) -> (dw x dh).
+    private static float[] ResampleBilinear(float[] src, int sw, int sh, int dw, int dh)
+    {
+        var dst = new float[dw * dh];
+        float xr = sw > 1 ? (float)(sw - 1) / Math.Max(1, dw - 1) : 0f;
+        float yr = sh > 1 ? (float)(sh - 1) / Math.Max(1, dh - 1) : 0f;
+        for (int y = 0; y < dh; y++)
+        {
+            float sy = y * yr;
+            int y0 = (int)sy; int y1 = Math.Min(sh - 1, y0 + 1);
+            float ty = sy - y0;
+            for (int x = 0; x < dw; x++)
+            {
+                float sx = x * xr;
+                int x0 = (int)sx; int x1 = Math.Min(sw - 1, x0 + 1);
+                float tx = sx - x0;
+                float p00 = src[y0 * sw + x0], p10 = src[y0 * sw + x1];
+                float p01 = src[y1 * sw + x0], p11 = src[y1 * sw + x1];
+                float top = p00 + (p10 - p00) * tx;
+                float bot = p01 + (p11 - p01) * tx;
+                dst[y * dw + x] = top + (bot - top) * ty;
+            }
+        }
+        return dst;
     }
 
     // Thu cac chu ky lap (period) hop ly: vi embed lap chuoi bit, ta khong biet do dai message truoc.

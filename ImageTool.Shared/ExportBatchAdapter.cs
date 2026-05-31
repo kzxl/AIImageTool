@@ -216,7 +216,8 @@ public class ExportBatchAdapter : IBatchCapable
         {
             using var rgba = image.CloneAs<Rgba32>();
             var linear = ImageEncoder.FromRgba32(rgba);
-            int blocks = BlindWatermark.Embed(linear, message);
+            // Dùng bản resilient (chuẩn hoá canonical) -> sống sót khi ảnh xuất bị resize lại.
+            int blocks = BlindWatermark.EmbedResilient(linear, message);
             if (blocks <= 0) return image; // ảnh quá nhỏ -> giữ nguyên.
             var watermarked = ImageEncoder.ToRgba32(linear);
             // Giữ metadata gốc (EXIF/ICC) để bước PreserveExif/encode sau không mất.
