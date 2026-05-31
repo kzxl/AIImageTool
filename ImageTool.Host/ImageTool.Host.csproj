@@ -22,4 +22,16 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
+  <!--
+    Native RAW (LibRaw) TUỲ CHỌN: bỏ libraw.dll (+ phụ thuộc) vào thư mục "native/" cạnh solution
+    để tự copy vào output. Không có file -> bỏ qua, app dùng JPEG-preview fallback. Không bắt buộc build.
+  -->
+  <ItemGroup>
+    <NativeRawDll Include="$(MSBuildProjectDirectory)\..\native\*.dll" />
+  </ItemGroup>
+  <Target Name="CopyNativeRaw" AfterTargets="Build" Condition="'@(NativeRawDll)' != ''">
+    <Copy SourceFiles="@(NativeRawDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="LibRaw native: đã copy @(NativeRawDll->'%(Filename)%(Extension)', ', ') vào output." />
+  </Target>
+
 </Project>

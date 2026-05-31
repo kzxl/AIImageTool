@@ -87,6 +87,11 @@ Darktable module -> op của ta đã làm:
 
 ## F. PHASE D5 — RAW thật (cần native), tách riêng
 
+> **BẬT LibRaw (không cần sửa code):** bỏ `libraw.dll` (x64, build C API) + DLL phụ thuộc vào thư mục
+> `native/` cạnh solution. Build Host tự copy vào output (target `CopyNativeRaw`). Khi có DLL,
+> `LibRawDecoder` tự đè đuôi RAW (demosaic thật 16-bit); không có -> dùng JPEG preview như cũ.
+> Verify chữ ký P/Invoke + chất lượng demosaic trên file RAW thật trước khi phát hành.
+
 - [~] **D5.1** Plugin LibRaw (P/Invoke) đăng ký đè `ImageDecoderRegistry` -> demosaic sensor 12-14 bit thật.
       **Scaffold ĐÃ XONG:** `LibRawNative` (P/Invoke gated bằng `NativeLibrary.TryLoad`, no-op khi thiếu DLL) +
       `LibRawImageConverter` (buffer→LinearImage, linear-gamma, có test) + `LibRawDecoder` (đăng ký SAU
