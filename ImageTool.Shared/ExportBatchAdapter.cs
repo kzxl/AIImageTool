@@ -59,8 +59,21 @@ public class ExportBatchAdapter : IBatchCapable
             Image image = LoadBaked(job.InputPath, ct);
             progress.Report(30);
 
+            // Kích thước chính xác (social media): crop-to-fill về đúng tỉ lệ rồi resize đúng px.
+            int exactW = int.TryParse(job.Params.GetValueOrDefault("exactWidth", "0"), out var ew) ? ew : 0;
+            int exactH = int.TryParse(job.Params.GetValueOrDefault("exactHeight", "0"), out var eh) ? eh : 0;
+            if (exactW > 0 && exactH > 0)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(exactW, exactH),
+                    Mode = ResizeMode.Crop,                 // center-crop để lấp đầy khung (không méo)
+                    Position = AnchorPositionMode.Center,
+                    Sampler = KnownResamplers.Lanczos3
+                }));
+            }
             // Resize theo % (ưu tiên) hoặc cạnh dài tối đa.
-            if (resizePct > 0 && resizePct != 100)
+            else if (resizePct > 0 && resizePct != 100)
             {
                 int nw = Math.Max(1, image.Width * resizePct / 100);
                 int nh = Math.Max(1, image.Height * resizePct / 100);

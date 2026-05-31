@@ -19,6 +19,9 @@ public partial class ExportPanel : UserControl
     {
         InitializeComponent();
         txtOutDir.Text = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output");
+        foreach (var s in ImageTool.Shared.SocialPresets.All)
+            cmbSocial.Items.Add(new ComboBoxItem { Content = s.Name, Tag = s });
+        cmbSocial.SelectedIndex = 0;
     }
 
     public void Bind(IWorkspaceService workspace, IBatchService batch, ISettingsService? settings = null)
@@ -363,6 +366,37 @@ public partial class ExportPanel : UserControl
         int dot = pattern.LastIndexOf(".{ext}", StringComparison.OrdinalIgnoreCase);
         if (dot >= 0) return pattern.Insert(dot, "_{size}");
         return pattern + "_{size}";
+    }
+
+    private void BtnSocialExport_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null || _batch == null) return;
+        var paths = _workspace.Selection.ToList();
+        if (paths.Count == 0)
+        {
+            MessageBox.Show("Hãy chọn ảnh trước khi export.", "Social Export", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (cmbSocial.SelectedItem is not ComboBoxItem item || item.Tag is not ImageTool.Shared.SocialPresets.Item preset) return;
+
+        string outDir = string.IsNullOrWhiteSpace(txtOutDir.Text)
+            ? System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output")
+            : txtOutDir.Text;
+        // Tên có hậu tố kích thước để không đè bản gốc.
+        string pattern = "{name}_" + preset.Width + "x" + preset.Height + ".{ext}";
+
+        var jobs = new System.Collections.Generic.List<BatchJob>();
+        foreach (var p in paths)
+        {
+            jobs.Add(new BatchJob
+            {
+                PluginId = ExportBatchAdapter.Plugin,
+                OpType = ExportBatchAdapter.OpExport,
+                InputPath = p,
+                Params = ImageTool.Shared.SocialPresets.ToJobParams(preset, outDir, pattern),
+            });
+        }
+        _batch.EnqueueRange(jobs);
     }
 
     private void BtnContactSheet_Click(object sender, RoutedEventArgs e)

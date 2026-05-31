@@ -143,6 +143,13 @@
                 <Button x:Name="btnExportSelection" Content="Export Selection" Height="32" Background="{DynamicResource SuccessBrush}" Foreground="White" BorderThickness="0" Cursor="Hand" Click="BtnExportSelection_Click"/>
                 <TextBlock x:Name="txtEstSize" Text="" FontSize="10" Foreground="{DynamicResource AccentBrush}" Margin="0,6,0,0"/>
                 <Button x:Name="btnContactSheet" Content="Contact Sheet…" Height="28" Margin="0,8,0,0" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="BtnContactSheet_Click" ToolTip="Ghép ảnh đang chọn thành 1 file lưới (contact sheet)"/>
+
+                <TextBlock Text="Social Media" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,4"/>
+                <DockPanel Margin="0,0,0,4">
+                    <Button x:Name="btnSocialExport" DockPanel.Dock="Right" Content="Export" Width="64" Margin="6,0,0,0" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="BtnSocialExport_Click" ToolTip="Xuất đúng kích thước nền tảng (crop-to-fill + sRGB)"/>
+                    <ComboBox x:Name="cmbSocial" Height="22" SelectedIndex="0" ToolTip="Chọn kích thước chuẩn nền tảng mạng xã hội"/>
+                </DockPanel>
+
                 <TextBlock x:Name="txtHint" Text="Chọn ảnh trong browser rồi bấm Export." FontSize="10" Foreground="{DynamicResource TextDimBrush}" Margin="0,2,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </ScrollViewer>
