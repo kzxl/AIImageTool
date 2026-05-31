@@ -64,6 +64,8 @@ public partial class DevelopPanel : UserControl
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
     private TextBlock? _iccAutoInfo;    // hiển thị ICC nhúng phát hiện được (D2.2/7.3)
     private ComboBox? _cmbGradientMap;  // #5 preset gradient map
+    private TextBlock? _colorMatchInfo; // #8 color match reference label
+    private ImageTool.Imaging.ColorMatch.Stats? _colorMatchStats; // stats ảnh tham chiếu đã đo
 
     // Lensfun auto lens-correction (5.3).
     private LensfunService? _lensfun;
@@ -331,6 +333,23 @@ public partial class DevelopPanel : UserControl
         AddSlider(gUnify, "uni_hue", "Target Hue", 0, 360, 0, "0");
         AddSlider(gUnify, "uni_sat", "Target Sat", 0, 1, 0.5, "0.00");
         AddSlider(gUnify, "uni_int", "Intensity", 0, 1, 0);
+
+        // Color Match (#8): mượn tông màu từ ảnh tham chiếu (Reinhard Lab transfer).
+        var gMatch = AddGroup("Color Match", false);
+        var matchRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        _colorMatchInfo = new TextBlock { Text = "(chưa chọn ảnh tham chiếu)", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var btnMatch = new Button { Content = "Chọn ảnh...", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(6, 0, 0, 0) };
+        var btnMatchClear = new Button { Content = "✕", Padding = new Thickness(6, 3, 6, 3), Margin = new Thickness(4, 0, 0, 0), ToolTip = "Bỏ color match" };
+        DockPanel.SetDock(btnMatch, Dock.Right);
+        DockPanel.SetDock(btnMatchClear, Dock.Right);
+        btnMatch.Click += BtnColorMatch_Click;
+        btnMatchClear.Click += BtnColorMatchClear_Click;
+        matchRow.Children.Add(btnMatchClear);
+        matchRow.Children.Add(btnMatch);
+        matchRow.Children.Add(_colorMatchInfo);
+        gMatch.Children.Add(matchRow);
+        AddSlider(gMatch, "match_strength", "Match Strength", 0, 1, 0.8, "0.00");
+        gMatch.Children.Add(new TextBlock { Text = "Mượn tông màu từ 1 ảnh khác (grading đồng bộ).", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
 
         // 3D LUT (.cube)
         var gLut = AddGroup("3D LUT (.cube)", false);
@@ -790,6 +809,22 @@ public partial class DevelopPanel : UserControl
         SetVal("uni_sat", uniSat != null ? Param(path!, ColorUnifyOp.Type, "sat") : 0.5);
         SetVal("uni_int", Param(path!, ColorUnifyOp.Type, "intensity"));
 
+        // Color Match (#8): khôi phục stats + strength từ op đã lưu.
+        var cmP = FindOp(path!, ImageTool.Imaging.ColorMatchOp.Type);
+        if (cmP != null)
+        {
+            var cm = ImageTool.Imaging.ColorMatchOp.FromParams(cmP);
+            _colorMatchStats = new ImageTool.Imaging.ColorMatch.Stats(cm.ML, cm.Ma, cm.Mb, cm.SL, cm.Sa, cm.Sb);
+            SetVal("match_strength", cm.Strength);
+            if (_colorMatchInfo != null) _colorMatchInfo.Text = "(đã lưu trong ảnh)";
+        }
+        else
+        {
+            _colorMatchStats = null;
+            SetVal("match_strength", 0.8);
+            if (_colorMatchInfo != null) _colorMatchInfo.Text = "(chưa chọn ảnh tham chiếu)";
+        }
+
         // WB Kelvin
         var kelvinP = FindOp(path!, WhiteBalanceKelvinOp.Type);
         SetVal("kelvin", kelvinP != null ? Param(path!, WhiteBalanceKelvinOp.Type, "kelvin") : 6500);
@@ -1214,6 +1249,18 @@ public partial class DevelopPanel : UserControl
         };
         if (!uni.IsIdentity) ops.Add(Op(ColorUnifyOp.Type, "Color Unify", uni.ToParams()));
 
+        // 6b3) Color Match (#8): áp tông màu ảnh tham chiếu (nếu đã đo stats + strength > 0).
+        if (_colorMatchStats.HasValue)
+        {
+            var cmStats = _colorMatchStats.Value;
+            var cm = new ImageTool.Imaging.ColorMatchOp
+            {
+                ML = cmStats.ML, Ma = cmStats.Ma, Mb = cmStats.Mb, SL = cmStats.SL, Sa = cmStats.Sa, Sb = cmStats.Sb,
+                Strength = (float)GetVal("match_strength"),
+            };
+            if (!cm.IsIdentity) ops.Add(Op(ImageTool.Imaging.ColorMatchOp.Type, "Color Match", cm.ToParams()));
+        }
+
         // 6c) 3D LUT
         if (!string.IsNullOrEmpty(_lutPath))
         {
@@ -1366,6 +1413,8 @@ public partial class DevelopPanel : UserControl
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
         if (_cmbInputProfile != null) _cmbInputProfile.SelectedIndex = 0;
         if (_cmbGradientMap != null) _cmbGradientMap.SelectedIndex = 0;
+        _colorMatchStats = null;
+        if (_colorMatchInfo != null) _colorMatchInfo.Text = "(chưa chọn ảnh tham chiếu)";
         _wbGainR = 1f; _wbGainG = 1f; _wbGainB = 1f;
         ClearMasks();
         ClearHealing();
@@ -1564,6 +1613,42 @@ public partial class DevelopPanel : UserControl
         if (dlg.ShowDialog() != true) return;
         _lutPath = dlg.FileName;
         if (_lutLabel != null) _lutLabel.Text = System.IO.Path.GetFileName(_lutPath);
+        Commit();
+    }
+
+    /// <summary>Color Match (#8): chọn ảnh tham chiếu -> đo thống kê Lab -> dựng op.</summary>
+    private void BtnColorMatch_Click(object sender, RoutedEventArgs e)
+    {
+        if (_renderer == null) return;
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh tham chiếu (mượn tông màu)",
+            Filter = "Ảnh (*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.webp)|*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.webp|All files (*.*)|*.*"
+        };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            if (!_renderer.Decoders.CanDecode(dlg.FileName))
+            {
+                MessageBox.Show("Không đọc được ảnh tham chiếu.", "Color Match", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var decoded = _renderer.Decoders.Decode(dlg.FileName);
+            _colorMatchStats = ImageTool.Imaging.ColorMatch.Measure(decoded.Image);
+            if (_colorMatchInfo != null) _colorMatchInfo.Text = System.IO.Path.GetFileName(dlg.FileName);
+            Commit();
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Warn("DevelopPanel.ColorMatch", $"{dlg.FileName}: {ex.Message}");
+            MessageBox.Show("Lỗi đo màu ảnh tham chiếu.", "Color Match", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void BtnColorMatchClear_Click(object sender, RoutedEventArgs e)
+    {
+        _colorMatchStats = null;
+        if (_colorMatchInfo != null) _colorMatchInfo.Text = "(chưa chọn ảnh tham chiếu)";
         Commit();
     }
 
