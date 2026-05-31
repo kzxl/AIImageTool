@@ -104,6 +104,28 @@ public static class LightroomXmpImporter
         if (hasHsl)
             ops.Add(Op("HslMixer", "HSL / Color Mixer (LR)", hsl));
 
+        // --- Texture (-100..100 -> -1..1) ---
+        var tex = ScaledVal(crs, 100, "Texture");
+        if (tex.HasValue && MathAbs(tex.Value) > 1e-4)
+            ops.Add(Op("Texture", "Texture (LR)", new() { ["amount"] = Fmt(tex.Value) }));
+
+        // --- Color Grading 3-way hiện đại (hue 0..360, sat 0..100 -> 0..1, lum -100..100 -> -1..1) ---
+        var cgrade = new Dictionary<string, string>();
+        var zones = new (string Lr, string Key)[]
+        {
+            ("Shadow", "sh"), ("Midtone", "mid"), ("Highlight", "hi"), ("Global", "glob"),
+        };
+        bool hasCg = false;
+        foreach (var (lr, key) in zones)
+        {
+            if (TryNum(crs, "ColorGrade" + lr + "Hue", out var hv)) cgrade[$"h_{key}"] = Fmt(hv);
+            if (TryNum(crs, "ColorGrade" + lr + "Sat", out var sv)) { cgrade[$"s_{key}"] = Fmt(sv / 100.0); if (sv > 1e-4) hasCg = true; }
+            if (TryNum(crs, "ColorGrade" + lr + "Lum", out var lv)) { cgrade[$"l_{key}"] = Fmt(lv / 100.0); if (MathAbs(lv) > 1e-4) hasCg = true; }
+        }
+        if (TryNum(crs, "ColorGradeBlending", out var blend)) cgrade["blend"] = Fmt(blend / 100.0);
+        if (hasCg)
+            ops.Add(Op("ColorGrading", "Color Grading (LR)", cgrade));
+
         // --- Tone Curve (point list, 0..255 -> 0..1): tổng + per-channel R/G/B ---
         try
         {

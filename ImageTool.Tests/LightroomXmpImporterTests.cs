@@ -263,4 +263,44 @@ public class LightroomXmpImporterTests
         var ops = LightroomXmpImporter.Parse(h);
         Assert.DoesNotContain(ops, o => o.OpType == "HslMixer");
     }
+
+    [Fact]
+    public void Parse_ColorGrading_ExtractsZones()
+    {
+        const string cg = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:ColorGradeShadowHue="220" crs:ColorGradeShadowSat="30"
+                    crs:ColorGradeHighlightHue="50" crs:ColorGradeHighlightSat="20"
+                    crs:ColorGradeBlending="60"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(cg);
+        var g = ops.FirstOrDefault(o => o.OpType == "ColorGrading");
+        Assert.NotNull(g);
+        Assert.Equal(220, double.Parse(g!.Params["h_sh"], System.Globalization.CultureInfo.InvariantCulture), 1);
+        Assert.Equal(0.3, double.Parse(g.Params["s_sh"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(0.6, double.Parse(g.Params["blend"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        var op = ImageTool.Imaging.ColorGradingOp.FromParams(g.Params);
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void Parse_Texture_Extracts()
+    {
+        const string t = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:Texture="45"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(t);
+        var tex = ops.FirstOrDefault(o => o.OpType == "Texture");
+        Assert.NotNull(tex);
+        Assert.Equal(0.45, double.Parse(tex!.Params["amount"], System.Globalization.CultureInfo.InvariantCulture), 3);
+    }
 }
