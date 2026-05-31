@@ -227,6 +227,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Điều hướng ảnh bằng ← → hoạt động cả khi chưa có ảnh active (miễn là có ảnh trong danh sách),
+        // và bất kể focus đang ở Grid/Filmstrip/Browser (PreviewKeyDown tunneling).
+        if (!typingNow && !ctrlMod && _workspace.Images.Count > 0)
+        {
+            if (e.Key == System.Windows.Input.Key.Left) { NavigateActiveImage(-1); e.Handled = true; return; }
+            if (e.Key == System.Windows.Input.Key.Right) { NavigateActiveImage(+1); e.Handled = true; return; }
+        }
+
         if (_workspace.ActiveImage == null) return;
         var path = _workspace.ActiveImage;
         bool ctrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0;
@@ -289,9 +297,7 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.D7: ApplyLabelToTargets(ColorLabel.Yellow); e.Handled = true; break;
             case System.Windows.Input.Key.D8: ApplyLabelToTargets(ColorLabel.Green); e.Handled = true; break;
             case System.Windows.Input.Key.D9: ApplyLabelToTargets(ColorLabel.Blue); e.Handled = true; break;
-            // Điều hướng ảnh kế tiếp/trước (kiểu Lightroom): mũi tên trái/phải.
-            case System.Windows.Input.Key.Left: if (!typing) { NavigateActiveImage(-1); e.Handled = true; } break;
-            case System.Windows.Input.Key.Right: if (!typing) { NavigateActiveImage(+1); e.Handled = true; } break;
+            // (← → điều hướng ảnh đã xử lý sớm phía trên, trước guard ActiveImage.)
         }
     }
 

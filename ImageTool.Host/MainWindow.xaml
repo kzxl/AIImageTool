@@ -13,7 +13,8 @@
             <DockPanel LastChildFill="True" Margin="10,0">
                 <!-- Left: Open / Recent -->
                 <Button x:Name="btnOpenFolder" DockPanel.Dock="Left" Content="📁  Open" Padding="14,6"
-                        VerticalAlignment="Center" Click="BtnOpenFolder_Click"/>
+                        VerticalAlignment="Center" Click="BtnOpenFolder_Click"
+                        ToolTip="Mở thư mục ảnh để duyệt"/>
                 <Button x:Name="btnRecent" DockPanel.Dock="Left" Content="▾" Width="28" Padding="6,6"
                         Margin="2,0,4,0" VerticalAlignment="Center" Click="BtnRecent_Click"
                         ToolTip="Recent folders"/>
@@ -57,7 +58,8 @@
                         <TextBlock Text="★≥" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
                                    VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <ComboBox x:Name="cmbQuickRating" Width="46" Height="22" SelectedIndex="0"
-                                  SelectionChanged="CmbQuickRating_SelectionChanged">
+                                  SelectionChanged="CmbQuickRating_SelectionChanged"
+                                  ToolTip="Lọc: chỉ hiện ảnh có rating ≥ giá trị này">
                             <ComboBoxItem Content="—"/>
                             <ComboBoxItem Content="1"/>
                             <ComboBoxItem Content="2"/>
@@ -69,11 +71,11 @@
                         <Button Tag="None"   Width="16" Height="16" Background="Transparent"
                                 BorderBrush="{DynamicResource BorderHoverBrush}" BorderThickness="1" Margin="2,0" Click="QuickLabel_Click"
                                 ToolTip="Tất cả label"/>
-                        <Button Tag="Red"    Width="16" Height="16" Background="Red"          BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
-                        <Button Tag="Yellow" Width="16" Height="16" Background="Gold"         BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
-                        <Button Tag="Green"  Width="16" Height="16" Background="LimeGreen"    BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
-                        <Button Tag="Blue"   Width="16" Height="16" Background="DodgerBlue"   BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
-                        <Button Tag="Purple" Width="16" Height="16" Background="MediumPurple" BorderThickness="0" Margin="2,0" Click="QuickLabel_Click"/>
+                        <Button Tag="Red"    Width="16" Height="16" Background="Red"          BorderThickness="0" Margin="2,0" Click="QuickLabel_Click" ToolTip="Lọc nhãn Đỏ"/>
+                        <Button Tag="Yellow" Width="16" Height="16" Background="Gold"         BorderThickness="0" Margin="2,0" Click="QuickLabel_Click" ToolTip="Lọc nhãn Vàng"/>
+                        <Button Tag="Green"  Width="16" Height="16" Background="LimeGreen"    BorderThickness="0" Margin="2,0" Click="QuickLabel_Click" ToolTip="Lọc nhãn Lục"/>
+                        <Button Tag="Blue"   Width="16" Height="16" Background="DodgerBlue"   BorderThickness="0" Margin="2,0" Click="QuickLabel_Click" ToolTip="Lọc nhãn Lam"/>
+                        <Button Tag="Purple" Width="16" Height="16" Background="MediumPurple" BorderThickness="0" Margin="2,0" Click="QuickLabel_Click" ToolTip="Lọc nhãn Tím"/>
                         <Border Width="1" Background="{DynamicResource BorderBrush_}" Margin="8,2"/>
                         <Button x:Name="btnFilterPick" Content="✓" Width="22" Height="20" Margin="2,0" Padding="0"
                                 Click="FilterPick_Click" ToolTip="Chỉ hiện ảnh Pick (bấm lại để bỏ)"/>

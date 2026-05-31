@@ -16,16 +16,16 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <Button x:Name="btnModeSingle" Content="◰  Single (E)" Padding="10,4" Margin="0,0,4,0"
                             Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
-                            Click="BtnModeSingle_Click"/>
+                            Click="BtnModeSingle_Click" ToolTip="Xem 1 ảnh lớn (phím E)"/>
                     <Button x:Name="btnModeGrid" Content="▦  Grid (G)" Padding="10,4" Margin="0,0,4,0"
                             Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
-                            Click="BtnModeGrid_Click"/>
+                            Click="BtnModeGrid_Click" ToolTip="Lưới thu nhỏ nhiều ảnh (phím G)"/>
                     <Button x:Name="btnModeCull" Content="❐  Cull (C)" Padding="10,4" Margin="0,0,4,0"
                             Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
-                            Click="BtnModeCull_Click"/>
+                            Click="BtnModeCull_Click" ToolTip="So sánh 2x2 để chọn lọc ảnh (phím C)"/>
                     <Button x:Name="btnModeFull" Content="⛶  Full (F)" Padding="10,4" Margin="0,0,4,0"
                             Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
-                            Click="BtnModeFull_Click"/>
+                            Click="BtnModeFull_Click" ToolTip="Toàn màn hình (phím F, Esc để thoát)"/>
                     <Button x:Name="btnCrop" Content="◳  Crop (R)" Padding="10,4" Margin="12,0,4,0"
                             Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"
                             Click="BtnCrop_Click" ToolTip="Bật/tắt cắt ảnh (kéo khung)"/>
@@ -109,7 +109,7 @@
                     <TextBlock x:Name="txtZoom" Text="100%" Foreground="#DDD" FontSize="10"/>
                 </Border>
                 <Border x:Name="afterBadge" HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,30,30,0" Background="#CC55C1E7" CornerRadius="2" Padding="6,2"
+                        Margin="0,30,30,0" Background="{DynamicResource EditedBadgeBrush}" CornerRadius="2" Padding="6,2"
                         Visibility="Collapsed">
                     <DockPanel>
                         <TextBlock Text="AFTER · kéo để so sánh" Foreground="#000" FontSize="10" FontWeight="SemiBold"/>
@@ -171,7 +171,7 @@
                                             HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6"
                                             Background="{Binding LabelBrush}"/>
                                     <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
-                                            Background="#CC55C1E7" CornerRadius="2" Padding="3,1"
+                                            Background="{DynamicResource EditedBadgeBrush}" CornerRadius="2" Padding="3,1"
                                             Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"
                                             ToolTip="Đã chỉnh sửa">
                                         <TextBlock Text="✎" Foreground="#000" FontSize="10" FontWeight="Bold"/>
@@ -180,12 +180,12 @@
                                             Background="#CC222222" CornerRadius="3" Padding="5,1"
                                             Visibility="{Binding IsStackCover, Converter={StaticResource BoolToVis}}"
                                             ToolTip="Nhóm ảnh chụp liên tiếp">
-                                        <TextBlock Text="{Binding StackBadge}" Foreground="#FFD24E" FontSize="11" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding StackBadge}" Foreground="{DynamicResource RatingBrush}" FontSize="11" FontWeight="Bold"/>
                                     </Border>
                                     <Border VerticalAlignment="Bottom" Background="#AA000000" Padding="4,2">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding RatingDisplay}"
-                                                       Foreground="#FFD24E" FontSize="10"/>
+                                                       Foreground="{DynamicResource RatingBrush}" FontSize="10"/>
                                             <TextBlock Text="{Binding FileName}" Foreground="#DDD" FontSize="10"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>

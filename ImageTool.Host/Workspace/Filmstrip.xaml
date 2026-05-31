@@ -35,12 +35,12 @@
                                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3"
                                         Background="{Binding LabelBrush}"/>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="3"
-                                        Background="#CC55C1E7" CornerRadius="2" Padding="2,0"
+                                        Background="{DynamicResource EditedBadgeBrush}" CornerRadius="2" Padding="2,0"
                                         Visibility="{Binding IsEdited, Converter={StaticResource BoolToVis}}"
                                         ToolTip="Đã chỉnh sửa">
                                     <TextBlock Text="✎" Foreground="#000" FontSize="8" FontWeight="Bold"/>
                                 </Border>
-                                <TextBlock Text="{Binding RatingDisplay}" Foreground="#FFD24E" FontSize="9"
+                                <TextBlock Text="{Binding RatingDisplay}" Foreground="{DynamicResource RatingBrush}" FontSize="9"
                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,3,2"/>
                             </Grid>
                         </Border>
