@@ -1,9 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:ImageTool.Host"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- Converters -->
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis"/>
 
     <!-- Palette -->
     <Color x:Key="BgBase">#FF141414</Color>
@@ -37,6 +39,10 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Danger}"/>
     <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource Selection}"/>
+
+    <!-- Data-viz / badge accents (rating sao, badge "đã chỉnh sửa") -->
+    <SolidColorBrush x:Key="RatingBrush" Color="{StaticResource AccentWarm}"/>
+    <SolidColorBrush x:Key="EditedBadgeBrush" Color="#CC55C1E7"/>
 
     <!-- Text -->
     <Style TargetType="{x:Type TextBlock}">

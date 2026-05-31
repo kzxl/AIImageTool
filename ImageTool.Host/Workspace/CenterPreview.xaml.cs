@@ -321,8 +321,13 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.Subtract:
                 StepZoom(1 / 1.25); e.Handled = true; break;
             case Key.Escape:
-                if (_zoom > 1.0) { ResetZoom(); e.Handled = true; }
+                if (_cropMode) { ToggleCropMode(); e.Handled = true; }       // thoát crop trước tiên
+                else if (_zoom > 1.0) { ResetZoom(); e.Handled = true; }
+                else if (_compareMode) { ToggleCompareMode(); e.Handled = true; }
                 else if (_mode == LighttableMode.Full) { SetMode(LighttableMode.Single); e.Handled = true; }
+                break;
+            case Key.Enter: // Enter áp crop (thoát chế độ crop, giữ khung) khi đang crop
+                if (_cropMode) { ToggleCropMode(); e.Handled = true; }
                 break;
             case Key.Space: // giữ Space để pan (kéo chuột trái), kiểu Photoshop
                 if (!_spaceHeld)

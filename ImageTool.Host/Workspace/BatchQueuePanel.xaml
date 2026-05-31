@@ -27,34 +27,40 @@
         </Border>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="icJobs">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Padding="6,4" Margin="0,1" Background="{DynamicResource BgPanelBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <DockPanel Grid.Row="0">
-                                    <TextBlock DockPanel.Dock="Left" Text="{Binding StatusGlyph}" Foreground="{Binding StatusBrush}" Width="14" FontSize="11"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                        <Button Content="↺" Width="18" Height="18" Margin="2,0" Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
-                                                Tag="{Binding Id}" Click="BtnRetry_Click" ToolTip="Retry"/>
-                                        <Button Content="✕" Width="18" Height="18" Margin="2,0" Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
-                                                Tag="{Binding Id}" Click="BtnRemove_Click" ToolTip="Cancel/Remove"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
-                                <Grid Grid.Row="1" Margin="14,2,0,0">
-                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Height="3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BgInputBrush}" BorderThickness="0"/>
-                                    <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextDimBrush}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <Grid>
+                <ItemsControl x:Name="icJobs">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="6,4" Margin="0,1" Background="{DynamicResource BgPanelBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <DockPanel Grid.Row="0">
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding StatusGlyph}" Foreground="{Binding StatusBrush}" Width="14" FontSize="11"/>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <Button Content="↺" Width="18" Height="18" Margin="2,0" Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
+                                                    Tag="{Binding Id}" Click="BtnRetry_Click" ToolTip="Retry"/>
+                                            <Button Content="✕" Width="18" Height="18" Margin="2,0" Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}" BorderThickness="0" Cursor="Hand"
+                                                    Tag="{Binding Id}" Click="BtnRemove_Click" ToolTip="Cancel/Remove"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                    <Grid Grid.Row="1" Margin="14,2,0,0">
+                                        <ProgressBar Value="{Binding Progress}" Maximum="100" Height="3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BgInputBrush}" BorderThickness="0"/>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextDimBrush}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Hàng đợi trống.&#x0a;Export hoặc chạy plugin để thêm tác vụ."
+                           FontSize="11" Foreground="{DynamicResource TextDimBrush}" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="12,24,12,0" TextWrapping="Wrap"
+                           Visibility="{Binding HasItems, ElementName=icJobs, Converter={StaticResource InverseBoolToVis}}"/>
+            </Grid>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

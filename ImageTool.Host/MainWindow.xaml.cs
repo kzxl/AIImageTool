@@ -270,7 +270,24 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.D7: ApplyLabelToTargets(ColorLabel.Yellow); e.Handled = true; break;
             case System.Windows.Input.Key.D8: ApplyLabelToTargets(ColorLabel.Green); e.Handled = true; break;
             case System.Windows.Input.Key.D9: ApplyLabelToTargets(ColorLabel.Blue); e.Handled = true; break;
+            // Điều hướng ảnh kế tiếp/trước (kiểu Lightroom): mũi tên trái/phải.
+            case System.Windows.Input.Key.Left: if (!typing) { NavigateActiveImage(-1); e.Handled = true; } break;
+            case System.Windows.Input.Key.Right: if (!typing) { NavigateActiveImage(+1); e.Handled = true; } break;
         }
+    }
+
+    /// <summary>Chuyển ảnh active sang ảnh kế tiếp (+1) / trước đó (-1) trong danh sách hiện tại.</summary>
+    private void NavigateActiveImage(int delta)
+    {
+        var images = _workspace.Images;
+        if (images.Count == 0) return;
+        int idx = _workspace.ActiveImage != null ? images.IndexOf(_workspace.ActiveImage) : -1;
+        int next = idx < 0 ? (delta > 0 ? 0 : images.Count - 1) : idx + delta;
+        next = Math.Clamp(next, 0, images.Count - 1);
+        if (next == idx) return;
+        var path = images[next];
+        _workspace.SetActiveImage(path);
+        _workspace.SetSelection(new[] { path });
     }
 
     /// <summary>Ảnh đích cho thao tác meta nhanh: toàn bộ selection, nếu rỗng thì ảnh active.</summary>

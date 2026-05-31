@@ -59,36 +59,42 @@
         </Border>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="icHistory">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Padding="8,4" Margin="0,1" Cursor="Hand"
-                                MouseLeftButtonUp="HistoryItem_Click">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsFuture}" Value="True">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Left" Text="{Binding Marker}" FontSize="11"
-                                           Foreground="{Binding MarkerBrush}" Width="14"/>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding TimeShort}"
-                                           FontSize="9" Foreground="{DynamicResource TextDimBrush}"/>
-                                <TextBlock Text="{Binding Title}" FontSize="11"
-                                           Foreground="{Binding TextBrush}" TextTrimming="CharacterEllipsis"/>
-                            </DockPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <Grid>
+                <ItemsControl x:Name="icHistory">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="8,4" Margin="0,1" Cursor="Hand"
+                                    MouseLeftButtonUp="HistoryItem_Click">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource BgHoverBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsFuture}" Value="True">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Marker}" FontSize="11"
+                                               Foreground="{Binding MarkerBrush}" Width="14"/>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TimeShort}"
+                                               FontSize="9" Foreground="{DynamicResource TextDimBrush}"/>
+                                    <TextBlock Text="{Binding Title}" FontSize="11"
+                                               Foreground="{Binding TextBrush}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Chưa có chỉnh sửa nào.&#x0a;Chọn ảnh và kéo slider để bắt đầu."
+                           FontSize="11" Foreground="{DynamicResource TextDimBrush}" TextAlignment="Center"
+                           HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,24,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding HasItems, ElementName=icHistory, Converter={StaticResource InverseBoolToVis}}"/>
+            </Grid>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

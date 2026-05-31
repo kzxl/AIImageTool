@@ -508,6 +508,30 @@ public partial class DevelopPanel : UserControl
         return content;
     }
 
+    /// <summary>Tooltip mô tả ngắn cho từng slider Develop (theo key). Giúp khám phá tác dụng.</summary>
+    private static readonly Dictionary<string, string> SliderTips = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["exposure"] = "Độ sáng tổng thể (EV). Kéo phải = sáng hơn.",
+        ["contrast"] = "Tương phản: tăng làm vùng sáng sáng hơn, tối tối hơn.",
+        ["highlights"] = "Khôi phục/kéo vùng SÁNG (mây, bầu trời cháy).",
+        ["shadows"] = "Mở/đè vùng TỐI (chi tiết trong bóng).",
+        ["whites"] = "Điểm trắng: ngưỡng vùng sáng nhất.",
+        ["blacks"] = "Điểm đen: ngưỡng vùng tối nhất.",
+        ["temp"] = "Cân bằng trắng: ấm (vàng) ↔ lạnh (xanh).",
+        ["tint"] = "Cân bằng trắng: lục ↔ tím.",
+        ["vibrance"] = "Tăng độ rực màu thông minh, bảo vệ tông da.",
+        ["saturation"] = "Độ bão hoà toàn ảnh (mọi màu như nhau).",
+        ["clarity"] = "Tương phản cục bộ tầm trung (độ 'nét' khối).",
+        ["texture"] = "Chi tiết bề mặt tần số nhỏ (da, vải, lá).",
+        ["dehaze"] = "Khử mờ/sương, tăng tương phản khí quyển.",
+        ["sharpen"] = "Làm sắc nét (unsharp mask).",
+        ["sharpenRadius"] = "Bán kính làm sắc nét.",
+        ["sharpenMasking"] = "Chỉ làm sắc cạnh mạnh, bảo vệ vùng phẳng khỏi nhiễu.",
+        ["grain"] = "Thêm hạt phim.",
+        ["vignette"] = "Tối/sáng 4 góc ảnh.",
+        ["straighten"] = "Xoay thẳng đường chân trời (độ).",
+    };
+
     private void AddSlider(Panel host, string key, string label, double min, double max, double def, string fmt = "0.00")
     {
         _defaults[key] = def;
@@ -516,8 +540,11 @@ public partial class DevelopPanel : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
 
+        string? tip = SliderTips.TryGetValue(key, out var t) ? t : null;
+
         var lbl = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
         lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
+        if (tip != null) lbl.ToolTip = tip;
         Grid.SetColumn(lbl, 0);
 
         var slider = new Slider
@@ -526,6 +553,7 @@ public partial class DevelopPanel : UserControl
             SmallChange = (max - min) / 100.0, LargeChange = (max - min) / 10.0,
             VerticalAlignment = VerticalAlignment.Center, IsMoveToPointEnabled = true, Tag = key
         };
+        if (tip != null) slider.ToolTip = tip;
         Grid.SetColumn(slider, 1);
 
         var input = new TextBox
