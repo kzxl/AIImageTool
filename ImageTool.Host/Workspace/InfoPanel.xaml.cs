@@ -338,6 +338,28 @@ public partial class InfoPanel : UserControl
 
     private void AddKeyword_Click(object sender, RoutedEventArgs e) => AddKeywordFromInput();
 
+    /// <summary>Auto-tag từ EXIF (#3): đọc metadata ảnh hiện tại -> sinh keyword phân cấp -> thêm.</summary>
+    private void AutoTagExif_Click(object sender, RoutedEventArgs e)
+    {
+        if (_meta == null || string.IsNullOrEmpty(_currentPath)) return;
+        try
+        {
+            var meta = ImageTool.Shared.ExifReader.ReadMetadata(_currentPath);
+            var tags = ImageTool.Shared.ExifAutoTagger.Generate(meta);
+            if (tags.Count == 0)
+            {
+                MessageBox.Show("Ảnh không có metadata EXIF để tạo keyword.", "Auto-tag",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            foreach (var t in tags) ApplyAddKeyword(t);
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Warn("InfoPanel.AutoTagExif", $"{_currentPath}: {ex.Message}");
+        }
+    }
+
     private void AddKeywordFromInput()
     {
         var n = ImageTool.Shared.KeywordHelper.Normalize(txtKeywordInput.Text);

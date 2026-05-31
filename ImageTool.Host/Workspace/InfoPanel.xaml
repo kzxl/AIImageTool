@@ -109,6 +109,10 @@
                                  Padding="4,3" KeyDown="KeywordInput_KeyDown"
                                  ToolTip="Nhập keyword (phân cấp bằng /, vd Animal/Dog). Enter để thêm."/>
                     </DockPanel>
+                    <Button x:Name="btnAutoTag" Content="✨ Auto-tag từ EXIF" Padding="6,2" Margin="0,4,0,0"
+                            HorizontalAlignment="Left" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                            BorderThickness="0" Cursor="Hand" Click="AutoTagExif_Click"
+                            ToolTip="Tự thêm keyword từ metadata: máy ảnh, ống kính, dải ISO, tiêu cự, năm/tháng chụp."/>
 
                     <TextBlock Text="Gợi ý" FontSize="9" Foreground="{DynamicResource TextDimBrush}" Margin="2,6,0,2"/>
                     <ItemsControl x:Name="icKeywordSuggest">
