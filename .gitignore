@@ -38,3 +38,6 @@ Publish/
 model_offline/
 *.safetensors
 *.log
+
+# Native libs tuỳ chọn (LibRaw...): thả vào native/ để bật RAW demosaic. Không commit binary bên thứ ba.
+native/
