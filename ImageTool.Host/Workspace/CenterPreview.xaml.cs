@@ -299,6 +299,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.C: SetMode(LighttableMode.Cull); e.Handled = true; break;
             case Key.F: SetMode(LighttableMode.Full); e.Handled = true; break;
             case Key.R: ToggleCropMode(); e.Handled = true; break;
+            case Key.O: if (_cropMode) { CycleCropGuide(); e.Handled = true; } break;
             case Key.J: ToggleClipOverlay(); e.Handled = true; break;
             case Key.OemOpenBrackets: _developPanel?.RotateActive(-1); e.Handled = true; break; // [
             case Key.OemCloseBrackets: _developPanel?.RotateActive(1); e.Handled = true; break;  // ]

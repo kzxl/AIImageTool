@@ -17,6 +17,15 @@ public partial class CenterPreview
     private Point _cropDragStart;
     private (float X, float Y, float W, float H) _cropAtDragStart;
     private const double HandleSize = 12;
+    // Guide overlay khi crop: 0=Thirds, 1=Golden ratio, 2=Diagonals, 3=Grid, 4=None.
+    private int _cropGuide;
+
+    /// <summary>Đổi kiểu lưới guide crop (phím O kiểu Lightroom). Chỉ tác dụng khi đang crop.</summary>
+    public void CycleCropGuide()
+    {
+        _cropGuide = (_cropGuide + 1) % 5;
+        if (_cropMode) DrawCropOverlay();
+    }
 
     /// <summary>Liên kết DevelopPanel để đồng bộ crop rectangle 2 chiều.</summary>
     public void BindCropPanel(DevelopPanel panel)
@@ -161,13 +170,9 @@ public partial class CenterPreview
         Canvas.SetTop(border, ct);
         cropOverlay.Children.Add(border);
 
-        // Đường thirds.
+        // Đường guide bố cục theo _cropGuide.
         var thin = new SolidColorBrush(Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF));
-        for (int i = 1; i < 3; i++)
-        {
-            cropOverlay.Children.Add(new Line { X1 = cl + cw * i / 3, Y1 = ct, X2 = cl + cw * i / 3, Y2 = ct + ch, Stroke = thin, StrokeThickness = 0.5 });
-            cropOverlay.Children.Add(new Line { X1 = cl, Y1 = ct + ch * i / 3, X2 = cl + cw, Y2 = ct + ch * i / 3, Stroke = thin, StrokeThickness = 0.5 });
-        }
+        DrawCropGuides(cl, ct, cw, ch, thin);
 
         // 8 tay nắm.
         AddHandle(cl, ct, "nw"); AddHandle(cl + cw / 2, ct, "n"); AddHandle(cl + cw, ct, "ne");
@@ -181,6 +186,33 @@ public partial class CenterPreview
         var r = new Rectangle { Width = w, Height = h, Fill = b, IsHitTestVisible = false };
         Canvas.SetLeft(r, x); Canvas.SetTop(r, y);
         cropOverlay.Children.Add(r);
+    }
+
+    /// <summary>Vẽ lưới guide bố cục theo _cropGuide (0=Thirds,1=Golden,2=Diagonals,3=Grid,4=None).</summary>
+    private void DrawCropGuides(double cl, double ct, double cw, double ch, Brush stroke)
+    {
+        void V(double fx) => cropOverlay.Children.Add(new Line { X1 = cl + cw * fx, Y1 = ct, X2 = cl + cw * fx, Y2 = ct + ch, Stroke = stroke, StrokeThickness = 0.5, IsHitTestVisible = false });
+        void H(double fy) => cropOverlay.Children.Add(new Line { X1 = cl, Y1 = ct + ch * fy, X2 = cl + cw, Y2 = ct + ch * fy, Stroke = stroke, StrokeThickness = 0.5, IsHitTestVisible = false });
+        void Diag(double x1, double y1, double x2, double y2) => cropOverlay.Children.Add(
+            new Line { X1 = cl + cw * x1, Y1 = ct + ch * y1, X2 = cl + cw * x2, Y2 = ct + ch * y2, Stroke = stroke, StrokeThickness = 0.5, IsHitTestVisible = false });
+
+        switch (_cropGuide)
+        {
+            case 0: // Thirds
+                V(1.0 / 3); V(2.0 / 3); H(1.0 / 3); H(2.0 / 3);
+                break;
+            case 1: // Golden ratio (phi ~0.618)
+                const double phi = 0.61803398875;
+                V(1 - phi); V(phi); H(1 - phi); H(phi);
+                break;
+            case 2: // Diagonals (2 đường chéo)
+                Diag(0, 0, 1, 1); Diag(1, 0, 0, 1);
+                break;
+            case 3: // Grid 4x4
+                for (int i = 1; i < 4; i++) { V(i / 4.0); H(i / 4.0); }
+                break;
+            // 4 = None: không vẽ
+        }
     }
 
     private void AddHandle(double cx, double cy, string tag)
