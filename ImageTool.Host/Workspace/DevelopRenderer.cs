@@ -97,6 +97,34 @@ public sealed class DevelopRenderer
         return _pipeline.Render(baseImg, ops, count);
     }
 
+    /// <summary>
+    /// Render thumbnail NHỎ tại 1 mốc history (pointer) cho History panel (11.11). Dùng proxy đã cache,
+    /// downscale tiếp về <paramref name="longEdge"/> px rồi replay tới pointer. Trả BitmapSource Freeze.
+    /// </summary>
+    public async Task<BitmapSource?> RenderThumbnailAsync(
+        string path, IReadOnlyList<EditOperation> ops, int pointer, int longEdge = 48)
+    {
+        var opsCopy = new List<EditOperation>(ops);
+        int count = Math.Clamp(pointer, 0, opsCopy.Count);
+        try
+        {
+            return await Task.Run(() =>
+            {
+                var proxy = GetOrBuildProxy(path, CancellationToken.None);
+                if (proxy == null) return null;
+                // Thu nhỏ proxy về thumbnail trước khi replay -> rất nhanh, đủ xem khác biệt từng bước.
+                int le = Math.Max(proxy.Width, proxy.Height);
+                float tScale = le > longEdge ? (float)longEdge / le : 1f;
+                var thumb = tScale < 1f ? Downscale(proxy, tScale) : proxy.Clone();
+                // scale tổng so với full-res = _cachedScale * tScale (cho op có bán kính).
+                float fullScale = _cachedScale * tScale;
+                var rendered = _pipeline.RenderScaled(thumb, opsCopy, fullScale, count);
+                return ToBitmapSource(rendered);
+            });
+        }
+        catch (Exception ex) { ImageTool.Shared.AppLog.Error("DevelopRenderer.RenderThumbnail", path, ex); return null; }
+    }
+
     private LinearImage? GetOrBuildProxy(string path, CancellationToken token)
     {
         lock (_cacheLock)

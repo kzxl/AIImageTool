@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using ImageTool.Core;
 
 namespace ImageTool.Host.Workspace;
@@ -10,6 +13,7 @@ public partial class HistoryPanel : UserControl
 {
     private IWorkspaceService? _workspace;
     private IHistoryService? _history;
+    private DevelopRenderer? _renderer;
 
     public ObservableCollection<HistoryRow> Rows { get; } = new();
     public ObservableCollection<SnapshotRow> Snapshots { get; } = new();
@@ -21,10 +25,11 @@ public partial class HistoryPanel : UserControl
         icSnapshots.ItemsSource = Snapshots;
     }
 
-    public void Bind(IWorkspaceService workspace, IHistoryService history)
+    public void Bind(IWorkspaceService workspace, IHistoryService history, DevelopRenderer? renderer = null)
     {
         _workspace = workspace;
         _history = history;
+        _renderer = renderer;
         _workspace.ActiveImageChanged += (s, e) => Refresh(e.CurrentPath);
         _history.HistoryChanged += (s, e) =>
         {
@@ -75,7 +80,27 @@ public partial class HistoryPanel : UserControl
                     Name = s.Name,
                     TimeShort = s.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm"),
                 });
+
+            // Thumbnail từng bước (11.11): render nền, gán dần khi xong (không chặn UI).
+            RenderThumbnails(path, stack);
         });
+    }
+
+    /// <summary>Render thumbnail nhỏ cho từng mốc history (off-UI) rồi gán vào row tương ứng.</summary>
+    private async void RenderThumbnails(string path, IReadOnlyList<EditOperation> stack)
+    {
+        if (_renderer == null || !_renderer.CanDecode(path)) return;
+        var ops = new List<EditOperation>(stack);
+        // Chụp lại danh sách row hiện tại để khớp index (Refresh có thể chạy lại).
+        var rowsSnapshot = Rows.ToList();
+        for (int i = 0; i < rowsSnapshot.Count; i++)
+        {
+            var row = rowsSnapshot[i];
+            int pointer = row.Index;
+            var bmp = await _renderer.RenderThumbnailAsync(path, ops, pointer, 44);
+            // Nếu user đã đổi ảnh trong lúc render -> bỏ (row không còn trong Rows).
+            if (bmp != null && Rows.Contains(row)) row.Thumb = bmp;
+        }
     }
 
     private void HistoryItem_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -134,7 +159,7 @@ public class SnapshotRow
     public string TimeShort { get; set; } = "";
 }
 
-public class HistoryRow
+public class HistoryRow : INotifyPropertyChanged
 {
     public int Index { get; set; }
     public string Title { get; set; } = "";
@@ -144,4 +169,13 @@ public class HistoryRow
     public bool IsFuture { get; set; }
     public Brush TextBrush => IsFuture ? Brushes.DimGray : (IsActive ? Brushes.White : (Brush)new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)));
     public Brush MarkerBrush => IsFuture ? Brushes.DimGray : (IsActive ? Brushes.Gold : (Brush)new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)));
+
+    private BitmapSource? _thumb;
+    public BitmapSource? Thumb
+    {
+        get => _thumb;
+        set { _thumb = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumb))); }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         filmstrip.Bind(_workspace, _thumbs, _meta);
         filmstrip.BindContext(_history, _developClipboard);
         infoPanel.Bind(_workspace, _meta, _settings);
-        historyPanel.Bind(_workspace, _history);
+        historyPanel.Bind(_workspace, _history, centerView.Renderer);
         batchPanel.Bind(_batch);
         exportPanel.Bind(_workspace, _batch, _settings);
         stylePanel.Bind(_styles, _workspace, _batch);

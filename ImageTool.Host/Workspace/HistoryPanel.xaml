@@ -78,14 +78,18 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Marker}" FontSize="11"
-                                               Foreground="{Binding MarkerBrush}" Width="14"/>
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TimeShort}"
-                                               FontSize="9" Foreground="{DynamicResource TextDimBrush}"/>
-                                    <TextBlock Text="{Binding Title}" FontSize="11"
-                                               Foreground="{Binding TextBrush}" TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Left" Text="{Binding Marker}" FontSize="11"
+                                           Foreground="{Binding MarkerBrush}" Width="14"/>
+                                <Border DockPanel.Dock="Left" Width="44" Height="33" Margin="0,0,6,0"
+                                        Background="{DynamicResource BgInputBrush}" CornerRadius="2">
+                                    <Image Source="{Binding Thumb}" Stretch="Uniform"/>
+                                </Border>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding TimeShort}"
+                                           FontSize="9" Foreground="{DynamicResource TextDimBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Title}" FontSize="11"
+                                           Foreground="{Binding TextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            </DockPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
