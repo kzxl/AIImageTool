@@ -161,4 +161,27 @@ public class LightroomXmpImporterTests
         var ops = LightroomXmpImporter.Parse(linear);
         Assert.DoesNotContain(ops, o => o.OpType == "ToneCurve"); // identity -> bỏ
     }
+
+    [Fact]
+    public void Parse_PerChannelToneCurve_ExtractsRedChannel()
+    {
+        const string perCh = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/">
+                  <crs:ToneCurvePV2012Red>
+                    <rdf:Seq><rdf:li>0, 20</rdf:li><rdf:li>255, 235</rdf:li></rdf:Seq>
+                  </crs:ToneCurvePV2012Red>
+                </rdf:Description>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(perCh);
+        var curve = ops.FirstOrDefault(o => o.OpType == "ToneCurve");
+        Assert.NotNull(curve);
+        Assert.True(curve!.Params.ContainsKey("r"));
+        Assert.False(curve.Params.ContainsKey("rgb")); // chỉ có kênh đỏ
+        var op = ImageTool.Imaging.ToneCurveOp.FromParams(curve.Params);
+        Assert.False(op.IsIdentity);
+    }
 }

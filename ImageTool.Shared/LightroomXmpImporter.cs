@@ -73,12 +73,23 @@ public static class LightroomXmpImporter
         if (crs.TryGetValue("ConvertToGrayscale", out var bw) && bw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase))
             ops.Add(Op("BlackWhite", "B&W (LR)", new() { ["enabled"] = "true" }));
 
-        // --- Tone Curve (point list, 0..255 -> 0..1) ---
+        // --- Tone Curve (point list, 0..255 -> 0..1): tổng + per-channel R/G/B ---
         try
         {
-            var curve = ParseToneCurve(xmpContent);
-            if (curve != null)
-                ops.Add(Op("ToneCurve", "Tone Curve (LR)", new() { ["rgb"] = curve }));
+            var doc = System.Xml.Linq.XDocument.Parse(xmpContent);
+            string? rgb = ParseToneCurve(doc, "ToneCurvePV2012") ?? ParseToneCurve(doc, "ToneCurve");
+            string? cr = ParseToneCurve(doc, "ToneCurvePV2012Red");
+            string? cg = ParseToneCurve(doc, "ToneCurvePV2012Green");
+            string? cb = ParseToneCurve(doc, "ToneCurvePV2012Blue");
+            if (rgb != null || cr != null || cg != null || cb != null)
+            {
+                var cp = new Dictionary<string, string>();
+                if (rgb != null) cp["rgb"] = rgb;
+                if (cr != null) cp["r"] = cr;
+                if (cg != null) cp["g"] = cg;
+                if (cb != null) cp["b"] = cb;
+                ops.Add(Op("ToneCurve", "Tone Curve (LR)", cp));
+            }
         }
         catch (Exception ex) { AppLog.Warn("LrXmp.ToneCurve", ex.Message); }
 
@@ -86,14 +97,12 @@ public static class LightroomXmpImporter
     }
 
     /// <summary>
-    /// Trích đường cong tổng từ crs:ToneCurvePV2012 (hoặc ToneCurve cũ) — rdf:Seq các "x, y" trong thang
-    /// 0..255. Chuẩn hoá về 0..1, serialize "x,y;x,y" cho ToneCurveOp. Trả null nếu không có / là identity.
+    /// Trích 1 đường cong từ element crs có tên <paramref name="localName"/> — rdf:Seq các "x, y" trong
+    /// thang 0..255. Chuẩn hoá về 0..1, serialize "x,y;x,y". Trả null nếu không có / là identity.
     /// </summary>
-    private static string? ParseToneCurve(string xmp)
+    private static string? ParseToneCurve(XDocument doc, string localName)
     {
-        var doc = XDocument.Parse(xmp);
-        // Ưu tiên PV2012; fallback ToneCurve (Process 2010).
-        var el = FindCrsElement(doc, "ToneCurvePV2012") ?? FindCrsElement(doc, "ToneCurve");
+        var el = FindCrsElement(doc, localName);
         if (el == null) return null;
 
         var pts = new List<(double X, double Y)>();
