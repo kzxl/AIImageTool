@@ -127,12 +127,15 @@ public sealed class StandardImageDecoder : IImageDecoder
             if (icc == null) return meta;
             byte[] bytes = icc.ToByteArray();
             var desc = IccProfileReader.TryReadDescription(bytes);
+            ColorSpaces.Space? space = null;
             if (!string.IsNullOrWhiteSpace(desc))
             {
                 meta["iccDesc"] = desc!;
-                var space = IccProfileReader.GuessSpace(desc);
-                if (space.HasValue) meta["iccSpace"] = ColorSpaces.Name(space.Value);
+                space = IccProfileReader.GuessSpace(desc);
             }
+            // Fallback: nếu tên không khớp gamut quen thuộc, nhận diện theo colorant matrix thật.
+            space ??= ColorSpaces.MatchSpace(IccProfileReader.TryReadRgbToXyzD65(bytes) ?? System.Array.Empty<float>());
+            if (space.HasValue) meta["iccSpace"] = ColorSpaces.Name(space.Value);
         }
         catch { /* ICC lỗi -> bỏ qua, không metadata */ }
         return meta;
