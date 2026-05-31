@@ -44,8 +44,9 @@ Darktable module -> op của ta đã làm:
       perceptual (nâng `ColorGradingOp`).
 - [~] **D2.2** Working color space + input/output profile: `ColorSpaces` (ma trận RGB↔XYZ D65 cho
       sRGB/AdobeRGB/Rec2020/DisplayP3 + invert/mul 3x3) + `InputProfileOp` quy ảnh nguồn gamut rộng về
-      working linear sRGB bằng ma trận 3x3, nối UI "Color Management" + test. Đọc file ICC nhúng (managed
-      parser) + output profile khi export CHƯA (cần parse ICC).
+      working linear sRGB bằng ma trận 3x3, nối UI "Color Management" + test. **Đọc ICC nhúng ĐÃ XONG:**
+      `IccProfileReader` (parse header + tag 'desc' v2/v4 mluc, đoán gamut) -> tự gợi ý Input Profile theo
+      ICC ảnh (`DetectSpaceFromFile`), có test. Output ICC profile khi export + parse ICC -> ma trận đầy đủ CHƯA.
 - [x] **D2.3** `VelviaOp` / saturation thông minh theo độ rực + luminance (giống module velvia).
 - [x] **D2.4** `ColorContrastOp` — chỉnh tương phản trục a*/b* (green-magenta, blue-yellow) trong Lab.
 - [x] **D2.5** `RgbLevelsOp` — levels (black/gray/white point per-channel + auto). Auto Levels:
