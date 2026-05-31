@@ -99,4 +99,20 @@ public static class IccProfileReader
 
     private static string Ascii(byte[] b, int o, int len)
         => Encoding.ASCII.GetString(b, o, len);
+
+    /// <summary>
+    /// Đọc gamut từ ICC nhúng của 1 FILE (chỉ Identify metadata, không decode pixel -> nhanh). Trả null
+    /// nếu không có ICC / không nhận diện được. Dùng cho UI gợi ý Input Profile mà không cần decode cả ảnh.
+    /// </summary>
+    public static ColorSpaces.Space? DetectSpaceFromFile(string path)
+    {
+        try
+        {
+            var info = SixLabors.ImageSharp.Image.Identify(path);
+            var icc = info?.Metadata?.IccProfile;
+            if (icc == null) return null;
+            return GuessSpace(TryReadDescription(icc.ToByteArray()));
+        }
+        catch { return null; }
+    }
 }

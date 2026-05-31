@@ -798,8 +798,17 @@ public partial class DevelopPanel : UserControl
         if (_cmbInputProfile != null)
         {
             var ipP = FindOp(path!, InputProfileOp.Type);
-            ColorSpaces.TryParse(ipP != null && ipP.TryGetValue("space", out var sp) ? sp : "sRGB", out var ipSpace);
-            _cmbInputProfile.SelectedIndex = (int)ipSpace;
+            if (ipP != null)
+            {
+                ColorSpaces.TryParse(ipP.TryGetValue("space", out var sp) ? sp : "sRGB", out var ipSpace);
+                _cmbInputProfile.SelectedIndex = (int)ipSpace;
+            }
+            else
+            {
+                // Chưa có profile lưu -> tự gợi ý theo ICC nhúng (chỉ chọn trong dropdown, áp khi user chỉnh).
+                var detected = ImageTool.Imaging.IccProfileReader.DetectSpaceFromFile(path!);
+                _cmbInputProfile.SelectedIndex = detected.HasValue ? (int)detected.Value : 0;
+            }
         }
 
         // Auto WB gains (ChannelGain)
