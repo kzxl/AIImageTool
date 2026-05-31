@@ -21,6 +21,9 @@
                 <Button x:Name="btnImport" DockPanel.Dock="Left" Content="⬇  Import" Padding="14,6"
                         VerticalAlignment="Center" Margin="4,0,12,0" Click="BtnImport_Click"
                         ToolTip="Import photos into catalog"/>
+                <Button x:Name="btnMore" DockPanel.Dock="Left" Content="⋯  Tools" Padding="12,6"
+                        VerticalAlignment="Center" Margin="0,0,12,0" Click="BtnMore_Click"
+                        ToolTip="Công cụ trên ảnh đang chọn: Merge HDR, Focus Stack, Batch Rename"/>
 
                 <!-- Right: Pop Out + Mode Switcher + Quick Filter -->
                 <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="◐" Width="30" Padding="6,6"

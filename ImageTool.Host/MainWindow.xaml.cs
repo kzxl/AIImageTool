@@ -456,6 +456,35 @@ public partial class MainWindow : Window
         dlg.ShowDialog();
     }
 
+    /// <summary>Menu công cụ tổng (Merge HDR / Focus Stack / Batch Rename) trên selection — đưa tính
+    /// năng vốn ẩn trong context menu ra toolbar cho dễ tìm.</summary>
+    private void BtnMore_Click(object sender, RoutedEventArgs e)
+    {
+        var targets = MetaTargets(); // selection, hoặc ảnh active nếu selection rỗng
+        var menu = new System.Windows.Controls.ContextMenu();
+
+        var miHdr = new System.Windows.Controls.MenuItem { Header = "Merge to HDR (Exposure Fusion)", IsEnabled = targets.Count >= 2 };
+        miHdr.Click += (_, _) => ImageContextMenu.RunMerge(targets, ImageTool.Shared.MergeService.Mode.Hdr);
+        menu.Items.Add(miHdr);
+
+        var miFocus = new System.Windows.Controls.MenuItem { Header = "Focus Stack (nét toàn bộ)", IsEnabled = targets.Count >= 2 };
+        miFocus.Click += (_, _) => ImageContextMenu.RunMerge(targets, ImageTool.Shared.MergeService.Mode.FocusStack);
+        menu.Items.Add(miFocus);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        var miRename = new System.Windows.Controls.MenuItem { Header = "Batch Rename...", IsEnabled = targets.Count >= 1 };
+        miRename.Click += (_, _) => ImageContextMenu.RunBatchRename(targets);
+        menu.Items.Add(miRename);
+
+        if (targets.Count == 0)
+            menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(chọn ảnh trước)", IsEnabled = false });
+
+        menu.PlacementTarget = btnMore;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
     private void BtnRecent_Click(object sender, RoutedEventArgs e)
     {
         var menu = new System.Windows.Controls.ContextMenu();

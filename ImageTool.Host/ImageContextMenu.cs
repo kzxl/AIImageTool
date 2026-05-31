@@ -144,15 +144,7 @@ public static class ImageContextMenu
 
         // --- Batch Rename (13.7) ---
         var miRename = new MenuItem { Header = "Batch Rename..." };
-        miRename.Click += (_, _) =>
-        {
-            var targets = Targets();
-            var dlg = new BatchRenameDialog(targets)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow
-            };
-            dlg.ShowDialog();
-        };
+        miRename.Click += (_, _) => RunBatchRename(Targets());
         menu.Items.Add(miRename);
 
         // --- Merge nhiều ảnh (HDR / Focus Stack) ---
@@ -168,8 +160,21 @@ public static class ImageContextMenu
         return menu;
     }
 
+    /// <summary>Mở dialog Batch Rename cho danh sách ảnh (dùng chung context menu + toolbar).</summary>
+    public static void RunBatchRename(List<string> targets)
+    {
+        if (targets == null || targets.Count == 0)
+        {
+            MessageBox.Show("Hãy chọn ít nhất 1 ảnh để đổi tên hàng loạt.", "Batch Rename",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var dlg = new BatchRenameDialog(targets) { Owner = System.Windows.Application.Current?.MainWindow };
+        dlg.ShowDialog();
+    }
+
     /// <summary>Decode + ghép các ảnh selection (HDR/Focus) ở thread nền, báo kết quả qua MessageBox.</summary>
-    private static async void RunMerge(List<string> targets, MergeService.Mode mode)
+    public static async void RunMerge(List<string> targets, MergeService.Mode mode)
     {
         string label = mode == MergeService.Mode.FocusStack ? "Focus Stack" : "Merge to HDR";
         if (targets.Count < 2)
