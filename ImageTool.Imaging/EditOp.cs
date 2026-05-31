@@ -120,6 +120,7 @@ public sealed class EditOpRegistry
         HighlightReconstructionOp.Register(reg);
         LiquifyOp.Register(reg);
         FilmNegativeOp.Register(reg);
+        LensProfileOp.Register(reg);
         // Masked op cần chính registry để dựng inner op -> đăng ký bằng closure.
         reg.Register(MaskedOp.Type, p => MaskedOp.FromParams(p, reg));
         return reg;

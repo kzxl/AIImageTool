@@ -32,6 +32,7 @@ public static class OpDisplayNames
         ["Perspective"] = "Perspective",
         ["Liquify"] = "Liquify / Warp",
         ["FilmNegative"] = "Film Negative",
+        ["LensProfile"] = "Lens Profile (auto)",
         ["WBKelvin"] = "White Balance (K)",
         ["SelectiveColor"] = "Selective Color",
         ["ColorUnify"] = "Color Unify",
