@@ -4,9 +4,6 @@ using ImageTool.Imaging;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -41,7 +38,6 @@ public class ExportBatchAdapter : IBatchCapable
             progress.Report(5);
 
             string format = job.Params.GetValueOrDefault("format", "png").ToLowerInvariant();
-            int quality = int.TryParse(job.Params.GetValueOrDefault("quality", "90"), out var q) ? q : 90;
             string outDir = job.Params.GetValueOrDefault("outDir", "");
             string pattern = job.Params.GetValueOrDefault("pattern", "{name}.{ext}");
             int maxLong = int.TryParse(job.Params.GetValueOrDefault("maxLongEdge", "0"), out var ml) ? ml : 0;
@@ -123,23 +119,11 @@ public class ExportBatchAdapter : IBatchCapable
             if (copyExif)
                 ExifWriter.PreserveExif(job.InputPath, image);
 
-            switch (format)
-            {
-                case "jpg":
-                case "jpeg":
-                    image.SaveAsJpeg(outPath, new JpegEncoder { Quality = quality });
-                    break;
-                case "webp":
-                    image.SaveAsWebp(outPath, new WebpEncoder { Quality = quality });
-                    break;
-                case "tif":
-                case "tiff":
-                    image.SaveAsTiff(outPath);
-                    break;
-                default:
-                    image.SaveAsPng(outPath, new PngEncoder());
-                    break;
-            }
+            // Nén sâu: dựng encoder từ params (Squoosh-style), hỗ trợ dung lượng mục tiêu (target KB).
+            long targetBytes = long.TryParse(job.Params.GetValueOrDefault("targetKB", "0"), out var tkb) && tkb > 0
+                ? tkb * 1024L : 0L;
+            var result = TargetSizeEncoder.Encode(image, format, job.Params, targetBytes);
+            File.WriteAllBytes(outPath, result.Data);
             image.Dispose();
 
             // XMP sidecar (tùy chọn) cạnh file gốc.

@@ -30,6 +30,70 @@
                     <Slider x:Name="slQuality" Minimum="40" Maximum="100" Value="90"/>
                 </DockPanel>
 
+                <Expander x:Name="expAdvanced" Header="Nén nâng cao" IsExpanded="False" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8">
+                    <StackPanel Margin="2,6,0,0">
+                        <!-- Target size (jpg/webp lossy) -->
+                        <StackPanel x:Name="pnlTargetSize">
+                            <TextBlock Text="Dung lượng mục tiêu (KB, 0 = bỏ qua)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="txtTargetKB" Text="0" Background="{DynamicResource BgInputBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"
+                                     ToolTip="Tự dò quality để file ≤ mục tiêu (chỉ JPEG / WebP lossy)."/>
+                        </StackPanel>
+
+                        <!-- JPEG -->
+                        <StackPanel x:Name="pnlJpeg">
+                            <TextBlock Text="JPEG Chroma Subsampling" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="cmbJpegSubsample" Height="22" SelectedIndex="0" Margin="0,0,0,6">
+                                <ComboBoxItem Content="4:2:0 (nhỏ nhất)" Tag="420"/>
+                                <ComboBoxItem Content="4:2:2 (cân bằng)" Tag="422"/>
+                                <ComboBoxItem Content="4:4:4 (sắc nét, lớn hơn)" Tag="444"/>
+                            </ComboBox>
+                            <CheckBox x:Name="chkJpegProgressive" Content="Progressive JPEG" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,0,6"/>
+                        </StackPanel>
+
+                        <!-- PNG -->
+                        <StackPanel x:Name="pnlPng">
+                            <TextBlock Text="PNG Compression Level (0–9)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <DockPanel Margin="0,0,0,6">
+                                <TextBlock Text="{Binding Value, ElementName=slPngLevel, StringFormat={}{0:F0}}" DockPanel.Dock="Right" Foreground="{DynamicResource AccentBrush}" Width="24"/>
+                                <Slider x:Name="slPngLevel" Minimum="0" Maximum="9" Value="6" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            </DockPanel>
+                            <CheckBox x:Name="chkPngPalette" Content="Palette (PNG-8, giảm mạnh dung lượng)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,0,0,4"/>
+                            <DockPanel x:Name="pnlPngColors" Margin="0,0,0,6">
+                                <TextBlock Text="{Binding Value, ElementName=slPngColors, StringFormat={}{0:F0} màu}" DockPanel.Dock="Right" Foreground="{DynamicResource AccentBrush}" Width="60"/>
+                                <Slider x:Name="slPngColors" Minimum="2" Maximum="256" Value="256" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <!-- WEBP -->
+                        <StackPanel x:Name="pnlWebp">
+                            <TextBlock Text="WebP Mode" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="cmbWebpMode" Height="22" SelectedIndex="0" Margin="0,0,0,6">
+                                <ComboBoxItem Content="Lossy (quality)" Tag="lossy"/>
+                                <ComboBoxItem Content="Lossless" Tag="lossless"/>
+                                <ComboBoxItem Content="Near-lossless" Tag="nearlossless"/>
+                            </ComboBox>
+                            <TextBlock Text="WebP Effort / Method (0 nhanh – 6 nhỏ nhất)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <DockPanel Margin="0,0,0,6">
+                                <TextBlock Text="{Binding Value, ElementName=slWebpMethod, StringFormat={}{0:F0}}" DockPanel.Dock="Right" Foreground="{DynamicResource AccentBrush}" Width="24"/>
+                                <Slider x:Name="slWebpMethod" Minimum="0" Maximum="6" Value="4" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <!-- TIFF -->
+                        <StackPanel x:Name="pnlTiff">
+                            <TextBlock Text="TIFF Compression" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="cmbTiffCompression" Height="22" SelectedIndex="0" Margin="0,0,0,6">
+                                <ComboBoxItem Content="LZW" Tag="lzw"/>
+                                <ComboBoxItem Content="Deflate (nhỏ nhất)" Tag="deflate"/>
+                                <ComboBoxItem Content="PackBits" Tag="packbits"/>
+                                <ComboBoxItem Content="None (không nén)" Tag="none"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <CheckBox x:Name="chkStripMeta" Content="Xoá metadata (giảm dung lượng cho web)" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="11" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Expander>
+
                 <TextBlock Text="Max Long Edge (px, 0 = giữ nguyên)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="txtMaxLong" Text="0" Background="{DynamicResource BgInputBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Padding="4,2" Height="22" Margin="0,0,0,8"/>
 

@@ -35,13 +35,35 @@ public partial class ExportPanel : UserControl
                 UpdateEstimate();
             });
         // Cập nhật ước lượng dung lượng khi đổi thông số.
-        cmbFormat.SelectionChanged += (_, _) => UpdateEstimate();
+        cmbFormat.SelectionChanged += (_, _) => { UpdateAdvancedVisibility(); UpdateEstimate(); };
         slQuality.ValueChanged += (_, _) => UpdateEstimate();
         txtMaxLong.TextChanged += (_, _) => UpdateEstimate();
         foreach (var chk in new[] { chkSize2048, chkSize1024, chkSize512, chkSize256 })
         { chk.Checked += (_, _) => UpdateEstimate(); chk.Unchecked += (_, _) => UpdateEstimate(); }
+        chkPngPalette.Checked += (_, _) => UpdatePngPaletteVisibility();
+        chkPngPalette.Unchecked += (_, _) => UpdatePngPaletteVisibility();
+        UpdateAdvancedVisibility();
+        UpdatePngPaletteVisibility();
         RefreshPresetList();
     }
+
+    /// <summary>Hiện đúng nhóm tuỳ chọn nén theo định dạng đang chọn (gọn, không rối UI).</summary>
+    private void UpdateAdvancedVisibility()
+    {
+        string fmt = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
+        Visibility V(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
+        bool isJpeg = fmt is "jpg" or "jpeg";
+        bool isWebpLossy = fmt == "webp"; // target áp dụng cho webp (lossy) — code-behind chỉ gửi param.
+        pnlJpeg.Visibility = V(isJpeg);
+        pnlPng.Visibility = V(fmt == "png");
+        pnlWebp.Visibility = V(fmt == "webp");
+        pnlTiff.Visibility = V(fmt is "tif" or "tiff");
+        pnlTargetSize.Visibility = V(isJpeg || isWebpLossy);
+    }
+
+    private void UpdatePngPaletteVisibility()
+        => pnlPngColors.Visibility = chkPngPalette.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
 
     /// <summary>Ước lượng dung lượng file xuất cho ảnh active (xấp xỉ, hiển thị nhanh).</summary>
     private void UpdateEstimate()
@@ -199,6 +221,7 @@ public partial class ExportPanel : UserControl
         string pattern = string.IsNullOrWhiteSpace(txtPattern.Text) ? "{name}.{ext}" : txtPattern.Text;
         string outputSharpen = (cmbSharpen.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "none";
         string copyExif = chkCopyExif.IsChecked == true ? "true" : "false";
+        var adv = CollectAdvancedParams();
 
         // Xuất đa kích thước: thu thập các size được tick. Rỗng -> dùng maxLong đơn (như cũ).
         var sizes = new System.Collections.Generic.List<int>();
@@ -214,20 +237,56 @@ public partial class ExportPanel : UserControl
                 foreach (var sz in sizes)
                 {
                     string pat = pattern.Contains("{size}") ? pattern : InsertSizeToken(pattern);
-                    jobs.Add(MakeJob(p, format, quality, sz, outDir, pat, outputSharpen, copyExif, sz));
+                    jobs.Add(MakeJob(p, format, quality, sz, outDir, pat, outputSharpen, copyExif, sz, adv));
                 }
             }
             else
             {
-                jobs.Add(MakeJob(p, format, quality, maxLong, outDir, pattern, outputSharpen, copyExif, null));
+                jobs.Add(MakeJob(p, format, quality, maxLong, outDir, pattern, outputSharpen, copyExif, null, adv));
             }
         }
 
         _batch.EnqueueRange(jobs);
     }
 
+    /// <summary>Thu thập tham số nén nâng cao (Squoosh-style) theo định dạng đang chọn.</summary>
+    private Dictionary<string, string> CollectAdvancedParams()
+    {
+        var d = new Dictionary<string, string>();
+        if (int.TryParse(txtTargetKB.Text, out var tkb) && tkb > 0) d["targetKB"] = tkb.ToString();
+        if (chkStripMeta.IsChecked == true) d["stripMetadata"] = "true";
+
+        string fmt = (cmbFormat.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "png";
+        switch (fmt)
+        {
+            case "jpg":
+            case "jpeg":
+                d["jpegSubsample"] = (cmbJpegSubsample.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "420";
+                if (chkJpegProgressive.IsChecked == true) d["jpegProgressive"] = "true";
+                break;
+            case "png":
+                d["pngLevel"] = ((int)slPngLevel.Value).ToString();
+                if (chkPngPalette.IsChecked == true)
+                {
+                    d["pngColorType"] = "palette";
+                    d["pngPaletteColors"] = ((int)slPngColors.Value).ToString();
+                }
+                break;
+            case "webp":
+                d["webpMode"] = (cmbWebpMode.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lossy";
+                d["webpMethod"] = ((int)slWebpMethod.Value).ToString();
+                break;
+            case "tif":
+            case "tiff":
+                d["tiffCompression"] = (cmbTiffCompression.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "lzw";
+                break;
+        }
+        return d;
+    }
+
     private static BatchJob MakeJob(string path, string format, int quality, int maxLong,
-        string outDir, string pattern, string outputSharpen, string copyExif, int? sizeToken)
+        string outDir, string pattern, string outputSharpen, string copyExif, int? sizeToken,
+        Dictionary<string, string>? advanced = null)
     {
         var p = new Dictionary<string, string>
         {
@@ -239,6 +298,8 @@ public partial class ExportPanel : UserControl
             ["outputSharpen"] = outputSharpen,
             ["copyExif"] = copyExif,
         };
+        if (advanced != null)
+            foreach (var kv in advanced) p[kv.Key] = kv.Value;
         if (sizeToken.HasValue) p["sizeToken"] = sizeToken.Value.ToString();
         return new BatchJob
         {
