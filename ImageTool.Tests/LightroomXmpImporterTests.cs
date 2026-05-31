@@ -303,4 +303,38 @@ public class LightroomXmpImporterTests
         Assert.NotNull(tex);
         Assert.Equal(0.45, double.Parse(tex!.Params["amount"], System.Globalization.CultureInfo.InvariantCulture), 3);
     }
+
+    [Fact]
+    public void Parse_Grain_ExtractsAmountSizeRoughness()
+    {
+        const string g = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:GrainAmount="50" crs:GrainSize="100" crs:GrainFrequency="80"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(g);
+        var grain = ops.FirstOrDefault(o => o.OpType == "Grain");
+        Assert.NotNull(grain);
+        Assert.Equal(0.5, double.Parse(grain!.Params["amount"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(5.0, double.Parse(grain.Params["size"], System.Globalization.CultureInfo.InvariantCulture), 3); // size=100 -> 5px
+        Assert.Equal(0.8, double.Parse(grain.Params["roughness"], System.Globalization.CultureInfo.InvariantCulture), 3);
+    }
+
+    [Fact]
+    public void Parse_Grain_ZeroAmount_Ignored()
+    {
+        const string g = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:GrainAmount="0" crs:GrainSize="50"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(g);
+        Assert.DoesNotContain(ops, o => o.OpType == "Grain");
+    }
 }

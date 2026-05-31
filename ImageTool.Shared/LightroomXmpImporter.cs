@@ -69,6 +69,15 @@ public static class LightroomXmpImporter
         if (sharp.HasValue && sharp.Value > 1e-4)
             ops.Add(Op("Sharpen", "Sharpen (LR)", new() { ["amount"] = Fmt(Math.Clamp(sharp.Value, 0, 1)) }));
 
+        // --- Grain (Amount 0..100 -> 0..1; Size 0..100 -> 0.5..5 px; Frequency 0..100 -> roughness 0..1) ---
+        if (TryNum(crs, "GrainAmount", out var gAmt) && gAmt > 1e-4)
+        {
+            var grain = new Dictionary<string, string> { ["amount"] = Fmt(gAmt / 100.0) };
+            if (TryNum(crs, "GrainSize", out var gSize)) grain["size"] = Fmt(0.5 + gSize / 100.0 * 4.5);
+            if (TryNum(crs, "GrainFrequency", out var gFreq)) grain["roughness"] = Fmt(gFreq / 100.0);
+            ops.Add(Op("Grain", "Grain (LR)", grain));
+        }
+
         // --- B&W ---
         if (crs.TryGetValue("ConvertToGrayscale", out var bw) && bw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase))
             ops.Add(Op("BlackWhite", "B&W (LR)", new() { ["enabled"] = "true" }));
