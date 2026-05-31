@@ -173,4 +173,44 @@ public class LensfunTests
         var reg = EditOpRegistry.CreateDefault();
         Assert.True(reg.Has(LensProfileOp.Type));
     }
+
+    // ---- LensfunService bridge ----
+
+    [Fact]
+    public void Service_BuildOpFor_MatchedLens()
+    {
+        var db = LensfunDatabase.ParseXml(Sample);
+        var svc = new ImageTool.Shared.LensfunService(db);
+        Assert.True(svc.HasDatabase);
+
+        var op = svc.BuildOpFor("Canon EF 50mm f/1.8 STM", 50f);
+        Assert.NotNull(op);
+        Assert.Equal("poly3", op!.DistModel);
+        Assert.Equal(0.012f, op.Dk1, 4);
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void Service_BuildOpFor_UnknownLens_Null()
+    {
+        var svc = new ImageTool.Shared.LensfunService(LensfunDatabase.ParseXml(Sample));
+        Assert.Null(svc.BuildOpFor("Nikon 85mm f/1.4", 85f));
+        Assert.Null(svc.BuildOpFor(null, 50f));
+    }
+
+    [Fact]
+    public void Service_MatchLensName()
+    {
+        var svc = new ImageTool.Shared.LensfunService(LensfunDatabase.ParseXml(Sample));
+        Assert.Equal("Canon EF 24-70mm f/2.8L", svc.MatchLensName("EF 24-70mm f/2.8L"));
+        Assert.Null(svc.MatchLensName("Sigma 35mm"));
+    }
+
+    [Fact]
+    public void Service_NoDatabase_BuildsNull()
+    {
+        var svc = new ImageTool.Shared.LensfunService(new LensfunDatabase());
+        Assert.False(svc.HasDatabase);
+        Assert.Null(svc.BuildOpFor("Canon EF 50mm f/1.8 STM", 50f));
+    }
 }

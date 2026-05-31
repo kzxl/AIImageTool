@@ -41,3 +41,6 @@ model_offline/
 
 # Native libs tuỳ chọn (LibRaw...): thả vào native/ để bật RAW demosaic. Không commit binary bên thứ ba.
 native/
+
+# Lensfun DB tuỳ chọn (5.3): thả XML vào lensfun/ để bật hiệu chỉnh ống kính tự động.
+lensfun/

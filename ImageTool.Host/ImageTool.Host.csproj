@@ -34,4 +34,16 @@
     <Message Importance="high" Text="LibRaw native: đã copy @(NativeRawDll->'%(Filename)%(Extension)', ', ') vào output." />
   </Target>
 
+  <!--
+    Lensfun DB TUỲ CHỌN (5.3): bỏ các file XML lensfun vào "lensfun/" cạnh solution để bật hiệu chỉnh
+    ống kính tự động. Không có file -> bỏ qua, dùng chỉnh tay. Copy giữ cấu trúc thư mục con.
+  -->
+  <ItemGroup>
+    <LensfunXml Include="$(MSBuildProjectDirectory)\..\lensfun\**\*.xml" />
+  </ItemGroup>
+  <Target Name="CopyLensfun" AfterTargets="Build" Condition="'@(LensfunXml)' != ''">
+    <Copy SourceFiles="@(LensfunXml)" DestinationFolder="$(OutDir)lensfun\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Lensfun: đã copy @(LensfunXml->Count()) file XML vào output\lensfun." />
+  </Target>
+
 </Project>
