@@ -184,4 +184,45 @@ public class LightroomXmpImporterTests
         var op = ImageTool.Imaging.ToneCurveOp.FromParams(curve.Params);
         Assert.False(op.IsIdentity);
     }
+
+    [Fact]
+    public void Parse_SplitToning_ExtractsHueSat()
+    {
+        const string st = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:SplitToningShadowHue="220"
+                    crs:SplitToningShadowSaturation="40"
+                    crs:SplitToningHighlightHue="50"
+                    crs:SplitToningHighlightSaturation="30"
+                    crs:SplitToningBalance="-20"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(st);
+        var sp = ops.FirstOrDefault(o => o.OpType == "SplitToning");
+        Assert.NotNull(sp);
+        Assert.Equal(220, double.Parse(sp!.Params["shHue"], System.Globalization.CultureInfo.InvariantCulture), 1);
+        Assert.Equal(0.4, double.Parse(sp.Params["shSat"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(0.3, double.Parse(sp.Params["hiSat"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        Assert.Equal(-0.2, double.Parse(sp.Params["balance"], System.Globalization.CultureInfo.InvariantCulture), 3);
+        var op = ImageTool.Imaging.SplitToningOp.FromParams(sp.Params);
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void Parse_SplitToning_NoSaturation_Ignored()
+    {
+        const string st = """
+            <x:xmpmeta xmlns:x="adobe:ns:meta/">
+              <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+                    crs:SplitToningShadowHue="220" crs:SplitToningHighlightHue="50"/>
+              </rdf:RDF>
+            </x:xmpmeta>
+            """;
+        var ops = LightroomXmpImporter.Parse(st);
+        Assert.DoesNotContain(ops, o => o.OpType == "SplitToning"); // sat=0 -> bỏ
+    }
 }

@@ -73,6 +73,19 @@ public static class LightroomXmpImporter
         if (crs.TryGetValue("ConvertToGrayscale", out var bw) && bw.Trim().Equals("True", StringComparison.OrdinalIgnoreCase))
             ops.Add(Op("BlackWhite", "B&W (LR)", new() { ["enabled"] = "true" }));
 
+        // --- Split Toning (hue 0..360 giữ nguyên, sat 0..100 -> 0..1, balance -100..100 -> -1..1) ---
+        var split = new Dictionary<string, string>();
+        if (TryNum(crs, "SplitToningHighlightHue", out var hh)) split["hiHue"] = Fmt(hh);
+        if (TryNum(crs, "SplitToningHighlightSaturation", out var hs)) split["hiSat"] = Fmt(hs / 100.0);
+        if (TryNum(crs, "SplitToningShadowHue", out var sh2)) split["shHue"] = Fmt(sh2);
+        if (TryNum(crs, "SplitToningShadowSaturation", out var ss)) split["shSat"] = Fmt(ss / 100.0);
+        if (TryNum(crs, "SplitToningBalance", out var sbal)) split["balance"] = Fmt(sbal / 100.0);
+        // chỉ thêm op khi có saturation (nếu không split toning vô hiệu).
+        bool hasSplit = (split.TryGetValue("hiSat", out var hsv) && double.Parse(hsv, CultureInfo.InvariantCulture) > 1e-4)
+                     || (split.TryGetValue("shSat", out var ssv) && double.Parse(ssv, CultureInfo.InvariantCulture) > 1e-4);
+        if (hasSplit)
+            ops.Add(Op("SplitToning", "Split Toning (LR)", split));
+
         // --- Tone Curve (point list, 0..255 -> 0..1): tổng + per-channel R/G/B ---
         try
         {
