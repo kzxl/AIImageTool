@@ -475,12 +475,12 @@ public partial class DevelopPanel : UserControl
         {
             Header = header,
             IsExpanded = expanded,
-            Foreground = Brushes.Gainsboro,
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 2, 0, 2),
             Content = content
         };
+        exp.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
         panelSliders.Children.Add(exp);
         return content;
     }
@@ -493,7 +493,8 @@ public partial class DevelopPanel : UserControl
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
 
-        var lbl = new TextBlock { Text = label, Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        var lbl = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
         Grid.SetColumn(lbl, 0);
 
         var slider = new Slider
