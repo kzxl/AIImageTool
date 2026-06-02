@@ -38,8 +38,9 @@ public partial class CenterPreview
     private void BrushOverlay_MouseMove(object sender, MouseEventArgs e)
     {
         if (!_brushing || _brushMask == null) return;
-        // Polygon: chỉ thêm đỉnh khi click (không thêm liên tục khi kéo).
-        if (_brushMask.MaskType == ImageTool.Imaging.PolygonMask.Type) return;
+        // Polygon/Path: chỉ thêm đỉnh khi click (không thêm liên tục khi kéo).
+        if (_brushMask.MaskType == ImageTool.Imaging.PolygonMask.Type ||
+            _brushMask.MaskType == ImageTool.Imaging.PathMask.Type) return;
         AddBrushPointFrom(e.GetPosition(brushOverlay));
     }
 

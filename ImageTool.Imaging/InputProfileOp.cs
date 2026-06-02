@@ -20,12 +20,30 @@ public sealed class InputProfileOp : IEditOp
 
     public ColorSpaces.Space Source = ColorSpaces.Space.Srgb;
 
-    public bool IsIdentity => Source == ColorSpaces.Space.Srgb;
+    /// <summary>
+    /// Ma trận RGB(linear nguồn)->XYZ (D65) tuỳ chỉnh (9 phần tử) — vd colorant matrix từ ICC nhúng
+    /// hoặc camera matrix (DCP/DNG ColorMatrix đã chuẩn hoá về D65). Khi != null, ƯU TIÊN hơn Source:
+    /// quy nguồn -> working sRGB bằng (XYZ->sRGB) * (nguồn->XYZ). Nền tảng cho DCP/camera profile.
+    /// </summary>
+    public float[]? SourceMatrix;
+
+    public bool IsIdentity => SourceMatrix == null && Source == ColorSpaces.Space.Srgb;
+
+    private float[] WorkingMatrix()
+    {
+        if (SourceMatrix != null && SourceMatrix.Length == 9)
+        {
+            // (XYZ -> sRGB) * (nguồn -> XYZ).
+            float[] xyzToSrgb = ColorSpaces.Invert3x3(ColorSpaces.RgbToXyzD65(ColorSpaces.Space.Srgb));
+            return ColorSpaces.Mul3x3(xyzToSrgb, SourceMatrix);
+        }
+        return ColorSpaces.ToWorkingMatrix(Source);
+    }
 
     public void Apply(LinearImage image, float scale)
     {
         if (IsIdentity) return;
-        float[] m = ColorSpaces.ToWorkingMatrix(Source);
+        float[] m = WorkingMatrix();
         float m00 = m[0], m01 = m[1], m02 = m[2];
         float m10 = m[3], m11 = m[4], m12 = m[5];
         float m20 = m[6], m21 = m[7], m22 = m[8];
@@ -41,12 +59,33 @@ public sealed class InputProfileOp : IEditOp
         });
     }
 
-    public Dictionary<string, string> ToParams() => new() { ["space"] = ColorSpaces.Name(Source) };
+    public Dictionary<string, string> ToParams()
+    {
+        var d = new Dictionary<string, string> { ["space"] = ColorSpaces.Name(Source) };
+        if (SourceMatrix != null && SourceMatrix.Length == 9)
+            d["srcMatrix"] = string.Join(",", System.Array.ConvertAll(SourceMatrix,
+                x => x.ToString("R", CultureInfo.InvariantCulture)));
+        return d;
+    }
 
     public static InputProfileOp FromParams(IReadOnlyDictionary<string, string> p)
     {
         ColorSpaces.TryParse(EditOpRegistry.S(p, "space"), out var s);
-        return new InputProfileOp { Source = s };
+        var op = new InputProfileOp { Source = s };
+        string mx = EditOpRegistry.S(p, "srcMatrix");
+        if (!string.IsNullOrWhiteSpace(mx))
+        {
+            var parts = mx.Split(',');
+            if (parts.Length == 9)
+            {
+                var m = new float[9];
+                bool ok = true;
+                for (int i = 0; i < 9; i++)
+                    ok &= float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out m[i]);
+                if (ok) op.SourceMatrix = m;
+            }
+        }
+        return op;
     }
     public static void Register(EditOpRegistry reg) => reg.Register(Type, FromParams);
 }

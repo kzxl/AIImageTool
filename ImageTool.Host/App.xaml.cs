@@ -17,7 +17,7 @@ public partial class App : Application
             LogException("UI Crash (Dispatcher)", e.Exception);
             MessageBox.Show(
                 $"Lỗi giao diện nghiêm trọng:\n{e.Exception.GetType().Name}: {e.Exception.Message}\n\nLog: {CrashLogPath}",
-                "Crash Insulator", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Aurora Studio", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
@@ -92,7 +92,8 @@ public partial class App : Application
         services.AddSingleton<IBatchService, BatchService>();
         services.AddSingleton<IModelDownloader, ModelDownloader>();
         services.AddSingleton<IStyleService, StyleService>();
-        services.AddSingleton<ICatalogService, CatalogService>();
+        services.AddSingleton<ICatalogService>(sp =>
+            new CatalogService(sp.GetRequiredService<IImageMetaService>()));
         services.AddSingleton<PluginLoader>();
         services.AddSingleton<AiWorkerManager>();
         services.AddSingleton<AiMaskService>();
@@ -124,6 +125,13 @@ public partial class App : Application
             if (styleSvc != null)
                 batchSvc?.RegisterCapability(new ImageTool.Shared.StyleBatchAdapter(styleSvc));
 
+            // Đồng bộ curation (rating/label/pick/keywords) từ sidecar vào catalog khi user đổi,
+            // để Smart Collection + Advanced Search phản ánh ngay (chỉ cập nhật ảnh đã import).
+            var metaSvc = (IImageMetaService)_serviceProvider.GetService(typeof(IImageMetaService))!;
+            var catalogSvc = (ICatalogService)_serviceProvider.GetService(typeof(ICatalogService))!;
+            if (metaSvc != null && catalogSvc != null)
+                metaSvc.MetaChanged += (_, args) => catalogSvc.UpdateCuration(args.ImagePath, args.Meta);
+
             // Áp theme đã lưu (Dark/Light) trước khi hiện cửa sổ.
             try
             {
@@ -142,7 +150,7 @@ public partial class App : Application
             LogException("Startup Failed", ex);
             MessageBox.Show(
                 $"Không khởi động được app:\n{ex.GetType().Name}: {ex.Message}\n\nLog: {CrashLogPath}",
-                "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Aurora Studio - Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

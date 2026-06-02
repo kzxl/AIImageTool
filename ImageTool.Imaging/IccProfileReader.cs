@@ -158,6 +158,17 @@ public static class IccProfileReader
     private static int ReadU32(byte[] b, int o)
         => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
 
+    /// <summary>
+    /// Đọc ma trận RGB(linear)->XYZ (D65) THẬT từ colorant ICC nhúng của 1 FILE (rXYZ/gXYZ/bXYZ).
+    /// Dùng cho Input Profile "Embedded ICC": áp đúng gamut nguồn kể cả profile lạ không khớp tên.
+    /// Trả null nếu không có ICC / không có colorant matrix.
+    /// </summary>
+    public static float[]? TryReadRgbToXyzD65FromFile(string path)
+    {
+        byte[]? bytes = ReadIccBytesFromFile(path);
+        return bytes == null ? null : TryReadRgbToXyzD65(bytes);
+    }
+
     private static string Ascii(byte[] b, int o, int len)
         => Encoding.ASCII.GetString(b, o, len);
 

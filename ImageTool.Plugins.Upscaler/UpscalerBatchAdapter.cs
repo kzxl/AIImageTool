@@ -33,13 +33,8 @@ public class UpscalerBatchAdapter : IBatchCapable
             }
 
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var mdPath = System.IO.Path.Combine(baseDir, "Plugins", "ImageTool.Plugins.Upscaler", "Models", modelFile);
-            if (!System.IO.File.Exists(mdPath))
-            {
-                mdPath = System.IO.Path.Combine(baseDir, "Models", modelFile);
-                if (!System.IO.File.Exists(mdPath))
-                    throw new System.IO.FileNotFoundException($"Model not found: {modelFile}");
-            }
+            var mdPath = ModelLocator.Resolve(modelFile)
+                ?? throw new System.IO.FileNotFoundException($"Model not found: {modelFile}");
 
             using var image = Image.Load<Rgba32>(job.InputPath);
             var upscaler = new OnnxUpscaler(mdPath, deviceId, perfMode);

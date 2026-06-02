@@ -63,7 +63,11 @@ public partial class DevelopPanel : UserControl
     private CheckBox? _chkAiUpscale;
     private ComboBox? _cmbInputProfile; // D2.2 working/input color space
     private TextBlock? _iccAutoInfo;    // hiển thị ICC nhúng phát hiện được (D2.2/7.3)
+    private ComboBox? _cmbSoftProof;    // #1 soft-proof / gamut map đích
+    private ComboBox? _cmbSoftProofMode; // #1 clip / desaturate
+    private TextBlock? _softProofInfo;  // % pixel ngoài gamut
     private ComboBox? _cmbGradientMap;  // #5 preset gradient map
+    private TextBox? _gmShadow, _gmMid, _gmHigh; // #5 màu 3 chặng tuỳ chỉnh (hex sRGB)
     private TextBlock? _colorMatchInfo; // #8 color match reference label
     private ImageTool.Imaging.ColorMatch.Stats? _colorMatchStats; // stats ảnh tham chiếu đã đo
 
@@ -169,6 +173,8 @@ public partial class DevelopPanel : UserControl
         AddSlider(gToneMap, "filmrgb_lat", "  Latitude", 0, 0.9, 0.2, "0.00");
         AddSlider(gToneMap, "filmrgb_sat", "  HL Saturation", -1, 1, 0);
         AddSlider(gToneMap, "hlrecon", "Highlight Recon", 0, 1, 0);
+        AddSlider(gToneMap, "ltm_amt", "Local Tone (HDR)", 0, 1, 0);
+        AddSlider(gToneMap, "ltm_detail", "  Local Contrast", -1, 1, 0);
 
         // Tone Equalizer (D1.3) — chỉnh sáng theo 5 zone
         var gToneEq = AddGroup("Tone Equalizer", false);
@@ -276,6 +282,15 @@ public partial class DevelopPanel : UserControl
         var gCc = AddGroup("Color Contrast (Lab)", false);
         AddSlider(gCc, "cc_ga", "Green ↔ Magenta", -1, 1, 0);
         AddSlider(gCc, "cc_by", "Blue ↔ Yellow", -1, 1, 0);
+
+        // Color Calibration / Channel Mixer (nudge hue + sat từng primary R/G/B).
+        var gChm = AddGroup("Color Calibration", false);
+        AddSlider(gChm, "chm_rHue", "Red Hue", -1, 1, 0);
+        AddSlider(gChm, "chm_rSat", "Red Sat", -1, 1, 0);
+        AddSlider(gChm, "chm_gHue", "Green Hue", -1, 1, 0);
+        AddSlider(gChm, "chm_gSat", "Green Sat", -1, 1, 0);
+        AddSlider(gChm, "chm_bHue", "Blue Hue", -1, 1, 0);
+        AddSlider(gChm, "chm_bSat", "Blue Sat", -1, 1, 0);
 
         // HSL
         var gHsl = AddGroup("HSL / Color Mixer", false);
@@ -418,11 +433,40 @@ public partial class DevelopPanel : UserControl
         foreach (var preset in GradientMapPresets.All)
             _cmbGradientMap.Items.Add(new ComboBoxItem { Content = preset.Name });
         _cmbGradientMap.SelectedIndex = 0;
-        _cmbGradientMap.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
         _cmbGradientMap.ToolTip = "Ánh xạ độ sáng sang dải màu (grading/duotone/cinematic). None = tắt.";
         gradRow.Children.Add(_cmbGradientMap);
         gFx.Children.Add(gradRow);
         AddSlider(gFx, "gradmap_opacity", "Gradient Amount", 0, 1, 0, "0.00");
+        AddSlider(gFx, "gradmap_mid", "Gradient Midpoint", 0.05, 0.95, 0.5, "0.00");
+        // Màu 3 chặng tuỳ chỉnh (hex sRGB). Chọn preset -> tự điền; sửa tay -> grading riêng.
+        var gmColorRow = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+        gmColorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        gmColorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
+        gmColorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        gmColorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
+        gmColorRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _gmShadow = GradientHexBox("000000", "Màu vùng tối (hex RRGGBB)");
+        _gmMid = GradientHexBox("808080", "Màu trung gian (hex RRGGBB)");
+        _gmHigh = GradientHexBox("FFFFFF", "Màu vùng sáng (hex RRGGBB)");
+        Grid.SetColumn(_gmShadow, 0); Grid.SetColumn(_gmMid, 2); Grid.SetColumn(_gmHigh, 4);
+        gmColorRow.Children.Add(_gmShadow);
+        gmColorRow.Children.Add(_gmMid);
+        gmColorRow.Children.Add(_gmHigh);
+        gFx.Children.Add(gmColorRow);
+        gFx.Children.Add(new TextBlock { Text = "Shadow · Mid · Highlight (hex)", FontSize = 9, Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 4) });
+
+        // Chọn preset -> điền hex 3 chặng (None giữ nguyên hex hiện có).
+        _cmbGradientMap.SelectionChanged += (_, _) =>
+        {
+            if (_loading) return;
+            int i = _cmbGradientMap.SelectedIndex;
+            if (i > 0)
+            {
+                var pr = GradientMapPresets.ByIndex(i);
+                _gmShadow!.Text = pr.Shadow; _gmMid!.Text = pr.Mid; _gmHigh!.Text = pr.High;
+            }
+            ScheduleCommit();
+        };
 
         // Film Negative (negadoctor) — chuyển scan phim âm bản thành dương bản.
         var gFilm = AddGroup("Film Negative", false);
@@ -504,16 +548,43 @@ public partial class DevelopPanel : UserControl
         var cmRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
         cmRow.Children.Add(new TextBlock { Text = "Input Profile", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
         _cmbInputProfile = new ComboBox { Height = 22 };
-        foreach (var n in new[] { "sRGB", "AdobeRGB", "Rec2020", "DisplayP3" })
+        foreach (var n in new[] { "sRGB", "AdobeRGB", "Rec2020", "DisplayP3", "Embedded ICC" })
             _cmbInputProfile.Items.Add(new ComboBoxItem { Content = n });
         _cmbInputProfile.SelectedIndex = 0;
         _cmbInputProfile.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
-        _cmbInputProfile.ToolTip = "Diễn giải ảnh theo gamut này rồi quy về working sRGB (D65). sRGB = không đổi.";
+        _cmbInputProfile.ToolTip = "Diễn giải ảnh theo gamut này rồi quy về working sRGB (D65). sRGB = không đổi. Embedded ICC = dùng ma trận colorant ICC nhúng thật của ảnh.";
         cmRow.Children.Add(_cmbInputProfile);
         gCm.Children.Add(cmRow);
         _iccAutoInfo = new TextBlock { FontSize = 10, Margin = new Thickness(0, 0, 0, 2), TextWrapping = TextWrapping.Wrap };
         _iccAutoInfo.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
         gCm.Children.Add(_iccAutoInfo);
+
+        // Soft Proof / Gamut (#1): mô phỏng giới hạn màu thiết bị đích + cảnh báo ngoài gamut.
+        var spRow = new DockPanel { Margin = new Thickness(0, 4, 0, 2) };
+        spRow.Children.Add(new TextBlock { Text = "Soft Proof", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        _cmbSoftProof = new ComboBox { Height = 22 };
+        foreach (var n in new[] { "Off", "sRGB", "AdobeRGB", "Rec2020", "DisplayP3" })
+            _cmbSoftProof.Items.Add(new ComboBoxItem { Content = n });
+        _cmbSoftProof.SelectedIndex = 0;
+        _cmbSoftProof.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _cmbSoftProof.ToolTip = "Mô phỏng màu trên gamut thiết bị đích (màu ngoài gamut bị nén/kẹp). Off = không proof.";
+        spRow.Children.Add(_cmbSoftProof);
+        gCm.Children.Add(spRow);
+
+        var spModeRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+        spModeRow.Children.Add(new TextBlock { Text = "Proof Mode", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        _cmbSoftProofMode = new ComboBox { Height = 22 };
+        foreach (var n in new[] { "Clip", "Desaturate" })
+            _cmbSoftProofMode.Items.Add(new ComboBoxItem { Content = n });
+        _cmbSoftProofMode.SelectedIndex = 0;
+        _cmbSoftProofMode.SelectionChanged += (_, _) => { if (!_loading) ScheduleCommit(); };
+        _cmbSoftProofMode.ToolTip = "Clip = kẹp màu ngoài gamut; Desaturate = kéo về luminance giữ độ sáng.";
+        spModeRow.Children.Add(_cmbSoftProofMode);
+        gCm.Children.Add(spModeRow);
+
+        _softProofInfo = new TextBlock { FontSize = 10, Margin = new Thickness(0, 0, 0, 2), TextWrapping = TextWrapping.Wrap };
+        _softProofInfo.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+        gCm.Children.Add(_softProofInfo);
 
         // Local Adjustments / Masking (6.4 brush + 6.7 full slider set)
         var gMask = AddGroup("Local Adjustments", false);
@@ -680,6 +751,29 @@ public partial class DevelopPanel : UserControl
             input.Text = slider.Value.ToString((string)input.Tag, CultureInfo.InvariantCulture);
     }
 
+    /// <summary>Ô nhập màu hex (RRGGBB) cho Gradient Map; sửa tay -> commit (debounce).</summary>
+    private TextBox GradientHexBox(string hex, string tip)
+    {
+        var tb = new TextBox
+        {
+            Text = hex, FontSize = 11, TextAlignment = TextAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center, BorderThickness = new Thickness(0),
+            ToolTip = tip, MaxLength = 7
+        };
+        tb.LostFocus += (_, _) => { if (!_loading) ScheduleCommit(); };
+        tb.KeyDown += (s, e) => { if (e.Key == Key.Enter && !_loading) ScheduleCommit(); };
+        return tb;
+    }
+
+    private static string NormHex(string? s, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return fallback;
+        s = s.Trim().TrimStart('#');
+        if (s.Length == 6 && int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _))
+            return s.ToUpperInvariant();
+        return fallback;
+    }
+
     private void ScheduleCommit()
     {
         _pendingCommit = true;
@@ -753,6 +847,8 @@ public partial class DevelopPanel : UserControl
         SetVal("lvl_blackG", LvlCh(lvlP, "blackG", 0)); SetVal("lvl_whiteG", LvlCh(lvlP, "whiteG", 1)); SetVal("lvl_gammaG", LvlCh(lvlP, "gammaG", 1));
         SetVal("lvl_blackB", LvlCh(lvlP, "blackB", 0)); SetVal("lvl_whiteB", LvlCh(lvlP, "whiteB", 1)); SetVal("lvl_gammaB", LvlCh(lvlP, "gammaB", 1));
         SetVal("hlrecon", Param(path!, HighlightReconstructionOp.Type, "amount"));
+        SetVal("ltm_amt", Param(path!, LocalToneMapOp.Type, "amount"));
+        SetVal("ltm_detail", Param(path!, LocalToneMapOp.Type, "detail"));
         SetVal("cbr_liftHue", Param(path!, ColorBalanceRgbOp.Type, "liftHue"));
         SetVal("cbr_liftSat", Param(path!, ColorBalanceRgbOp.Type, "liftSat"));
         SetVal("cbr_gammaHue", Param(path!, ColorBalanceRgbOp.Type, "gammaHue"));
@@ -763,6 +859,12 @@ public partial class DevelopPanel : UserControl
         SetVal("cbr_contrast", Param(path!, ColorBalanceRgbOp.Type, "contrast"));
         SetVal("cc_ga", Param(path!, ColorContrastOp.Type, "greenMagenta"));
         SetVal("cc_by", Param(path!, ColorContrastOp.Type, "blueYellow"));
+        SetVal("chm_rHue", Param(path!, ChannelMixerOp.Type, "rHue"));
+        SetVal("chm_rSat", Param(path!, ChannelMixerOp.Type, "rSat"));
+        SetVal("chm_gHue", Param(path!, ChannelMixerOp.Type, "gHue"));
+        SetVal("chm_gSat", Param(path!, ChannelMixerOp.Type, "gSat"));
+        SetVal("chm_bHue", Param(path!, ChannelMixerOp.Type, "bHue"));
+        SetVal("chm_bSat", Param(path!, ChannelMixerOp.Type, "bSat"));
         SetVal("clarity", Param(path!, ClarityOp.Type, "amount"));
         SetVal("texture", Param(path!, TextureOp.Type, "amount"));
         SetVal("sharpen", Param(path!, SharpenOp.Type, "amount"));
@@ -799,9 +901,22 @@ public partial class DevelopPanel : UserControl
         SetVal("grain_color", Param(path!, GrainOp.Type, "color"));
         SetVal("glow", Param(path!, GlowOp.Type, "amount"));
 
-        // Gradient Map (#5): khôi phục preset (theo màu) + opacity.
+        // Gradient Map (#5): khôi phục màu 3 chặng + midpoint + opacity (preset chỉ là shortcut điền màu).
         var gmP = FindOp(path!, ImageTool.Imaging.GradientMapOp.Type);
         SetVal("gradmap_opacity", gmP != null ? Param(path!, ImageTool.Imaging.GradientMapOp.Type, "opacity") : 0);
+        SetVal("gradmap_mid", gmP != null ? Param(path!, ImageTool.Imaging.GradientMapOp.Type, "midpoint") : 0.5);
+        if (gmP != null)
+        {
+            if (_gmShadow != null) _gmShadow.Text = NormHex(gmP.TryGetValue("sh", out var sh2) ? sh2 : null, "000000");
+            if (_gmMid != null) _gmMid.Text = NormHex(gmP.TryGetValue("mid", out var md2) ? md2 : null, "808080");
+            if (_gmHigh != null) _gmHigh.Text = NormHex(gmP.TryGetValue("hi", out var hi2) ? hi2 : null, "FFFFFF");
+        }
+        else
+        {
+            if (_gmShadow != null) _gmShadow.Text = "000000";
+            if (_gmMid != null) _gmMid.Text = "808080";
+            if (_gmHigh != null) _gmHigh.Text = "FFFFFF";
+        }
         if (_cmbGradientMap != null)
         {
             int idx = 0;
@@ -962,8 +1077,16 @@ public partial class DevelopPanel : UserControl
             var ipP = FindOp(path!, InputProfileOp.Type);
             if (ipP != null)
             {
-                ColorSpaces.TryParse(ipP.TryGetValue("space", out var sp) ? sp : "sRGB", out var ipSpace);
-                _cmbInputProfile.SelectedIndex = (int)ipSpace;
+                if (ipP.ContainsKey("srcMatrix"))
+                {
+                    // Embedded ICC = item cuối cùng trong combo.
+                    _cmbInputProfile.SelectedIndex = _cmbInputProfile.Items.Count - 1;
+                }
+                else
+                {
+                    ColorSpaces.TryParse(ipP.TryGetValue("space", out var sp) ? sp : "sRGB", out var ipSpace);
+                    _cmbInputProfile.SelectedIndex = (int)ipSpace;
+                }
             }
             else
             {
@@ -984,6 +1107,23 @@ public partial class DevelopPanel : UserControl
                         ? $"ICC nhúng → gamut {g}"
                         : $"ICC: {desc} → {g}";
                 }
+            }
+        }
+
+        // Soft Proof / Gamut map (#1)
+        if (_cmbSoftProof != null)
+        {
+            var gmapP = FindOp(path!, GamutMapOp.Type);
+            if (gmapP != null)
+            {
+                ColorSpaces.TryParse(gmapP.TryGetValue("dest", out var ds) ? ds : "sRGB", out var dsSpace);
+                _cmbSoftProof.SelectedIndex = (int)dsSpace + 1; // +1 do index 0 = Off
+                if (_cmbSoftProofMode != null)
+                    _cmbSoftProofMode.SelectedIndex = (gmapP.TryGetValue("method", out var mm) && mm == "desaturate") ? 1 : 0;
+            }
+            else
+            {
+                _cmbSoftProof.SelectedIndex = 0; // Off
             }
         }
 
@@ -1152,12 +1292,26 @@ public partial class DevelopPanel : UserControl
         AppendHealingOp(ops);
 
         // 0c2) Input color profile (D2.2) — quy ảnh về working sRGB trước mọi op màu.
-        if (_cmbInputProfile?.SelectedItem is ComboBoxItem ipItem &&
-            ColorSpaces.TryParse(ipItem.Content?.ToString(), out var ipSpace) &&
-            ipSpace != ColorSpaces.Space.Srgb)
+        if (_cmbInputProfile?.SelectedItem is ComboBoxItem ipItem)
         {
-            var ip = new InputProfileOp { Source = ipSpace };
-            ops.Add(Op(InputProfileOp.Type, "Input Profile", ip.ToParams()));
+            string ipName = ipItem.Content?.ToString() ?? "sRGB";
+            if (ipName == "Embedded ICC")
+            {
+                // Áp ma trận colorant ICC nhúng THẬT (kể cả profile lạ không khớp tên).
+                var mtx = _currentPath != null
+                    ? ImageTool.Imaging.IccProfileReader.TryReadRgbToXyzD65FromFile(_currentPath)
+                    : null;
+                if (mtx != null)
+                {
+                    var ip = new InputProfileOp { SourceMatrix = mtx };
+                    ops.Add(Op(InputProfileOp.Type, "Input Profile (ICC)", ip.ToParams()));
+                }
+            }
+            else if (ColorSpaces.TryParse(ipName, out var ipSpace) && ipSpace != ColorSpaces.Space.Srgb)
+            {
+                var ip = new InputProfileOp { Source = ipSpace };
+                ops.Add(Op(InputProfileOp.Type, "Input Profile", ip.ToParams()));
+            }
         }
 
         // 0c1) Film Negative (negadoctor) — sau input profile, trước WB/màu.
@@ -1247,6 +1401,10 @@ public partial class DevelopPanel : UserControl
         var hlr = new HighlightReconstructionOp { Amount = (float)GetVal("hlrecon") };
         if (!hlr.IsIdentity) ops.Add(Op(HighlightReconstructionOp.Type, "Highlight Recon", hlr.ToParams()));
 
+        // 4e) Local tone map (HDR-look single-shot)
+        var ltm = new LocalToneMapOp { Amount = (float)GetVal("ltm_amt"), Detail = (float)GetVal("ltm_detail") };
+        if (!ltm.IsIdentity) ops.Add(Op(LocalToneMapOp.Type, "Local Tone Map", ltm.ToParams()));
+
         // 5) HSL
         var hsl = new HslMixerOp();
         Array.Copy(_hslHue, hsl.Hue, HslMixerOp.Bands);
@@ -1267,6 +1425,15 @@ public partial class DevelopPanel : UserControl
         // 5c) Color Contrast Lab (D2.4)
         var cc = new ColorContrastOp { GreenMagenta = (float)GetVal("cc_ga"), BlueYellow = (float)GetVal("cc_by") };
         if (!cc.IsIdentity) ops.Add(Op(ColorContrastOp.Type, "Color Contrast", cc.ToParams()));
+
+        // 5c2) Color Calibration / Channel Mixer (hue+sat từng primary).
+        var chm = new ChannelMixerOp
+        {
+            RHue = (float)GetVal("chm_rHue"), RSat = (float)GetVal("chm_rSat"),
+            GHue = (float)GetVal("chm_gHue"), GSat = (float)GetVal("chm_gSat"),
+            BHue = (float)GetVal("chm_bHue"), BSat = (float)GetVal("chm_bSat"),
+        };
+        if (!chm.IsIdentity) ops.Add(Op(ChannelMixerOp.Type, "Color Calibration", chm.ToParams()));
 
         // 5d) Velvia (D2.3)
         var velvia = new VelviaOp { Amount = (float)GetVal("velvia") };
@@ -1373,16 +1540,16 @@ public partial class DevelopPanel : UserControl
         var glow = new GlowOp { Amount = (float)GetVal("glow") };
         if (!glow.IsIdentity) ops.Add(Op(GlowOp.Type, "Glow / Soften", glow.ToParams()));
 
-        // 8a) Gradient Map (#5): preset dải màu + opacity.
-        int gmIdx = _cmbGradientMap?.SelectedIndex ?? 0;
+        // 8a) Gradient Map (#5): màu 3 chặng tuỳ chỉnh (preset điền sẵn) + midpoint + opacity.
         double gmOpacity = GetVal("gradmap_opacity");
-        if (gmIdx > 0 && gmOpacity > 0)
+        if (gmOpacity > 0)
         {
-            var preset = ImageTool.Imaging.GradientMapPresets.ByIndex(gmIdx);
             var gm = ImageTool.Imaging.GradientMapOp.FromParams(new Dictionary<string, string>
             {
-                ["sh"] = preset.Shadow, ["mid"] = preset.Mid, ["hi"] = preset.High,
-                ["midpoint"] = "0.5",
+                ["sh"] = NormHex(_gmShadow?.Text, "000000"),
+                ["mid"] = NormHex(_gmMid?.Text, "808080"),
+                ["hi"] = NormHex(_gmHigh?.Text, "FFFFFF"),
+                ["midpoint"] = GetVal("gradmap_mid").ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["opacity"] = gmOpacity.ToString(System.Globalization.CultureInfo.InvariantCulture),
             });
             if (!gm.IsIdentity) ops.Add(Op(ImageTool.Imaging.GradientMapOp.Type, "Gradient Map", gm.ToParams()));
@@ -1404,6 +1571,19 @@ public partial class DevelopPanel : UserControl
         // 8d) AI Denoise (4.3) — op cuối, chỉ chạy full-res (export) qua AiOpHost.
         var aiDn = new AiDenoiseOp { Strength = (float)GetVal("aiDenoise") };
         if (!aiDn.IsIdentity) ops.Add(Op(AiDenoiseOp.Type, "AI Denoise", aiDn.ToParams()));
+
+        // 8e) Soft Proof / Gamut map (#1) — mô phỏng gamut thiết bị đích (Off = bỏ qua).
+        if (_cmbSoftProof?.SelectedItem is ComboBoxItem spItem && (spItem.Content?.ToString() ?? "Off") != "Off" &&
+            ColorSpaces.TryParse(spItem.Content?.ToString(), out var spSpace))
+        {
+            var gm = new GamutMapOp
+            {
+                Dest = spSpace,
+                Method = (_cmbSoftProofMode?.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Desaturate"
+                    ? GamutMapOp.Mode.Desaturate : GamutMapOp.Mode.Clip,
+            };
+            ops.Add(Op(GamutMapOp.Type, "Soft Proof", gm.ToParams()));
+        }
 
         // 9) Local adjustments (masked ops) — sau cùng để áp lên kết quả global.
         AppendMaskOps(ops);
@@ -1478,6 +1658,8 @@ public partial class DevelopPanel : UserControl
         if (_chkFilmNeg != null) _chkFilmNeg.IsChecked = false;
         if (_chkAiUpscale != null) _chkAiUpscale.IsChecked = false;
         if (_cmbInputProfile != null) _cmbInputProfile.SelectedIndex = 0;
+        if (_cmbSoftProof != null) _cmbSoftProof.SelectedIndex = 0;
+        if (_cmbSoftProofMode != null) _cmbSoftProofMode.SelectedIndex = 0;
         if (_cmbGradientMap != null) _cmbGradientMap.SelectedIndex = 0;
         _colorMatchStats = null;
         if (_colorMatchInfo != null) _colorMatchInfo.Text = "(chưa chọn ảnh tham chiếu)";

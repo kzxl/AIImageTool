@@ -109,4 +109,45 @@ public class InputProfileOpTests
     {
         Assert.True(EditOpRegistry.CreateDefault().Has(InputProfileOp.Type));
     }
+
+    [Fact]
+    public void CustomMatrix_OverridesSpace_NotIdentity()
+    {
+        // SourceMatrix != null -> không còn identity dù Source = sRGB.
+        var op = new InputProfileOp { Source = ColorSpaces.Space.Srgb, SourceMatrix = ColorSpaces.RgbToXyzD65(ColorSpaces.Space.AdobeRgb) };
+        Assert.False(op.IsIdentity);
+    }
+
+    [Fact]
+    public void CustomMatrix_SrgbMatrix_IsNoop()
+    {
+        // Ma trận nguồn = sRGB -> (XYZ->sRGB)*(sRGB->XYZ) = identity -> ảnh không đổi.
+        var img = Solid(0.3f, 0.6f, 0.2f);
+        var before = (float[])img.Pixels.Clone();
+        new InputProfileOp { SourceMatrix = ColorSpaces.RgbToXyzD65(ColorSpaces.Space.Srgb) }.Apply(img, 1f);
+        for (int i = 0; i < before.Length; i++)
+            Assert.Equal(before[i], img.Pixels[i], 4);
+    }
+
+    [Fact]
+    public void CustomMatrix_MatchesEquivalentSpace()
+    {
+        // Dùng SourceMatrix = ma trận AdobeRGB phải cho KẾT QUẢ GIỐNG Source = AdobeRGB.
+        var imgA = Solid(0.7f, 0.4f, 0.2f);
+        var imgB = Solid(0.7f, 0.4f, 0.2f);
+        new InputProfileOp { Source = ColorSpaces.Space.AdobeRgb }.Apply(imgA, 1f);
+        new InputProfileOp { SourceMatrix = ColorSpaces.RgbToXyzD65(ColorSpaces.Space.AdobeRgb) }.Apply(imgB, 1f);
+        for (int i = 0; i < imgA.Pixels.Length; i++)
+            Assert.Equal(imgA.Pixels[i], imgB.Pixels[i], 4);
+    }
+
+    [Fact]
+    public void CustomMatrix_RoundTrip()
+    {
+        var src = ColorSpaces.RgbToXyzD65(ColorSpaces.Space.Rec2020);
+        var back = InputProfileOp.FromParams(new InputProfileOp { SourceMatrix = src }.ToParams());
+        Assert.NotNull(back.SourceMatrix);
+        Assert.Equal(9, back.SourceMatrix!.Length);
+        for (int i = 0; i < 9; i++) Assert.Equal(src[i], back.SourceMatrix[i], 4);
+    }
 }

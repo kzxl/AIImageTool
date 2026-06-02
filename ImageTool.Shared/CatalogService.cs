@@ -9,12 +9,16 @@ public class CatalogService : ICatalogService
 {
     private readonly string _dbPath;
     private readonly string _connectionString;
+    private readonly IImageMetaService? _meta;
 
     public event EventHandler<ImportCompletedEventArgs>? ImportCompleted;
     public event EventHandler? CollectionsChanged;
 
-    public CatalogService()
+    public CatalogService() : this((IImageMetaService?)null) { }
+
+    public CatalogService(IImageMetaService? meta)
     {
+        _meta = meta;
         var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ImageTool");
         Directory.CreateDirectory(appData);
         _dbPath = Path.Combine(appData, "catalog.db");
@@ -23,8 +27,12 @@ public class CatalogService : ICatalogService
     }
 
     /// <summary>Ctor cho test: chỉ định đường dẫn DB (vd file tạm). Không đụng AppData.</summary>
-    public CatalogService(string dbPath)
+    public CatalogService(string dbPath) : this(dbPath, null) { }
+
+    /// <summary>Ctor cho test: DB path + meta service (đồng bộ curation).</summary>
+    public CatalogService(string dbPath, IImageMetaService? meta)
     {
+        _meta = meta;
         _dbPath = dbPath;
         var dir = Path.GetDirectoryName(dbPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
@@ -99,6 +107,14 @@ public class CatalogService : ICatalogService
         // Migration: thêm cột GPS nếu DB cũ chưa có (ALTER an toàn, bọc try vì SQLite không có IF NOT EXISTS cho cột).
         AddColumnIfMissing(conn, "CatalogImage", "GpsLatitude", "REAL");
         AddColumnIfMissing(conn, "CatalogImage", "GpsLongitude", "REAL");
+
+        // Migration: cột curation (đồng bộ từ sidecar) cho search/smart-collection.
+        AddColumnIfMissing(conn, "CatalogImage", "Rating", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, "CatalogImage", "Label", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, "CatalogImage", "Pick", "INTEGER NOT NULL DEFAULT 0");
+        AddColumnIfMissing(conn, "CatalogImage", "Keywords", "TEXT");
+        try { conn.Execute("CREATE INDEX IF NOT EXISTS IX_CatalogImage_Rating ON CatalogImage(Rating)"); }
+        catch (Exception ex) { AppLog.Warn("Catalog.Migrate", $"IX_Rating: {ex.Message}"); }
     }
 
     private static void AddColumnIfMissing(IDbConnection conn, string table, string column, string type)
@@ -161,6 +177,21 @@ public class CatalogService : ICatalogService
                 meta.ImportedAt = DateTime.UtcNow;
                 meta.ImportMode = options.Mode;
                 meta.OriginalPath = t.Original;
+
+                // Curation từ sidecar (.imgtool.json) nếu có -> catalog search/smart collection dùng được.
+                if (_meta != null)
+                {
+                    try
+                    {
+                        var c = _meta.Get(t.Target);
+                        meta.Rating = c.Rating;
+                        meta.Label = c.Label;
+                        meta.Pick = c.Pick;
+                        meta.Keywords = (c.Tags != null && c.Tags.Count > 0) ? string.Join(",", c.Tags) : null;
+                    }
+                    catch (Exception ex) { AppLog.Warn("Catalog.Import.Curation", $"{t.Target}: {ex.Message}"); }
+                }
+
                 metas[i] = meta;
 
                 int done = Interlocked.Increment(ref processed);
@@ -175,9 +206,11 @@ public class CatalogService : ICatalogService
                 if (meta == null) continue;
                 conn.Execute("""
                     INSERT INTO CatalogImage (FilePath, FileName, FolderPath, FileSize, ImportedAt, ImportMode, OriginalPath,
-                        DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation, GpsLatitude, GpsLongitude)
+                        DateTaken, CameraMake, CameraModel, LensModel, FocalLength, Aperture, ShutterSpeed, Iso, Width, Height, Orientation, GpsLatitude, GpsLongitude,
+                        Rating, Label, Pick, Keywords)
                     VALUES (@FilePath, @FileName, @FolderPath, @FileSize, @ImportedAt, @ImportMode, @OriginalPath,
-                        @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation, @GpsLatitude, @GpsLongitude)
+                        @DateTaken, @CameraMake, @CameraModel, @LensModel, @FocalLength, @Aperture, @ShutterSpeed, @Iso, @Width, @Height, @Orientation, @GpsLatitude, @GpsLongitude,
+                        @Rating, @Label, @Pick, @Keywords)
                     """, meta, tx);
                 importedPaths.Add(meta.FilePath);
             }
@@ -368,6 +401,16 @@ public class CatalogService : ICatalogService
         if (q.DateFrom.HasValue) { where.Add("DateTaken >= @dFrom"); p.Add("dFrom", q.DateFrom.Value.ToString("o")); }
         if (q.DateTo.HasValue) { where.Add("DateTaken <= @dTo"); p.Add("dTo", q.DateTo.Value.ToString("o")); }
 
+        // Curation (đồng bộ từ sidecar).
+        if (q.RatingMin.HasValue) { where.Add("Rating >= @ratingMin"); p.Add("ratingMin", q.RatingMin.Value); }
+        if (q.Label.HasValue) { where.Add("Label = @label"); p.Add("label", (int)q.Label.Value); }
+        if (q.Pick.HasValue) { where.Add("Pick = @pick"); p.Add("pick", (int)q.Pick.Value); }
+        if (!string.IsNullOrWhiteSpace(q.Keyword))
+        {
+            where.Add("Keywords LIKE @kw");
+            p.Add("kw", $"%{q.Keyword.Trim()}%");
+        }
+
         string whereClause = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
         string sortCol = q.SortField switch
         {
@@ -377,6 +420,7 @@ public class CatalogService : ICatalogService
             CatalogSortField.FileSize => "FileSize",
             CatalogSortField.Aperture => "Aperture",
             CatalogSortField.FocalLength => "FocalLength",
+            CatalogSortField.Rating => "Rating",
             _ => "ImportedAt"
         };
         string dir = q.SortDescending ? "DESC" : "ASC";
@@ -395,6 +439,20 @@ public class CatalogService : ICatalogService
         using var conn = Open();
         foreach (var path in filePaths)
             conn.Execute("DELETE FROM CatalogImage WHERE FilePath = @path", new { path });
+    }
+
+    public void UpdateCuration(string filePath, ImageMeta meta)
+    {
+        if (string.IsNullOrEmpty(filePath) || meta == null) return;
+        try
+        {
+            using var conn = Open();
+            string? keywords = (meta.Tags != null && meta.Tags.Count > 0) ? string.Join(",", meta.Tags) : null;
+            conn.Execute(
+                "UPDATE CatalogImage SET Rating = @rating, Label = @label, Pick = @pick, Keywords = @keywords WHERE FilePath = @filePath",
+                new { rating = meta.Rating, label = (int)meta.Label, pick = (int)meta.Pick, keywords, filePath });
+        }
+        catch (Exception ex) { AppLog.Warn("Catalog.UpdateCuration", $"{filePath}: {ex.Message}"); }
     }
 
     public IReadOnlyList<ImageCollection> GetCollections()

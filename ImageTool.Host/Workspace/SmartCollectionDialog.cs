@@ -25,6 +25,10 @@ public sealed class SmartCollectionDialog : Window
     private readonly TextBox _apMax = NewBox();
     private readonly TextBox _focalMin = NewBox();
     private readonly TextBox _focalMax = NewBox();
+    private readonly TextBox _keyword = NewBox();
+    private readonly ComboBox _ratingMin = NewCombo("Bất kỳ", "≥ 1 ★", "≥ 2 ★", "≥ 3 ★", "≥ 4 ★", "= 5 ★");
+    private readonly ComboBox _label = NewCombo("Bất kỳ", "Đỏ", "Vàng", "Xanh lá", "Xanh dương", "Tím");
+    private readonly ComboBox _pick = NewCombo("Bất kỳ", "Pick", "Reject");
 
     public string? CollectionName { get; private set; }
     public CatalogQuery Query { get; private set; } = new();
@@ -51,6 +55,10 @@ public sealed class SmartCollectionDialog : Window
         _apMax.Text = query.ApertureMax?.ToString(CultureInfo.InvariantCulture) ?? "";
         _focalMin.Text = query.FocalMin?.ToString(CultureInfo.InvariantCulture) ?? "";
         _focalMax.Text = query.FocalMax?.ToString(CultureInfo.InvariantCulture) ?? "";
+        _keyword.Text = query.Keyword ?? "";
+        _ratingMin.SelectedIndex = query.RatingMin.HasValue ? Math.Clamp(query.RatingMin.Value, 0, 5) : 0;
+        _label.SelectedIndex = query.Label.HasValue ? (int)query.Label.Value : 0;
+        _pick.SelectedIndex = query.Pick switch { PickFlag.Pick => 1, PickFlag.Reject => 2, _ => 0 };
 
         var sp = new StackPanel { Margin = new Thickness(16) };
         sp.Children.Add(Label("Tên Smart Collection"));
@@ -66,6 +74,14 @@ public sealed class SmartCollectionDialog : Window
         sp.Children.Add(Row("ISO từ … đến", _isoMin, _isoMax));
         sp.Children.Add(Row("Khẩu độ f/ từ … đến", _apMin, _apMax));
         sp.Children.Add(Row("Tiêu cự (mm) từ … đến", _focalMin, _focalMax));
+        sp.Children.Add(Label("Rating tối thiểu"));
+        sp.Children.Add(_ratingMin);
+        sp.Children.Add(Label("Color Label"));
+        sp.Children.Add(_label);
+        sp.Children.Add(Label("Pick / Reject"));
+        sp.Children.Add(_pick);
+        sp.Children.Add(Label("Keyword (chứa)"));
+        sp.Children.Add(_keyword);
 
         var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
         var ok = new Button { Content = "OK", Width = 72, Height = 28, IsDefault = true };
@@ -94,6 +110,10 @@ public sealed class SmartCollectionDialog : Window
             ApertureMax = Dbl(_apMax.Text),
             FocalMin = Dbl(_focalMin.Text),
             FocalMax = Dbl(_focalMax.Text),
+            RatingMin = _ratingMin.SelectedIndex > 0 ? _ratingMin.SelectedIndex : null,
+            Label = _label.SelectedIndex > 0 ? (ColorLabel)_label.SelectedIndex : null,
+            Pick = _pick.SelectedIndex switch { 1 => PickFlag.Pick, 2 => PickFlag.Reject, _ => (PickFlag?)null },
+            Keyword = Empty(_keyword.Text),
         };
         DialogResult = true;
     }
@@ -108,6 +128,18 @@ public sealed class SmartCollectionDialog : Window
         Foreground = Brushes.Gainsboro, BorderThickness = new Thickness(0),
         Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 0, 0, 6), FontSize = 12
     };
+
+    private static ComboBox NewCombo(params string[] items)
+    {
+        var cb = new ComboBox
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+            Foreground = Brushes.Gainsboro,
+            Margin = new Thickness(0, 0, 0, 6), FontSize = 12, SelectedIndex = 0
+        };
+        foreach (var it in items) cb.Items.Add(new ComboBoxItem { Content = it });
+        return cb;
+    }
 
     private static TextBlock Label(string text) => new()
     {

@@ -36,8 +36,19 @@ public class UpscalerPlugin : IImagePlugin
     /// <summary>Phóng to LinearImage bằng OnnxUpscaler: linear -> Rgba32 -> Process -> linear.</summary>
     private static LinearImage UpscaleLinear(LinearImage linear, int factor)
     {
-        string? mdPath = FindModel();
-        if (mdPath == null) return linear; // không có model -> giữ nguyên
+        string? mdPath = ModelLocator.ResolveAny();
+        if (mdPath == null)
+        {
+            // Không có model: giữ nguyên ảnh nhưng GHI LOG (trước đây im lặng -> user tưởng đã upscale).
+            try
+            {
+                File.AppendAllText(
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "upscaler_error.log"),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] UpscaleLinear: bỏ qua AI upscale vì không tìm thấy model .onnx.{Environment.NewLine}");
+            }
+            catch { }
+            return linear;
+        }
 
         using var input = ToRgba32(linear);
         // targetMp lớn để Process upscale theo model; factor điều khiển model 2x/4x đã cố định.
@@ -45,22 +56,6 @@ public class UpscalerPlugin : IImagePlugin
         var up = new OnnxUpscaler(mdPath, -1, PerformanceMode.Safe);
         using var result = up.Process(input, null, (int)Math.Clamp(targetMp, 1, 200));
         return FromRgba32(result);
-    }
-
-    private static string? FindModel()
-    {
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        foreach (var p in new[]
-        {
-            Path.Combine(baseDir, "Plugins", "ImageTool.Plugins.Upscaler", "Models"),
-            Path.Combine(baseDir, "Models"),
-        })
-        {
-            if (!Directory.Exists(p)) continue;
-            var files = Directory.GetFiles(p, "*.onnx");
-            if (files.Length > 0) return files[0];
-        }
-        return null;
     }
 
     private static Image<Rgba32> ToRgba32(LinearImage img)

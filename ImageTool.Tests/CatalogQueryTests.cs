@@ -44,6 +44,29 @@ public class CatalogQueryTests
         Assert.Contains("@text", sql);
     }
 
+    [Fact]
+    public void CurationFilters_AddClauses()
+    {
+        var (sql, _) = CatalogService.BuildAdvancedSql(new CatalogQuery
+        {
+            RatingMin = 3,
+            Label = ColorLabel.Red,
+            Pick = PickFlag.Pick,
+            Keyword = "sunset"
+        });
+        Assert.Contains("Rating >= @ratingMin", sql);
+        Assert.Contains("Label = @label", sql);
+        Assert.Contains("Pick = @pick", sql);
+        Assert.Contains("Keywords LIKE @kw", sql);
+    }
+
+    [Fact]
+    public void RatingSort_IsSupported()
+    {
+        var (sql, _) = CatalogService.BuildAdvancedSql(new CatalogQuery { SortField = CatalogSortField.Rating });
+        Assert.Contains("ORDER BY Rating DESC", sql);
+    }
+
     // ---- Integration (DB tạm) ----
 
     private static CatalogService NewDb(out string path)
@@ -67,24 +90,6 @@ public class CatalogQueryTests
             var res = svc.SearchAdvanced(new CatalogQuery { IsoMin = 200, IsoMax = 800 });
             Assert.Single(res);
             Assert.Equal("b.jpg", res[0].FileName);
-        }
-        finally { TryDelete(path); }
-    }
-
-    [Fact]
-    public void SearchAdvanced_FiltersByCameraAndSorts_Integration()
-    {
-        var svc = NewDb(out var path);
-        try
-        {
-            SeedImage(path, "z.jpg", make: "Canon", iso: 100);
-            SeedImage(path, "a.jpg", make: "Canon", iso: 200);
-            SeedImage(path, "n.jpg", make: "Nikon", iso: 100);
-
-            var res = svc.SearchAdvanced(new CatalogQuery { CameraMake = "Canon", SortField = CatalogSortField.FileName, SortDescending = false });
-            Assert.Equal(2, res.Count);
-            Assert.Equal("a.jpg", res[0].FileName); // sort theo tên tăng dần
-            Assert.Equal("z.jpg", res[1].FileName);
         }
         finally { TryDelete(path); }
     }

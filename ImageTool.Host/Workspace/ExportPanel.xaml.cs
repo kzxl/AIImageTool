@@ -460,4 +460,49 @@ public partial class ExportPanel : UserControl
             MessageBox.Show("Lỗi tạo web gallery (xem app.log).", "Web Gallery", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    private void BtnPrint_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null) return;
+        var paths = _workspace.Selection.ToList();
+        if (paths.Count == 0 && !string.IsNullOrEmpty(_workspace.ActiveImage))
+            paths.Add(_workspace.ActiveImage);
+        if (paths.Count == 0)
+        {
+            MessageBox.Show("Chọn ít nhất 1 ảnh để in.", "In ấn", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dlg = new PhotoPrintDialog(paths.Count) { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() != true) return;
+
+        string outDir = string.IsNullOrWhiteSpace(txtOutDir.Text)
+            ? System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "Output")
+            : txtOutDir.Text;
+        string outPath = FileNameTokenizer.EnsureUniquePath(System.IO.Path.Combine(outDir, "print.png"));
+
+        try
+        {
+            var pages = ImageTool.Shared.PrintModule.RenderPages(paths, outPath, dlg.Options);
+            if (pages.Count > 0)
+            {
+                string msg = pages.Count == 1
+                    ? $"Đã tạo file in:\n{pages[0]}"
+                    : $"Đã tạo {pages.Count} trang in:\n{System.IO.Path.GetDirectoryName(pages[0])}";
+                var open = MessageBox.Show($"{msg}\n\nMở file đầu tiên?",
+                    "In ấn", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (open == MessageBoxResult.Yes)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(pages[0]) { UseShellExecute = true });
+            }
+            else
+            {
+                MessageBox.Show("Không đặt được ảnh nào lên trang.", "In ấn", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            ImageTool.Shared.AppLog.Error("ExportPanel.Print", outPath, ex);
+            MessageBox.Show("Lỗi tạo file in (xem app.log).", "In ấn", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }

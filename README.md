@@ -1,82 +1,161 @@
-# AIImageTool
+# 🌟 Aurora Studio
 
-AIImageTool là ứng dụng Desktop (WPF, .NET 8) xử lý & nâng cấp ảnh, kết hợp **chỉnh sửa phi phá hủy
-kiểu Lightroom/Darktable** với các luồng **AI** (upscale, khôi phục khuôn mặt, auto-tag). Kiến trúc gồm
-một **pipeline Develop linear-light** trong lõi và một lớp **Plugin mở rộng** cho các tác vụ AI nặng.
+> **Aurora Studio** là một ứng dụng Desktop (WPF, .NET 8) hiện đại chuyên dùng để quản lý, xử lý và nâng cấp hình ảnh. Ứng dụng kết hợp sức mạnh của **quy trình chỉnh sửa ảnh phi phá hủy (non-destructive)** chất lượng cao (tương tự Adobe Lightroom, Darktable) với các **công cụ AI tiên tiến** (Upscale siêu phân giải, khôi phục khuôn mặt, tự động gán thẻ thông minh).
 
-## Kiến trúc tổng quan
+---
 
-- **`ImageTool.Core`** — interface & model dùng chung (workspace, history, catalog, meta, style...).
-- **`ImageTool.Imaging`** — pipeline Develop phi phá hủy chạy ở **linear light** (float RGBA):
-  `LinearImage`, `ColorSpace`, `IEditOp`/`EditOpRegistry`, `EditPipeline` + `CachedEditPipeline`
-  (cache theo tầng, replay từ op bị đổi), `ImageDecoderRegistry`. ~40 op chỉnh sửa, đều có unit test.
-- **`ImageTool.Shared`** — dịch vụ nền: workspace, history, catalog SQLite, thumbnail, batch, style,
-  export, EXIF/GPS, keyword, stacking, filename token, logging.
-- **`ImageTool.Host`** — UI WPF: top-bar, browser/filmstrip, CenterPreview (Single/Grid/Cull/Full +
-  crop/brush/compare/clipping overlay) và panel phải dạng tab (Develop / Info / History / Style /
-  Batch / Export / Tools).
-- **Plugins** (`.dll` hot-load từ thư mục `Plugins`): Upscaler, FaceRestorer, VisionTagger.
+![Aurora Studio Preview](screenshots/preview.png)
 
-## Tính năng chính
+---
 
-### Develop — chỉnh sửa phi phá hủy (linear light)
-- **Tone:** Exposure, Contrast, Highlights/Shadows/Whites/Blacks, Tone Curve (kéo điểm + **preset
-  Linear/Medium/Strong/Faded**), Parametric Curve, Filmic/Filmic RGB/Sigmoid/Tone Equalizer, Dehaze,
-  Levels (per-channel + **Auto Levels** + **Auto Color** khử ám), Highlight Reconstruction, Auto Tone,
-  **kéo trực tiếp trên histogram để chỉnh tone**.
-- **Color:** White Balance (Kelvin + **Auto WB** + **eyedropper** + **preset nguồn sáng**), HSL 8 dải,
-  Color Balance RGB 4-way + Color Grading wheel, Split Toning, Channel Mixer, Selective Color, Color Unify,
-  Velvia, Color Contrast (Lab), 3D LUT (.cube), Input color profile (sRGB/AdobeRGB/Rec2020/P3),
-  **Black & White** (channel mix + **filter màu cổ điển** + toning), **Negative/Invert**, **Film Negative
-  (negadoctor)** cho scan phim âm bản.
-- **Detail:** Sharpen (+ Radius/**Masking** edge-aware), Luminance/Color/Chroma Noise Reduction,
-  Diffuse-or-sharpen (PDE), Hot Pixel, CA Correct, Defringe, Texture, Clarity, **Grain (mono + màu)**.
-- **Geometry:** Crop (kéo khung + **preset tỉ lệ** 1:1/16:9... + guide bố cục), Straighten, Rotate/Flip + **EXIF
-  auto-orientation**, **Perspective/Upright**, **Liquify/Warp** (kéo handle), Lens Correction (thủ công +
-  **lensfun tự động** theo EXIF).
-- **Effects:** Vignette (+ Roundness/Highlights), Glow/Orton.
-- **Local Adjustments:** mask Gradient / Radial / Brush / Polygon / Luminance & Color Range / Parametric
-  đa kênh / AI Subject / Sky, blend modes + opacity, mask combine, **nhân bản mask**; mỗi mask đầy đủ slider.
-- **Preset/Style:** lưu/áp style (append/replace, chọn module), copy-paste settings (selective module),
-  **import preset Lightroom (.xmp)**, XMP sidecar, **Named Snapshots** (lưu nhiều mốc edit có tên).
+## ✨ Điểm nổi bật & Tính năng chính
 
-### Thư viện & catalog
-- Workspace browser (cây thư mục + grid thumbnail), filmstrip, rating/flag/color label (**gắn hàng loạt
-  cho cả selection**), **lọc Pick/Reject/Hide-rejected**.
-- Catalog SQLite: import, **smart collections** (lọc theo rule), **tìm kiếm nâng cao** (camera/lens/ISO/
-  khẩu độ/tiêu cự/ngày), **keyword phân cấp** + editor chip + **từ điển/recently-used tag**, **stacking**.
+### 🎨 1. Quy trình phát triển ảnh (Develop) phi phá hủy ở Linear Light
+Toàn bộ các bộ lọc và thuật toán chỉnh sửa ảnh được áp dụng trực tiếp trong không gian màu tuyến tính (**linear light** với float RGBA) thông qua một Pipeline thông minh, giúp giữ lại tối đa chi tiết vùng sáng/tối mà không làm bệt màu.
 
-### Panel Info (đã gộp)
-- Histogram RGB/Luma + cảnh báo clip, **dòng tóm tắt chụp** (camera · tiêu cự · f · tốc độ · ISO),
-  **bảng màu chủ đạo K-Means** (click copy hex), **GPS → mở bản đồ**, **sửa EXIF** trực tiếp
-  (Description/Artist/Copyright/Software/Make/Model), và **trình sửa Keywords** (chip thêm/gỡ + gợi ý).
+*   **Tone & Ánh sáng**:
+    *   **Exposure, Contrast, Highlights, Shadows, Whites, Blacks**.
+    *   **Tone Curve & Parametric Curve** kéo điểm tự do hỗ trợ các preset mặc định (*Linear, Medium, Strong, Faded*).
+    *   **Filmic, Filmic RGB, Sigmoid, Tone Equalizer, Dehaze**.
+    *   **Levels** (chỉnh trên từng kênh, **Auto Levels**, **Auto Color** khử ám vàng/xanh).
+    *   Hỗ trợ kéo và điều chỉnh tone trực tiếp trên biểu đồ **Histogram**.
+*   **Màu sắc (Color)**:
+    *   **White Balance** (chỉnh nhiệt độ màu Kelvin, **Auto WB**, công cụ chấm màu **eyedropper** và các preset nguồn sáng tiêu chuẩn).
+    *   **HSL 8 dải màu** chi tiết.
+    *   **Color Balance RGB 4-way** và vòng tròn màu **Color Grading**.
+    *   **Split Toning, Channel Mixer, Selective Color, Color Unify, Velvia, Color Contrast (Lab)**.
+    *   Hỗ trợ **3D LUT (.cube)** và profile màu đầu vào (**sRGB, AdobeRGB, Rec2020, Display P3**).
+    *   **Black & White**: Trộn kênh chuyên sâu, áp dụng bộ lọc màu cổ điển và tông màu giả lập.
+    *   **Film Negative (negadoctor)**: Hỗ trợ xử lý ảnh scan phim âm bản một cách chuyên nghiệp.
+*   **Chi tiết & Sắc nét (Detail)**:
+    *   **Sharpen** (hỗ trợ bán kính và **Masking** tìm kiếm cạnh biên thông minh).
+    *   Khử nhiễu **Noise Reduction** (Luminance, Color, Chroma).
+    *   Bộ lọc khuếch tán sắc nét **Diffuse-or-sharpen (PDE)**, loại bỏ **Hot Pixel**, sửa sắc sai (**CA Correct**, **Defringe**).
+    *   **Texture, Clarity, Grain** (hiệu ứng hạt phim đen trắng và hạt màu).
+*   **Hình học & Bố cục (Geometry)**:
+    *   **Crop** tự do hoặc chọn theo tỉ lệ chuẩn (1:1, 16:9, 4:3...) cùng các lưới hướng dẫn bố cục.
+    *   **Straighten, Rotate, Flip**, tự động xoay ảnh dựa trên dữ liệu **EXIF**.
+    *   **Perspective / Upright** sửa méo hình học, **Liquify/Warp** kéo nắn ảnh bằng handle trực quan.
+    *   **Lens Correction**: Tự động sửa méo và tối góc theo ống kính nhờ thư viện **lensfun** tích hợp dữ liệu EXIF hoặc chỉnh thủ công.
+*   **Chỉnh sửa cục bộ (Local Adjustments)**:
+    *   Tạo các vùng chọn bằng mặt nạ: **Gradient, Radial, Brush, Polygon, Luminance & Color Range, Parametric, AI Subject & AI Sky**.
+    *   Kết hợp nhiều mặt nạ, điều chỉnh opacity và chế độ hòa trộn (blend modes).
+    *   Sao chép/nhân bản mặt nạ dễ dàng; mỗi mặt nạ sở hữu đầy đủ bộ slider chỉnh sửa độc lập.
+*   **Preset & Quản lý Style**:
+    *   Lưu các bước chỉnh sửa thành Style để áp dụng hàng loạt (chọn lọc các module cần áp dụng).
+    *   **Import preset Lightroom (.xmp)**, tự động ghi file XMP sidecar để lưu trữ chỉnh sửa.
+    *   **Named Snapshots**: Lưu nhiều phiên bản/mốc chỉnh sửa khác nhau trong cùng một ảnh để so sánh nhanh.
 
-### Export
-- PNG/JPEG/WebP/TIFF (8/16-bit), resize %/cạnh dài, watermark, **sharpen-for-output**,
-  **filename token** (`{name}/{n:000}/{date}/{parent}...`), **export presets**, batch song song,
-  **giữ EXIF gốc** (camera/lens/ngày/GPS), **không ghi đè im lặng** (tự thêm hậu tố khi trùng tên).
+### 🗂️ 2. Quản lý thư viện ảnh & Catalog thông minh
+*   Duyệt ảnh qua cấu trúc thư mục dạng cây và lưới thumbnail trực quan, thanh filmstrip cuộn nhanh.
+*   Đánh giá ảnh nhanh bằng **Rating (1-5 sao), Flag (Pick/Reject/None), Color Label**. Hỗ trợ gán nhãn hàng loạt cho nhiều ảnh cùng lúc.
+*   **Catalog SQLite** hiệu năng cao:
+    *   Tự động lưu trữ thông tin ảnh.
+    *   **Smart Collections**: Tự động gom nhóm ảnh dựa trên bộ quy tắc động (ví dụ: tất cả ảnh chụp bằng ống kính 50mm có rating >= 4 sao).
+    *   Tìm kiếm nâng cao theo Camera, Lens, ISO, Khẩu độ, Tiêu cự, Ngày chụp.
+    *   Từ khóa phân cấp (**Hierarchical Keywords**) cùng bảng gợi ý từ khóa thông dụng.
+    *   **Stacking**: Gom nhóm các ảnh tương tự hoặc chụp liên tiếp để tránh rối mắt.
 
-### AI Plugins
-- **Upscaler:** 4x-UltraSharpV2 (ONNX), Tiled Inference + DirectML (NVIDIA/AMD/Intel), fallback CPU.
-- **Face Restorer:** GFPGAN (ONNX) khôi phục chân dung.
-- **Vision Tagger:** auto caption + tag (WD ViT), lưu thẳng vào keyword của ảnh.
+### ℹ️ 3. Panel Thông tin Tích hợp (Info Panel)
+*   **Biểu đồ Histogram** thời gian thực (RGB/Luma) cùng chế độ cảnh báo cháy sáng (clipping overlay).
+*   **Thông số chụp chi tiết (EXIF)**: Camera, Lens, Tiêu cự, Khẩu độ (f/), Tốc độ màn trập, ISO.
+*   **Bảng màu K-Means**: Phân tích và trích xuất bảng màu chủ đạo của bức ảnh (hỗ trợ click để copy mã màu HEX nhanh).
+*   **Bản đồ GPS**: Đọc dữ liệu tọa độ ảnh và hỗ trợ click mở trực tiếp trên bản đồ trực tuyến.
+*   Chỉnh sửa siêu dữ liệu EXIF trực tiếp (Description, Artist, Copyright, Make/Model...) và quản lý keyword dạng tag chip.
 
-## Yêu cầu hệ thống
-- Windows 10/11 (64-bit).
-- Bản *Lite*: cần Microsoft .NET 8 Desktop Runtime.
-- **Bắt buộc:** [Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) cho thư viện AI Native.
-- Khuyên dùng GPU tương thích DirectML (NVIDIA, AMD Radeon, Intel UHD).
+### 📤 4. Bộ xuất ảnh chuyên nghiệp (Export Engine)
+*   Hỗ trợ xuất các định dạng **JPEG, PNG, WebP, TIFF** (8-bit hoặc 16-bit chất lượng cao).
+*   Thay đổi kích thước linh hoạt (theo %, chiều dài tối đa của cạnh) và áp dụng **Sharpen-for-output** tối ưu độ nét khi đăng web/in ấn.
+*   Watermark bản quyền dạng ảnh hoặc chữ.
+*   Đặt tên file tự động bằng token thông minh (ví dụ: `{name}_{date}_{n:000}`).
+*   Xử lý xuất ảnh hàng loạt (batch export) chạy đa luồng song song không gây treo UI.
+*   Giữ nguyên hoặc loại bỏ siêu dữ liệu EXIF/GPS/IPTC tùy cấu hình.
+*   Ngăn chặn ghi đè tệp tin ngầm (tự động thêm hậu tố để tránh mất dữ liệu).
 
-## Cài đặt từ Release
-Vào [Releases](../../releases):
-1. `ImageTool_Lite_Win_x64.zip` — máy đã cài .NET 8.
-2. `ImageTool_Full_Win_x64.zip` — trọn bộ, chạy trực tiếp không cần cài đặt.
+### 🤖 5. Tiện ích AI tích hợp (AI Plugins)
+Ứng dụng hỗ trợ cơ chế hot-load các plugin AI (`.dll` được tải động từ thư mục `Plugins`) để tăng tốc xử lý bằng phần cứng (DirectML):
+*   **AI Upscaler**: Sử dụng mô hình **4x-UltraSharpV2 (ONNX)** với kỹ thuật **Tiled Inference** (chia nhỏ vùng xử lý để tiết kiệm VRAM) chạy qua DirectML trên GPU (NVIDIA, AMD, Intel) hoặc CPU fallback.
+*   **Face Restorer**: Tích hợp mô hình **GFPGAN (ONNX)** giúp khôi phục chi tiết khuôn mặt bị mờ, nhòe khi chụp thiếu sáng hoặc phóng to.
+*   **Vision Tagger**: Tự động phân tích nội dung hình ảnh bằng mô hình **WD ViT** để gán nhãn/từ khóa mô tả, lưu trực tiếp vào siêu dữ liệu của ảnh.
 
-## Phát triển
-- Build: `dotnet build ImageTool.slnx -c Debug`
-- Test: `dotnet test ImageTool.Tests/ImageTool.Tests.csproj` (544 test, build 0 warning)
-- Publish: `pwsh ./publish.ps1` (Lite + Full + plugins)
-- Hướng dẫn viết op Develop mới: `ImageTool.Imaging/WRITING_OPS.md`
+---
 
-## License
-Apache License 2.0 — xem [LICENSE](LICENSE).
+## 🛠️ Kiến trúc hệ thống & Công nghệ sử dụng
+
+Ứng dụng được thiết kế theo hướng module hóa cao, tách biệt luồng UI và luồng xử lý ảnh nặng:
+
+```mermaid
+graph TD
+    UI[ImageTool.Host - WPF UI] -->|Sử dụng| Shared[ImageTool.Shared - Services]
+    UI -->|Gọi qua registry| Imaging[ImageTool.Imaging - Core Pipeline]
+    Shared -->|Quản lý| DB[(Catalog SQLite)]
+    Imaging -->|Render| CPU_GPU[Linear-Light Float RGBA Canvas]
+    UI -->|Hot-load| Plugins[Plugins Directory]
+    Plugins -->|AI Upscale/GFPGAN/Tagger| DirectML[ONNX Runtime + DirectML]
+```
+
+### Chi tiết các project thành phần
+| Project | Vai trò / Công nghệ |
+| :--- | :--- |
+| **`ImageTool.Core`** | Interface, Models dùng chung cho toàn bộ hệ thống (Workspace, History, Catalog, Styles...). |
+| **`ImageTool.Imaging`** | Lõi xử lý ảnh phi phá hủy chạy ở không gian tuyến tính (**linear light float RGBA**). Quản lý danh sách ~40 phép hiệu chỉnh ảnh (`IEditOp`), pipeline lưu trữ đệm tối ưu hóa render (`CachedEditPipeline`). |
+| **`ImageTool.Shared`** | Dịch vụ nền: Catalog SQLite (sử dụng **LiteSql ORM** tối ưu), History, Stacking, Batch Export, EXIF/GPS parser, filename token engine. |
+| **`ImageTool.Host`** | Lớp giao diện người dùng chính (WPF, MVVM). Chứa các chế độ xem linh hoạt (Single, Grid, Cull, Compare), histogram tương tác kéo thả trực tiếp, các bảng trượt điều khiển mượt mà. |
+| **`Plugins`** | Các module AI chạy độc lập (`FaceRestorer`, `Upscaler`, `VisionTagger`) được load động lúc khởi động. |
+
+---
+
+## 💻 Yêu cầu hệ thống
+
+*   **Hệ điều hành**: Windows 10 / 11 (64-bit).
+*   **Môi trường chạy (với bản Lite)**: Đã cài đặt [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+*   **Thành phần bắt buộc**: [Visual C++ 2015-2022 Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) để chạy các thư viện AI native.
+*   **Phần cứng khuyên dùng**: GPU tương thích **DirectML** (NVIDIA GeForce, AMD Radeon, Intel Arc/UHD Graphics) để tăng tốc độ chạy các mô hình AI.
+
+---
+
+## 🚀 Hướng dẫn cài đặt & Chạy ứng dụng
+
+Tải phiên bản mới nhất tại mục [Releases](../../releases):
+*   **Bản Full (`AuroraStudio_Full_Win_x64.zip`)**: Đã đóng gói sẵn mọi thư viện phụ thuộc và .NET Runtime. Chỉ cần giải nén và chạy ngay file `AuroraStudio.exe`.
+*   **Bản Lite (`AuroraStudio_Lite_Win_x64.zip`)**: Bản rút gọn nhẹ hơn dành cho máy đã cài đặt sẵn .NET 8 Runtime.
+
+---
+
+## 👩‍💻 Dành cho nhà phát triển
+
+Nếu bạn muốn đóng góp code hoặc tự build ứng dụng từ mã nguồn:
+
+### Chuẩn bị môi trường
+1. Cài đặt [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+2. Cài đặt Visual Studio 2022 hoặc Rider hỗ trợ .NET 8.
+3. Cài đặt C++ compiler (nếu muốn biên dịch lại các module native).
+
+### Build dự án
+```bash
+# Build toàn bộ solution
+dotnet build ImageTool.slnx -c Release
+
+# Chạy unit tests (Bao gồm ~800 tests tự động hóa)
+dotnet test ImageTool.Tests/ImageTool.Tests.csproj
+```
+
+### Đóng gói & Phát hành
+Dự án cung cấp script PowerShell tự động build và đóng gói cả 2 bản Lite và Full cùng các Plugins:
+```powershell
+# Chạy script đóng gói
+pwsh ./publish.ps1
+```
+Hoặc dùng script build release chính thức:
+```powershell
+pwsh ./ReleasePublish.ps1
+```
+
+### Tự viết thêm Bộ lọc/Edit Operator mới
+Tham khảo tài liệu hướng dẫn viết Op Develop tại [WRITING_OPS.md](ImageTool.Imaging/WRITING_OPS.md).
+
+---
+
+## 📝 License
+
+Dự án này được phát hành dưới giấy phép **Apache License 2.0**. Xem chi tiết tại tệp tin [LICENSE](LICENSE).

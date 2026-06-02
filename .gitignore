@@ -36,6 +36,10 @@ project.assets.json
 .vs/
 Publish/
 model_offline/
+# Custom ignores
+.vs/
+Publish/
+model_offline/
 *.safetensors
 *.log
 
@@ -44,3 +48,9 @@ native/
 
 # Lensfun DB tuỳ chọn (5.3): thả XML vào lensfun/ để bật hiệu chỉnh ống kính tự động.
 lensfun/
+
+# Python/AI caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/

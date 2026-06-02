@@ -1,7 +1,7 @@
 <Window x:Class="ImageTool.Host.ToolsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Image Studio - Tools" Height="800" Width="500" Background="{DynamicResource BgPanelBrush}"
+        Title="Aurora Studio - Tools" Height="800" Width="500" Background="{DynamicResource BgPanelBrush}"
         WindowStartupLocation="Manual">
     <Grid x:Name="rootHost" Background="{DynamicResource BgPanelBrush}"/>
 </Window>

@@ -266,9 +266,44 @@ public partial class UpscalerControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Ping /health của AuraSR worker với timeout ngắn. Ném exception rõ ràng nếu worker chưa chạy
+    /// (lỗi kết nối) hoặc model chưa nạp xong (503), thay vì để job treo tới 3 phút.
+    /// </summary>
+    private async Task EnsureAuraWorkerReadyAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            probeCts.CancelAfter(TimeSpan.FromSeconds(3));
+            using var req = new HttpRequestMessage(HttpMethod.Get, "http://127.0.0.1:8000/health");
+            var resp = await _sharedHttpClient.SendAsync(req, probeCts.Token);
+            if (resp.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                throw new Exception("AuraSR Worker đang chạy nhưng model chưa nạp xong. Đợi vài giây rồi thử lại (lần đầu tải model có thể lâu).");
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception($"AuraSR Worker phản hồi bất thường ({(int)resp.StatusCode}).");
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // user huỷ
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is OperationCanceledException || ex is TaskCanceledException)
+        {
+            throw new Exception(
+                "Không kết nối được AuraSR Worker (http://127.0.0.1:8000). " +
+                "Hãy đảm bảo Python worker đã khởi động (ImageTool.Worker.AuraSR), " +
+                "hoặc chọn model ONNX/Fast Resize thay thế.");
+        }
+    }
+
     private async Task<(byte[] ImageBytes, string SavedPath)> ProcessAuraSRAsync(string imagePath, CancellationToken ct)
     {
         pbProgress.IsIndeterminate = true;
+        txtStatus.Text = "Đang kiểm tra AuraSR Worker...";
+
+        // Health-check trước (timeout ngắn) để không treo 3 phút khi worker chưa chạy / model chưa nạp.
+        await EnsureAuraWorkerReadyAsync(ct);
+
         txtStatus.Text = "Đang xin Thẻ Chờ (Job ID) từ Backend...";
 
         using var form = new MultipartFormDataContent();
@@ -342,15 +377,8 @@ public partial class UpscalerControl : UserControl
     {
         return await Task.Run(() => 
         {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var mdPath = Path.Combine(baseDir, "Plugins", "ImageTool.Plugins.Upscaler", "Models", mdFileName);
-            
-            if (!File.Exists(mdPath))
-            {
-                // Fallback debug mode
-                mdPath = Path.Combine(baseDir, "Models", mdFileName);
-                if (!File.Exists(mdPath)) throw new Exception($"Không tìm thấy file Model tại: {mdPath}\nVui lòng copy file .onnx (và .data nếu có) vào thư mục Models.");
-            }
+            var mdPath = ModelLocator.Resolve(mdFileName)
+                ?? throw new Exception($"Không tìm thấy file Model '{mdFileName}'.\nVui lòng copy file .onnx (và .data nếu có) vào thư mục Models của plugin Upscaler.");
             
             ct.ThrowIfCancellationRequested();
             

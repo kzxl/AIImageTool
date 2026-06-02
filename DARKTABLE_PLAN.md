@@ -81,9 +81,12 @@ Darktable module -> op của ta đã làm:
 - [x] **D4.2** Mask combine ops — union/intersect/difference giữa nhiều mask trên 1 instance: `MaskCombine`
       (intersect a*b / union a+b-ab / subtract a*(1-b)) + mask phụ luminance-range trong `MaskedOp` ("Refine"
       combo + Min/Max/Smooth trong Local Adjustments). Round-trip qua params. + test.
-- [~] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng — `PolygonMask` (đa giác nhiều đỉnh,
-      ray-casting inside + feather theo khoảng cách tới biên, invert; UI "+ Polygon" click đặt đỉnh trên ảnh,
-      có test). Ellipse nhiều node + per-node feather CHƯA (Radial hiện 1 tâm).
+- [x] **D4.3** Path/Ellipse/Gradient mask có nhiều node + feather riêng — `PolygonMask` (đa giác nhiều đỉnh,
+      ray-casting inside + feather chung tới biên) + **`PathMask` (per-node feather: mỗi node 1 feather riêng,
+      nội suy theo node gần nhất trên biên — mềm chỗ này cứng chỗ kia, kiểu Darktable "path")**; UI "+ Polygon"
+      và "+ Path" click đặt node trên ảnh, có test. **UI per-node feather:** mỗi node ghi giá trị slider
+      Feather lúc click (đổi slider giữa các lần click → từng node mềm/cứng khác nhau). Ellipse nhiều node
+      riêng (Radial vẫn 1 tâm) — không cần, Path đa giác đã phủ.
 - [~] **D4.4** Multiple instances 1 module (vd 2 lần exposure khác mask) — pipeline đã hỗ trợ; Local
       Adjustments cho phép NHIỀU mask instance cùng/khác loại (theo maskId) + nút **Nhân bản mask** (⧉,
       `LocalMask.Clone` Id mới, round-trip qua maskId). Multiple instance cho op GLOBAL (vd 2 Curve) vẫn cần UI riêng.

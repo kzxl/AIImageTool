@@ -26,6 +26,12 @@ public class CatalogImage
     public int? Orientation { get; set; }
     public double? GpsLatitude { get; set; }
     public double? GpsLongitude { get; set; }
+
+    // Curation (đồng bộ từ sidecar .imgtool.json để catalog search / smart collection lọc được).
+    public int Rating { get; set; }            // 0..5
+    public ColorLabel Label { get; set; }      // màu nhãn
+    public PickFlag Pick { get; set; }         // pick / reject
+    public string? Keywords { get; set; }      // CSV tags, để LIKE search
 }
 
 public class ImageCollection
@@ -63,7 +69,7 @@ public class ImportCompletedEventArgs : EventArgs
     }
 }
 
-public enum CatalogSortField { ImportedAt, FileName, DateTaken, Iso, FileSize, Aperture, FocalLength }
+public enum CatalogSortField { ImportedAt, FileName, DateTaken, Iso, FileSize, Aperture, FocalLength, Rating }
 
 /// <summary>
 /// Truy vấn tìm kiếm nâng cao (8.4): lọc theo nhiều tiêu chí metadata. Mọi trường null = không lọc.
@@ -83,6 +89,13 @@ public class CatalogQuery
     public double? FocalMax { get; set; }
     public DateTime? DateFrom { get; set; }      // theo DateTaken
     public DateTime? DateTo { get; set; }
+
+    // Curation filters (đồng bộ từ sidecar) — null = không lọc.
+    public int? RatingMin { get; set; }          // rating >= N (sao)
+    public ColorLabel? Label { get; set; }       // đúng màu nhãn
+    public PickFlag? Pick { get; set; }          // đúng pick/reject flag
+    public string? Keyword { get; set; }         // khớp 1 keyword (LIKE)
+
     public CatalogSortField SortField { get; set; } = CatalogSortField.ImportedAt;
     public bool SortDescending { get; set; } = true;
 }
@@ -136,6 +149,13 @@ public interface ICatalogService
     CatalogImage? GetImage(string filePath);
 
     void RemoveFromCatalog(IEnumerable<string> filePaths);
+
+    /// <summary>
+    /// Đồng bộ thông tin curation (rating/label/pick/keywords) từ sidecar vào catalog cho 1 ảnh.
+    /// Gọi khi user đổi rating/flag/keyword để catalog search + smart collection phản ánh ngay.
+    /// No-op nếu ảnh chưa import vào catalog.
+    /// </summary>
+    void UpdateCuration(string filePath, ImageMeta meta);
 
     IReadOnlyList<ImageCollection> GetCollections();
     ImageCollection CreateCollection(string name, string? description = null);

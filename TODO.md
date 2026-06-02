@@ -3,7 +3,38 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-05-31 (b) — ĐỢT TÍNH NĂNG LỚN: Gradient Map (#5) + Color Match Reinhard (#8) +
+> Cập nhật lần cuối: 2026-06-01 (d) — RÀ SOÁT & HOÀN THIỆN UI (op có engine nhưng thiếu/cụt UI):
+> (1) **Gradient Map** — thêm color picker hex Shadow/Mid/High tuỳ chỉnh + slider Midpoint (trước chỉ có
+> preset + opacity; engine vốn hỗ trợ màu/midpoint tuỳ ý nhưng UI hardcode); preset giờ chỉ điền sẵn hex.
+> (2) **ChannelMixer (Color Calibration)** — op trước MỒ CÔI (đăng ký nhưng 0 UI), nay có nhóm "Color
+> Calibration" 6 slider hue/sat từng primary R/G/B + BuildOps + Load. (3) **Input Profile "Embedded ICC"** —
+> thêm lựa chọn áp ma trận colorant ICC nhúng THẬT (`IccProfileReader.TryReadRgbToXyzD65FromFile` →
+> `InputProfileOp.SourceMatrix`), dùng được profile lạ không khớp tên. (4) **PathMask per-node feather** —
+> mỗi node ghi giá trị Feather hiện tại lúc click (đổi slider giữa các lần click → mép mềm/cứng khác nhau
+> theo node, đúng "path" Darktable). 799 test pass, build 0 warning.
+> 2026-06-01 (c) — ĐỢT TÍNH NĂNG TEST-ĐƯỢC: (#6) Multi-page Print
+> (`PrintModule.RenderPages`/`PageCount`/`CellsPerPage`: chia ảnh tràn nhiều trang, tự đánh số _p01/_p02);
+> (#3) `PathMask` (D4.3 đầy đủ — path nhiều node + feather RIÊNG từng node, nội suy theo node gần nhất;
+> nối DevelopPanel "+ Path" + CenterPreview click đặt node); (#2) `LocalToneMapOp` (HDR-look single-shot:
+> tách log-luminance base/detail, nén dải động giữ tương phản cục bộ; UI "Local Tone (HDR)" trong Tone
+> Mapping); (#1) Soft-proof — `GamutMapOp` (clip/desaturate về gamut đích sRGB/AdobeRGB/Rec2020/P3 hoặc
+> ma trận ICC bất kỳ) + `GamutCheck` (phát hiện màu ngoài gamut + % pixel) + UI "Soft Proof / Proof Mode"
+> trong Color Management; (#5) `InputProfileOp.SourceMatrix` — input profile theo ma trận RGB→XYZ tuỳ
+> chỉnh (nền tảng DCP/camera matrix, dùng được colorant ICC thật). 799 test pass, build 0 warning.
+> 2026-06-01 (b) — PRINT MODULE (#11): `PrintModule` dựng file raster sẵn-sàng-in theo
+> khổ giấy (A3/A4/A5/Letter/Legal/4×6/5×7/8×10) + DPI (150/200/300) + orientation + lề/khoảng cách (mm)
+> + lưới N-up (Rows×Cols) + Fit/Fill; bố cục PageLayout thuần toán học (mm→px theo DPI) tách riêng để test
+> (9 test: A4@300=2480×3508, landscape swap, grid margin/gap, render single + N-up + skip ảnh lỗi). Nối
+> ExportPanel: nút "In ấn (Print)…" + `PhotoPrintDialog` (code-built) -> render -> mở file. 765 test pass, build 0 warning.
+> 2026-06-01 (a) — ĐỢT ĐỘ BỀN (A): (A1) Plugin load/init/UI lỗi báo cho user qua toast +
+> AppLog thay vì nuốt im lặng (PluginLoader.LoadErrors). (A2) AuraSR worker thêm endpoint /health + C#
+> ping health-check timeout ngắn trước khi gửi (hết treo 3 phút khi worker chưa chạy/model chưa nạp).
+> (A3) Model discovery bền: `ModelLocator` tìm đa vị trí (publish + build cục bộ + đệ quy Plugins\) + ghi log
+> khi thiếu model (hết tình trạng pipeline trả ảnh y nguyên IM LẶNG); dùng chung cho UI/Batch/pipeline.
+> (A4) Catalog lưu curation (Rating/Label/Pick/Keywords) đồng bộ từ sidecar .imgtool.json: populate lúc
+> import + tự đồng bộ qua MetaChanged -> UpdateCuration; Advanced Search + Smart Collection lọc/sort được
+> theo rating/label/pick/keyword (SmartCollectionDialog thêm 4 trường). 756 test pass, build 0 warning.
+> 2026-05-31 (b) — ĐỢT TÍNH NĂNG LỚN: Gradient Map (#5) + Color Match Reinhard (#8) +
 > Perceptual hash/duplicate finder (#1) + Auto-Upright keystone (#6) + Frequency Separation skin (#7) +
 > Delta-E CIE76/CIEDE2000 (#9) + Social media presets (#10) + Import from URL + Auto-tag EXIF (#3) +
 > Web gallery HTML (#11) + **Panorama stitching đầy đủ** (Homography DLT/RANSAC + Harris/NCC + warp/blend, #4) +
@@ -424,6 +455,39 @@ lens correction (5.3, lensfun), import XMP/.dtstyle của LR/Darktable (9.3).
 >   (softmax theo focus map từng pixel).
 > - **MergeService** + context menu "Merge..." (Merge to HDR / Focus Stack) trên selection, xuất PNG 16-bit.
 >   Đều có test (fusion/focus/stack + decode→merge→save).
+
+---
+
+## 15. BACKLOG — CẦN NATIVE / GPU / MODEL / DỮ LIỆU PHẦN CỨNG (làm sau, verify trên máy thật)
+
+> Các mục này KHÔNG test trọn vẹn được bằng unit test thuần vì phụ thuộc phần cứng/binary/model.
+> Phần managed (engine + pipeline + math) có thể đã/đang làm; phần đánh dấu cần verify ngoài đời thật.
+
+- [ ] **15.1 GPU compute cho pipeline** (10.7) — port các op nặng (Gaussian blur, Clarity, Diffuse, Dehaze,
+      LocalToneMap) sang ComputeSharp/DirectML. Đòn bẩy perf lớn nhất còn lại. `PipelineProfiler` đã có để
+      chọn op đáng port. **Cần verify shader trên GPU thật** (NVIDIA/AMD/Intel) + so khớp kết quả CPU.
+- [ ] **15.2 LibRaw demosaic THẬT** (D5.1/D5.2) — scaffold `LibRawDecoder`/`LibRawNative`/`LibRawImageConverter`
+      đã xong (gated, có test). **Cần bundle `libraw.dll` x64 + DLL phụ thuộc vào `native/` + verify P/Invoke
+      + chất lượng demosaic trên file RAW thật** (CR2/CR3/NEF/ARW/DNG...). Chọn thuật toán demosaic (PPG/AMaZE/RCD)
+      qua param: CHƯA.
+- [ ] **15.3 DCP/camera profile đầy đủ** (D5.4/7.3/7.5) — `InputProfileOp.SourceMatrix` (nền tảng ma trận) ✅
+      test được. CÒN LẠI: **parse binary DCP/DNG ColorMatrix + ForwardMatrix + HSV lookup table** (cần dữ liệu
+      profile máy ảnh thật) + Bradford về working. Parse format nhị phân theo từng máy -> verify trên RAW thật.
+- [ ] **15.4 Soft-proof với ICC máy in/màn hình THẬT** (#1 mở rộng) — engine `GamutMapOp`/`GamutCheck` ✅ nhận
+      ma trận tuỳ chỉnh. CÒN LẠI: **đọc gamut từ ICC máy in/màn hình thật** (LUT-based profile, perceptual/
+      relative-colorimetric intent — không chỉ matrix profile) + overlay cảnh báo out-of-gamut trên canvas.
+      Cần file ICC thiết bị thật để verify.
+- [ ] **15.5 AI segmentation đa lớp** (6.6 mở rộng) — Sky hiện heuristic; Subject cần ONNX. **Cần model ONNX
+      (U²-Net / segmentation đa lớp người/da/tóc/nền) + GPU** để verify inference. Pipeline mask + RasterMask
+      đã sẵn sàng nhận kết quả.
+- [ ] **15.6 Tethering** — chụp tether qua USB (libgphoto2/Canon/Nikon SDK). Cần thiết bị máy ảnh thật + SDK
+      hãng -> không test bằng unit test.
+- [ ] **15.7 Print ra máy in thật** (#11 mở rộng) — hiện `PrintModule` xuất file raster sẵn-sàng-in (test được).
+      CÒN LẠI: gửi thẳng `System.Drawing.Printing`/`System.Printing` tới máy in + chọn khay/giấy. Cần máy in thật.
+- [ ] **15.8 Multiple instances cho op GLOBAL** (D4.4) — pipeline đã hỗ trợ nhiều MaskedOp; còn UI cho 2+
+      instance op global (vd 2 Tone Curve khác nhau). Thuần UI, sẽ làm khi cần (không chặn).
+- [ ] **15.9 Virtual copies đầy đủ** (D6.3) — đã có Named Snapshots; còn model history per-version + hiển thị
+      nhiều bản song song trong grid + selection-by-copy-id. Thuần managed nhưng động vào nhiều tầng, tách riêng.
 
 ---
 

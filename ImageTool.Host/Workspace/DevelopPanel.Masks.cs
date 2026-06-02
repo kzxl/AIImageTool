@@ -39,6 +39,7 @@ public partial class DevelopPanel
         AddMaskButton(addRow, "+ Radial", RadialMask.Type);
         AddMaskButton(addRow, "+ Brush", BrushMask.Type);
         AddMaskButton(addRow, "+ Polygon", PolygonMask.Type);
+        AddMaskButton(addRow, "+ Path", PathMask.Type);
         AddMaskButton(addRow, "+ Lum", LuminanceRangeMask.Type);
         AddMaskButton(addRow, "+ Color", ColorRangeMask.Type);
         AddMaskButton(addRow, "+ Param", ParametricMask.Type);
@@ -129,7 +130,7 @@ public partial class DevelopPanel
         _activeMask = m;
         BuildMaskEditor();
         // Brush/Polygon mask đang chọn -> báo CenterPreview cho phép vẽ/đặt điểm.
-        bool drawable = m != null && (m.MaskType == BrushMask.Type || m.MaskType == PolygonMask.Type);
+        bool drawable = m != null && (m.MaskType == BrushMask.Type || m.MaskType == PolygonMask.Type || m.MaskType == PathMask.Type);
         BrushMaskActivated?.Invoke(this, drawable ? m : null);
     }
 
@@ -198,6 +199,15 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Click trên ảnh để đặt các đỉnh đa giác (≥3 điểm). Vùng trong đa giác được chọn.",
+                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+                });
+                break;
+            case PathMask.Type:
+                AddMaskGeomSlider(m, "dfeather", "Feather (mỗi node)", 0, 0.5, 0.05);
+                AddMaskInvertToggle(m);
+                _maskEditPanel.Children.Add(new TextBlock
+                {
+                    Text = "Click trên ảnh để đặt node (≥3). Mỗi node ghi giá trị Feather hiện tại — đổi slider giữa các lần click để mép mềm/cứng khác nhau theo từng node (path).",
                     Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
                 });
                 break;
@@ -431,6 +441,7 @@ public partial class DevelopPanel
         RadialMask.Type => "Radial",
         BrushMask.Type => "Brush",
         PolygonMask.Type => "Polygon",
+        PathMask.Type => "Path",
         LuminanceRangeMask.Type => "Luminance Range",
         ColorRangeMask.Type => "Color Range",
         RasterMask.Type => "AI Subject",
@@ -448,6 +459,7 @@ public partial class DevelopPanel
             RadialMask.Type => new[] { "cx", "cy", "rx", "ry", "feather", "invert" },
             BrushMask.Type => new[] { "radius", "hardness", "pts" },
             PolygonMask.Type => new[] { "pts", "feather", "invert" },
+            PathMask.Type => new[] { "pts", "feathers", "dfeather", "invert" },
             LuminanceRangeMask.Type => new[] { "min", "max", "smooth" },
             ColorRangeMask.Type => new[] { "hue", "range", "minSat", "smooth" },
             RasterMask.Type => new[] { "maskFile", "invert" },
@@ -467,14 +479,26 @@ public partial class DevelopPanel
         return d;
     }
 
-    /// <summary>Thêm 1 điểm vào brush/polygon mask đang active (toạ độ chuẩn hoá) rồi commit (debounce).</summary>
+    /// <summary>Thêm 1 điểm vào brush/polygon/path mask đang active (toạ độ chuẩn hoá) rồi commit (debounce).</summary>
     public void AppendBrushPoint(float nx, float ny)
     {
         if (_activeMask == null) return;
-        if (_activeMask.MaskType != BrushMask.Type && _activeMask.MaskType != PolygonMask.Type) return;
+        if (_activeMask.MaskType != BrushMask.Type && _activeMask.MaskType != PolygonMask.Type && _activeMask.MaskType != PathMask.Type) return;
         string cur = _activeMask.MaskParams.TryGetValue("pts", out var s) ? s : "";
         string pt = $"{nx.ToString("R", System.Globalization.CultureInfo.InvariantCulture)},{ny.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}";
         _activeMask.MaskParams["pts"] = string.IsNullOrEmpty(cur) ? pt : cur + ";" + pt;
+
+        // Path mask: mỗi node ghi feather hiện tại (slider "dfeather") -> per-node feather thật.
+        // Đổi slider Feather giữa các lần click để mỗi node mềm/cứng khác nhau.
+        if (_activeMask.MaskType == PathMask.Type)
+        {
+            float f = _activeMask.MaskParams.TryGetValue("dfeather", out var df) &&
+                      float.TryParse(df, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dv)
+                      ? dv : 0.05f;
+            string curF = _activeMask.MaskParams.TryGetValue("feathers", out var fs) ? fs : "";
+            string fStr = f.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            _activeMask.MaskParams["feathers"] = string.IsNullOrEmpty(curF) ? fStr : curF + ";" + fStr;
+        }
         ScheduleCommit();
     }
 

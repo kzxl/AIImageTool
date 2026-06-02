@@ -20,6 +20,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Thương hiệu hiển thị (exe metadata + About). Tên assembly giữ ImageTool.Host để không
+         ảnh hưởng nạp plugin / đường dẫn. -->
+    <Product>Aurora Studio</Product>
+    <AssemblyTitle>Aurora Studio</AssemblyTitle>
+    <Description>Aurora Studio — trình chỉnh sửa ảnh phi phá hủy (linear-light) + AI.</Description>
+    <Company>Aurora Studio</Company>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <!--

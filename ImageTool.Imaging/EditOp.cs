@@ -116,8 +116,10 @@ public sealed class EditOpRegistry
         ChromaDenoiseOp.Register(reg);
         DiffuseOp.Register(reg);
         InputProfileOp.Register(reg);
+        GamutMapOp.Register(reg);
         GlowOp.Register(reg);
         HighlightReconstructionOp.Register(reg);
+        LocalToneMapOp.Register(reg);
         LiquifyOp.Register(reg);
         FilmNegativeOp.Register(reg);
         LensProfileOp.Register(reg);

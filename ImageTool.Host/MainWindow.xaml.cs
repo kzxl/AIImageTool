@@ -416,9 +416,16 @@ public partial class MainWindow : Window
         string pluginsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
         var plugins = _pluginLoader.LoadPlugins(pluginsPath).ToList();
 
+        var failures = new List<string>(_pluginLoader.LoadErrors);
+
         foreach (var plugin in plugins)
         {
-            try { plugin.Initialize(_serviceProvider); } catch { }
+            try { plugin.Initialize(_serviceProvider); }
+            catch (Exception ex)
+            {
+                failures.Add($"{plugin.Name}: khởi tạo lỗi - {ex.Message}");
+                AppLog.Error("MainWindow.LoadPlugins", $"Initialize plugin '{plugin.Name}' lỗi", ex);
+            }
         }
 
         _pluginEntries = plugins
@@ -427,6 +434,11 @@ public partial class MainWindow : Window
 
         lstPlugins.ItemsSource = _pluginEntries;
         if (_pluginEntries.Count > 0) lstPlugins.SelectedIndex = 0;
+
+        if (failures.Count > 0)
+            ShowToast(failures.Count == 1
+                ? $"Plugin lỗi: {failures[0]}"
+                : $"{failures.Count} plugin nạp lỗi (xem app.log)");
     }
 
     private void LstPlugins_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -434,7 +446,12 @@ public partial class MainWindow : Window
         if (lstPlugins.SelectedItem is PluginEntry entry)
         {
             try { contentPresenter.Content = entry.Plugin.GetUIComponent(); }
-            catch { contentPresenter.Content = null; }
+            catch (Exception ex)
+            {
+                contentPresenter.Content = null;
+                AppLog.Error("MainWindow.PluginUI", $"GetUIComponent '{entry.Name}' lỗi", ex);
+                ShowToast($"Không mở được giao diện plugin '{entry.Name}'");
+            }
         }
     }
 

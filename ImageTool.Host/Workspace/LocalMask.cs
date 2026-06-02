@@ -152,6 +152,10 @@ public sealed class LocalMask
                 m.Name = "Polygon";
                 m.MaskParams = new() { ["pts"] = "", ["feather"] = "0.05", ["invert"] = "false" };
                 break;
+            case PathMask.Type:
+                m.Name = "Path";
+                m.MaskParams = new() { ["pts"] = "", ["feathers"] = "", ["dfeather"] = "0.05", ["invert"] = "false" };
+                break;
             case LuminanceRangeMask.Type:
                 m.Name = "Luminance Range";
                 m.MaskParams = new() { ["min"] = "0", ["max"] = "1", ["smooth"] = "0.1" };

@@ -144,6 +144,7 @@
                 <TextBlock x:Name="txtEstSize" Text="" FontSize="10" Foreground="{DynamicResource AccentBrush}" Margin="0,6,0,0"/>
                 <Button x:Name="btnContactSheet" Content="Contact Sheet…" Height="28" Margin="0,8,0,0" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="BtnContactSheet_Click" ToolTip="Ghép ảnh đang chọn thành 1 file lưới (contact sheet)"/>
                 <Button x:Name="btnWebGallery" Content="Web Gallery…" Height="28" Margin="0,6,0,0" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="BtnWebGallery_Click" ToolTip="Xuất trang HTML gallery (grid + lightbox) từ ảnh đang chọn"/>
+                <Button x:Name="btnPrint" Content="In ấn (Print)…" Height="28" Margin="0,6,0,0" Background="{DynamicResource BgHoverBrush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="BtnPrint_Click" ToolTip="Dựng file ảnh sẵn-sàng-in theo khổ giấy + DPI (1 ảnh hoặc nhiều ảnh N-up trên 1 trang)"/>
 
                 <TextBlock Text="Social Media" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,12,0,4"/>
                 <DockPanel Margin="0,0,0,4">

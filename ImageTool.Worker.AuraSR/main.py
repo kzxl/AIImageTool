@@ -68,6 +68,15 @@ def process_upscale_job(job_id: str, image_bytes: bytes):
         print(f"[!] [Job {job_id[:6]}] Lỗi: {str(e)}")
         job_queue[job_id] = {"status": "error", "message": str(e)}
 
+@app.get("/health")
+async def health():
+    # C# ping endpoint này trước khi gửi ảnh để biết worker + model đã sẵn sàng chưa,
+    # tránh treo chờ vô ích khi worker chưa chạy hoặc model chưa nạp.
+    if aura_model is None:
+        return JSONResponse(status_code=503, content={"status": "loading", "model_ready": False})
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return {"status": "ready", "model_ready": True, "device": device}
+
 @app.post("/upscale")
 async def upscale_queue(file: UploadFile = File(...)):
     if aura_model is None:

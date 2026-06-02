@@ -21,7 +21,7 @@ dotnet publish ImageTool.Host\ImageTool.Host.csproj -c Release -r win-x64 -p:Sel
 Copy-Item -Path "ImageTool.Host\bin\Release\net8.0-windows\win-x64\Plugins" -Destination "Publish_Release\Lite\Plugins" -Recurse -Force
 
 Write-Host "Compressing ZIP packages..."
-Compress-Archive -Path "Publish_Release\Full\*" -DestinationPath "Publish_Release\ImageTool_Full_Win_x64.zip" -Force
-Compress-Archive -Path "Publish_Release\Lite\*" -DestinationPath "Publish_Release\ImageTool_Lite_Win_x64.zip" -Force
+Compress-Archive -Path "Publish_Release\Full\*" -DestinationPath "Publish_Release\AuroraStudio_Full_Win_x64.zip" -Force
+Compress-Archive -Path "Publish_Release\Lite\*" -DestinationPath "Publish_Release\AuroraStudio_Lite_Win_x64.zip" -Force
 
 Write-Host "Publish Process Completed Successfully!"

@@ -6,9 +6,17 @@ namespace ImageTool.Shared;
 
 public class PluginLoader
 {
+    /// <summary>
+    /// Lỗi gặp khi nạp plugin ở lần <see cref="LoadPlugins"/> gần nhất (file DLL -> thông điệp lỗi).
+    /// Host đọc danh sách này để báo cho user thay vì nuốt im lặng.
+    /// </summary>
+    public IReadOnlyList<string> LoadErrors => _loadErrors;
+    private readonly List<string> _loadErrors = new();
+
     public IEnumerable<IImagePlugin> LoadPlugins(string pluginsPath)
     {
         var plugins = new List<IImagePlugin>();
+        _loadErrors.Clear();
 
         if (!Directory.Exists(pluginsPath))
         {
@@ -72,7 +80,10 @@ public class PluginLoader
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load plugin from {dllFile}: {ex.Message}");
+                var name = Path.GetFileNameWithoutExtension(dllFile);
+                var msg = $"{name}: {ex.GetType().Name} - {ex.Message}";
+                _loadErrors.Add(msg);
+                AppLog.Error("PluginLoader", $"Nạp plugin thất bại: {dllFile}", ex);
             }
         }
 

@@ -513,6 +513,158 @@ public sealed class PolygonMask : IMaskGenerator
 }
 
 /// <summary>
+/// Path mask (D4.3 đầy đủ, kiểu Darktable "path" có per-node feather): vùng định nghĩa bằng đa giác
+/// nhiều node (toạ độ chuẩn hoá [0..1]) NHƯNG mỗi node mang feather RIÊNG. Feather tại 1 điểm trên
+/// biên được nội suy theo node gần nhất, nên mép có thể mềm chỗ này, cứng chỗ kia (vd path quanh
+/// chủ thể: mềm ở tóc, cứng ở vai). Khác PolygonMask (1 feather chung).
+///
+/// Thuật toán: inside test ray-casting; với mỗi pixel tìm cạnh gần nhất + node feather nội suy theo
+/// vị trí chiếu trên cạnh đó, rồi smoothstep theo khoảng cách / featherPx cục bộ. Cần ≥3 điểm.
+/// Serialize: "pts"="x0,y0;...", "feathers"="f0;f1;..." (mỗi node 1 feather chuẩn hoá), "invert".
+/// </summary>
+public sealed class PathMask : IMaskGenerator
+{
+    public const string Type = "Path";
+    public string MaskType => Type;
+
+    public List<(float X, float Y)> Points = new();
+    public List<float> Feathers = new();   // feather/node, chuẩn hoá [0..0.5] theo cạnh dài
+    public float DefaultFeather = 0.05f;   // dùng khi Feathers thiếu/không khớp số node
+    public bool Invert;
+
+    public float[] Generate(int width, int height)
+    {
+        var m = new float[width * height];
+        int n = Points.Count;
+        if (n < 3) return m;
+
+        var px = new float[n];
+        var py = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            px[i] = Points[i].X * (width - 1);
+            py[i] = Points[i].Y * (height - 1);
+        }
+
+        float maxEdge = MathF.Max(width, height);
+        // feather px theo node (clamp + fallback default).
+        var fpx = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            float f = (i < Feathers.Count) ? Feathers[i] : DefaultFeather;
+            fpx[i] = MathF.Max(1f, Math.Clamp(f, 0f, 0.5f) * maxEdge);
+        }
+        bool invert = Invert;
+
+        Parallel.For(0, height, y =>
+        {
+            int row = y * width;
+            for (int x = 0; x < width; x++)
+            {
+                bool inside = PointInPolygon(x, y, px, py, n);
+                float featherLocal = NearestEdgeFeather(x, y, px, py, fpx, n, out float dist);
+                float v;
+                if (featherLocal <= 1f)
+                {
+                    v = inside ? 1f : 0f;
+                }
+                else
+                {
+                    float t = Math.Clamp(dist / featherLocal, 0f, 1f);
+                    float s = t * t * (3f - 2f * t);
+                    v = inside ? s : 0f;
+                }
+                m[row + x] = invert ? 1f - v : v;
+            }
+        });
+        return m;
+    }
+
+    private static bool PointInPolygon(float x, float y, float[] px, float[] py, int n)
+    {
+        bool inside = false;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            if (((py[i] > y) != (py[j] > y)) &&
+                (x < (px[j] - px[i]) * (y - py[i]) / (py[j] - py[i] + 1e-9f) + px[i]))
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    /// <summary>
+    /// Tìm cạnh gần nhất tới (x,y); trả feather nội suy giữa 2 node của cạnh đó theo vị trí chiếu t,
+    /// và out khoảng cách tới biên gần nhất.
+    /// </summary>
+    private static float NearestEdgeFeather(float x, float y, float[] px, float[] py, float[] fpx, int n, out float dist)
+    {
+        float best = float.MaxValue;
+        float bestFeather = fpx[0];
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            float d = DistToSegmentT(x, y, px[j], py[j], px[i], py[i], out float t);
+            if (d < best)
+            {
+                best = d;
+                // node j (t=0) -> node i (t=1).
+                bestFeather = fpx[j] + (fpx[i] - fpx[j]) * t;
+            }
+        }
+        dist = best;
+        return bestFeather;
+    }
+
+    private static float DistToSegmentT(float px, float py, float ax, float ay, float bx, float by, out float t)
+    {
+        float dx = bx - ax, dy = by - ay;
+        float len2 = dx * dx + dy * dy;
+        t = len2 < 1e-9f ? 0f : Math.Clamp(((px - ax) * dx + (py - ay) * dy) / len2, 0f, 1f);
+        float cx = ax + t * dx, cy = ay + t * dy;
+        float ex = px - cx, ey = py - cy;
+        return MathF.Sqrt(ex * ex + ey * ey);
+    }
+
+    public Dictionary<string, string> ToParams() => new()
+    {
+        ["mask"] = Type,
+        ["pts"] = BrushMask.PackPoints(Points),
+        ["feathers"] = PackFeathers(Feathers),
+        ["dfeather"] = F(DefaultFeather),
+        ["invert"] = Invert ? "true" : "false",
+    };
+    private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    internal static string PackFeathers(List<float> fs)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < fs.Count; i++)
+        {
+            if (i > 0) sb.Append(';');
+            sb.Append(fs[i].ToString("R", CultureInfo.InvariantCulture));
+        }
+        return sb.ToString();
+    }
+
+    internal static List<float> UnpackFeathers(string s)
+    {
+        var list = new List<float>();
+        if (string.IsNullOrWhiteSpace(s)) return list;
+        foreach (var part in s.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            if (float.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                list.Add(v);
+        return list;
+    }
+
+    public static PathMask FromParams(IReadOnlyDictionary<string, string> p) => new()
+    {
+        Points = BrushMask.UnpackPoints(EditOpRegistry.S(p, "pts")),
+        Feathers = UnpackFeathers(EditOpRegistry.S(p, "feathers")),
+        DefaultFeather = EditOpRegistry.F(p, "dfeather", 0.05f),
+        Invert = EditOpRegistry.B(p, "invert"),
+    };
+}
+
+/// <summary>
 /// Parametric mask đa kênh (D4.1, kiểu Darktable "parametric masking"): chọn vùng theo NHIỀU kênh
 /// cùng lúc — L (lightness), C (chroma), H (hue) trong Lab/HSV và R, G, B (sRGB). Mỗi kênh là 1
 /// band-pass [Min..Max] (giá trị chuẩn hoá [0..1], hue cũng [0..1] = độ/360) với mép mượt theo Feather.
