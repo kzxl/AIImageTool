@@ -141,14 +141,10 @@ dotnet test ImageTool.Tests/ImageTool.Tests.csproj
 ```
 
 ### Đóng gói & Phát hành
-Dự án cung cấp script PowerShell tự động build và đóng gói cả 2 bản Lite và Full cùng các Plugins:
+Dự án cung cấp script PowerShell tự động build, xuất bản và nén zip cả 2 bản Lite và Full cùng các Plugins ra thư mục `Publish`:
 ```powershell
-# Chạy script đóng gói
+# Chạy script đóng gói và nén zip
 pwsh ./publish.ps1
-```
-Hoặc dùng script build release chính thức:
-```powershell
-pwsh ./ReleasePublish.ps1
 ```
 
 ### Tự viết thêm Bộ lọc/Edit Operator mới
