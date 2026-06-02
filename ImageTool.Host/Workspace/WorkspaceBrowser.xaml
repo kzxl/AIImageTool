@@ -122,6 +122,7 @@
 
         <!-- Thumbnails (workspace OR preview, swapped via _isPreviewing) -->
         <Border Grid.Row="8" Background="{DynamicResource BgPanelBrush}">
+            <!-- Fixes #1: Set CanContentScroll to False to enable smooth physical scrolling for WrapPanel -->
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                           CanContentScroll="False">
                 <ItemsControl x:Name="icThumbnails" ItemsSource="{Binding Thumbnails}">
