@@ -123,8 +123,21 @@
                 <ColumnDefinition x:Name="colRight" Width="380" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT -->
-            <ws:WorkspaceBrowser x:Name="browser" Grid.Column="0"/>
+            <!-- LEFT: Tabs -->
+            <Grid Grid.Column="0" Background="{DynamicResource BgPanelBrush}">
+                <TabControl x:Name="leftTabs" Background="Transparent"
+                            BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0">
+                    <TabItem Header="Folder">
+                        <ws:WorkspaceBrowser x:Name="browser"/>
+                    </TabItem>
+                    <TabItem Header="Presets">
+                        <ws:StylePanel x:Name="stylePanel"/>
+                    </TabItem>
+                    <TabItem Header="History">
+                        <ws:HistoryPanel x:Name="historyPanel"/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
 
             <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
                           Background="{DynamicResource BgBaseBrush}"/>
@@ -140,19 +153,13 @@
 
             <!-- RIGHT: Tabs -->
             <Grid Grid.Column="4" x:Name="toolsHost" Background="{DynamicResource BgPanelBrush}">
-                <TabControl x:Name="rightTabs" Background="Transparent"
+                <TabControl x:Name="rightTabs" Background="Transparent" TabStripPlacement="Right"
                             BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0">
                     <TabItem Header="Develop">
                         <ws:DevelopPanel x:Name="developPanel"/>
                     </TabItem>
                     <TabItem Header="Info">
                         <ws:InfoPanel x:Name="infoPanel"/>
-                    </TabItem>
-                    <TabItem Header="History">
-                        <ws:HistoryPanel x:Name="historyPanel"/>
-                    </TabItem>
-                    <TabItem Header="Style">
-                        <ws:StylePanel x:Name="stylePanel"/>
                     </TabItem>
                     <TabItem Header="Batch">
                         <ws:BatchQueuePanel x:Name="batchPanel"/>
