@@ -20,6 +20,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <!-- Thương hiệu hiển thị (exe metadata + About). Tên assembly giữ ImageTool.Host để không
          ảnh hưởng nạp plugin / đường dẫn. -->
     <Product>Aurora Studio</Product>
