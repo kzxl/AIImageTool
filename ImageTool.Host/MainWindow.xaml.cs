@@ -264,6 +264,15 @@ public partial class MainWindow : Window
             }
         }
 
+        if (ctrl && !shift)
+        {
+            switch (e.Key)
+            {
+                case System.Windows.Input.Key.C: if (!typing) { CopyDevelopSettings(); e.Handled = true; return; } break;
+                case System.Windows.Input.Key.V: if (!typing) { PasteDevelopSettings(); e.Handled = true; return; } break;
+            }
+        }
+
         if (ctrl)
         {
             switch (e.Key)

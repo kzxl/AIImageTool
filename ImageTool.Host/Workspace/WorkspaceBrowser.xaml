@@ -8,8 +8,8 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="220" MinHeight="100"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="120" MinHeight="60"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -123,7 +123,7 @@
         <!-- Thumbnails (workspace OR preview, swapped via _isPreviewing) -->
         <Border Grid.Row="8" Background="{DynamicResource BgPanelBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                          CanContentScroll="True">
+                          CanContentScroll="False">
                 <ItemsControl x:Name="icThumbnails" ItemsSource="{Binding Thumbnails}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
