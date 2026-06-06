@@ -15,6 +15,7 @@ public partial class CenterPreview
     {
         panel.WhiteBalancePickRequested += (_, _) =>
         {
+            panel.DisableTat();
             var path = _workspace?.ActiveImage;
             if (string.IsNullOrEmpty(path) || !_renderer.CanDecode(path)) return;
             _wbPickMode = true;
@@ -24,6 +25,7 @@ public partial class CenterPreview
         };
         panel.FilmBasePickRequested += (_, _) =>
         {
+            panel.DisableTat();
             var path = _workspace?.ActiveImage;
             if (string.IsNullOrEmpty(path) || !_renderer.CanDecode(path)) return;
             _filmBasePickMode = true;

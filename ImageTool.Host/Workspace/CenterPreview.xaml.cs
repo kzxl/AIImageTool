@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ImageTool.Core;
 
@@ -17,6 +18,8 @@ public partial class CenterPreview : UserControl, IImageToolHost
     private IImageMetaService? _meta;
     private IHistoryService? _history;
     private DevelopClipboard? _clipboard;
+    private IReadOnlyList<EditOperation>? _tempPreviewOps;
+    private Color _maskOverlayColor = Color.FromArgb(0x80, 0xFF, 0x00, 0x00); // Đỏ mặc định
     private readonly DevelopRenderer _renderer = new();
     private LighttableMode _mode = LighttableMode.Single;
     private bool _isDraggingSplit;
@@ -132,6 +135,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             foreach (var t in GridItems)
                 t.IsActive = string.Equals(t.ImagePath, e.CurrentPath, StringComparison.OrdinalIgnoreCase);
 
+            _tempPreviewOps = null; // Reset temp preview ops
             ClearResult(); // ảnh đổi → xoá after
             ResetZoom();   // ảnh đổi → về fit
             UpdatePreview(e.CurrentPath);
@@ -205,8 +209,18 @@ public partial class CenterPreview : UserControl, IImageToolHost
     private async Task RenderDevelopAsync(string path)
     {
         var history = _history;
-        var ops = history?.GetStack(path) ?? (IReadOnlyList<EditOperation>)Array.Empty<EditOperation>();
-        int pointer = history?.GetPointer(path) ?? 0;
+        IReadOnlyList<EditOperation> ops;
+        int pointer;
+        if (_tempPreviewOps != null)
+        {
+            ops = _tempPreviewOps;
+            pointer = ops.Count;
+        }
+        else
+        {
+            ops = history?.GetStack(path) ?? (IReadOnlyList<EditOperation>)Array.Empty<EditOperation>();
+            pointer = history?.GetPointer(path) ?? 0;
+        }
 
         // Trong crop mode: hiển thị ảnh CHƯA cắt (bỏ rectangle, giữ straighten) để overlay khớp toạ độ.
         if (_cropMode) ops = StripCropRect(ops, pointer);
@@ -300,7 +314,18 @@ public partial class CenterPreview : UserControl, IImageToolHost
             case Key.C: SetMode(LighttableMode.Cull); e.Handled = true; break;
             case Key.F: SetMode(LighttableMode.Full); e.Handled = true; break;
             case Key.R: ToggleCropMode(); e.Handled = true; break;
-            case Key.O: if (_cropMode) { CycleCropGuide(); e.Handled = true; } break;
+            case Key.O:
+                if (_cropMode)
+                {
+                    CycleCropGuide();
+                    e.Handled = true;
+                }
+                else if (_brushMask != null)
+                {
+                    CycleMaskOverlayColor();
+                    e.Handled = true;
+                }
+                break;
             case Key.J: ToggleClipOverlay(); e.Handled = true; break;
             case Key.K: TogglePeakOverlay(); e.Handled = true; break; // focus peaking
             case Key.OemOpenBrackets: _developPanel?.RotateActive(-1); e.Handled = true; break; // [
@@ -435,6 +460,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
     {
         if (TryHandleHealClick(e)) { e.Handled = true; return; }
         if (TryHandleWbPick(e)) { e.Handled = true; return; }
+        if (TryHandleTatMouseDown(e)) { e.Handled = true; return; }
         // Space + kéo trái = pan (khi đang zoom).
         if (_spaceHeld && _zoom > 1.0 && imgPreview.Source != null)
         {
@@ -456,6 +482,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
 
     private void PaneSingle_MouseMove(object sender, MouseEventArgs e)
     {
+        if (_isDraggingTat) { TryHandleTatMouseMove(e); return; }
         if (_isPanning)
         {
             var pos = e.GetPosition(paneSingle);
@@ -471,6 +498,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
 
     private void PaneSingle_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isDraggingTat) { TryHandleTatMouseUp(e); return; }
         // kết thúc Space-pan (left button).
         if (_isPanning)
         {
@@ -707,4 +735,44 @@ public partial class CenterPreview : UserControl, IImageToolHost
 
     /// <summary>Phát tiến trình (percent, status) cho host hiển thị ở status bar. percent&lt;0 = ẩn.</summary>
     public event EventHandler<(int Percent, string? Status)>? ProgressReported;
+
+    public void SetTemporaryOperations(IReadOnlyList<EditOperation>? ops)
+    {
+        _tempPreviewOps = ops;
+        var active = _workspace?.ActiveImage;
+        if (!string.IsNullOrEmpty(active))
+        {
+            _ = RenderDevelopAsync(active);
+        }
+    }
+
+    private void CycleMaskOverlayColor()
+    {
+        if (_maskOverlayColor.R == 255 && _maskOverlayColor.G == 0 && _maskOverlayColor.B == 0) // Đỏ -> Xanh lá
+            _maskOverlayColor = Color.FromArgb(0x80, 0x00, 0xFF, 0x00);
+        else if (_maskOverlayColor.G == 255 && _maskOverlayColor.R == 0) // Xanh lá -> Xanh dương
+            _maskOverlayColor = Color.FromArgb(0x80, 0x00, 0x00, 0xFF);
+        else if (_maskOverlayColor.B == 255 && _maskOverlayColor.R == 0) // Xanh dương -> Trắng
+            _maskOverlayColor = Color.FromArgb(0x80, 0xFF, 0xFF, 0xFF);
+        else if (_maskOverlayColor.R == 255 && _maskOverlayColor.G == 255) // Trắng -> Đen
+            _maskOverlayColor = Color.FromArgb(0x80, 0x00, 0x00, 0x00);
+        else // Đen -> Đỏ
+            _maskOverlayColor = Color.FromArgb(0x80, 0xFF, 0x00, 0x00);
+
+        RedrawBrushOverlay(); // Gọi vẽ lại các chấm nét cọ vẽ bằng màu mới
+        
+        if (Application.Current.MainWindow is MainWindow mw)
+        {
+            mw.ShowToast($"Màu mặt nạ: {GetMaskColorName(_maskOverlayColor)}");
+        }
+    }
+
+    private string GetMaskColorName(Color c)
+    {
+        if (c.R == 255 && c.G == 0 && c.B == 0) return "Đỏ";
+        if (c.G == 255 && c.R == 0 && c.B == 0) return "Xanh lá";
+        if (c.B == 255 && c.R == 0 && c.G == 0) return "Xanh dương";
+        if (c.R == 255 && c.G == 255 && c.B == 255) return "Trắng";
+        return "Đen";
+    }
 }

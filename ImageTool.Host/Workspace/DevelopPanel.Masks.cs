@@ -20,6 +20,15 @@ public partial class DevelopPanel
     private TextBlock? _maskHint;
     private Expander? _maskExpander;
 
+    private Panel? _externalLayersHost;
+    private readonly Dictionary<string, float> _maskOldOpacities = new();
+
+    public void BindActiveLayersHost(Panel host)
+    {
+        _externalLayersHost = host;
+        RefreshMaskList();
+    }
+
     /// <summary>Bắn khi user chọn 1 brush mask để bắt đầu vẽ (CenterPreview lắng nghe). null = thôi vẽ.</summary>
     public event EventHandler<LocalMask?>? BrushMaskActivated;
 
@@ -127,6 +136,7 @@ public partial class DevelopPanel
 
     private void SelectMask(LocalMask? m)
     {
+        if (m != null) DisableTat();
         _activeMask = m;
         BuildMaskEditor();
         // Brush/Polygon mask đang chọn -> báo CenterPreview cho phép vẽ/đặt điểm.
@@ -136,35 +146,117 @@ public partial class DevelopPanel
 
     private void RefreshMaskList()
     {
-        if (_maskListPanel == null) return;
-        _maskListPanel.Children.Clear();
-        foreach (var m in _masks)
+        if (_maskListPanel != null)
         {
-            var mm = m;
-            var row = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
-            var del = new Button { Content = "✕", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0) };
-            del.Click += (_, _) => RemoveMask(mm);
-            DockPanel.SetDock(del, Dock.Right);
-            var dup = new Button { Content = "⧉", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0), ToolTip = "Nhân bản mask (instance mới)" };
-            dup.Click += (_, _) => DuplicateMask(mm);
-            DockPanel.SetDock(dup, Dock.Right);
-            var sel = new Button
+            _maskListPanel.Children.Clear();
+            foreach (var m in _masks)
             {
-                Content = $"{m.Name}{(m.MaskType == BrushMask.Type ? "" : "")}",
-                HorizontalContentAlignment = HorizontalAlignment.Left, FontSize = 11,
-                Padding = new Thickness(6, 2, 6, 2),
-                Background = m == _activeMask ? new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF)) : Brushes.Transparent,
-                BorderThickness = new Thickness(0)
-            };
-            sel.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
-            sel.Click += (_, _) => { SelectMask(mm); RefreshMaskList(); };
-            row.Children.Add(del);
-            row.Children.Add(dup);
-            row.Children.Add(sel);
-            _maskListPanel.Children.Add(row);
+                var mm = m;
+                var row = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
+                var del = new Button { Content = "✕", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0) };
+                del.Click += (_, _) => RemoveMask(mm);
+                DockPanel.SetDock(del, Dock.Right);
+                var dup = new Button { Content = "⧉", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0), ToolTip = "Nhân bản mask (instance mới)" };
+                dup.Click += (_, _) => DuplicateMask(mm);
+                DockPanel.SetDock(dup, Dock.Right);
+                var sel = new Button
+                {
+                    Content = $"{m.Name}",
+                    HorizontalContentAlignment = HorizontalAlignment.Left, FontSize = 11,
+                    Padding = new Thickness(6, 2, 6, 2),
+                    Background = m == _activeMask ? new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF)) : Brushes.Transparent,
+                    BorderThickness = new Thickness(0)
+                };
+                sel.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+                sel.Click += (_, _) => { SelectMask(mm); RefreshMaskList(); };
+                row.Children.Add(del);
+                row.Children.Add(dup);
+                row.Children.Add(sel);
+                _maskListPanel.Children.Add(row);
+            }
+            if (_maskHint != null)
+                _maskHint.Visibility = _masks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
-        if (_maskHint != null)
-            _maskHint.Visibility = _masks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_externalLayersHost != null)
+        {
+            _externalLayersHost.Children.Clear();
+            if (_masks.Count == 0)
+            {
+                _externalLayersHost.Children.Add(new TextBlock
+                {
+                    Text = "(Không có mask hoạt động)",
+                    Foreground = Brushes.Gray,
+                    FontSize = 10,
+                    FontStyle = FontStyles.Italic,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 8, 0, 8)
+                });
+            }
+            else
+            {
+                foreach (var m in _masks)
+                {
+                    var mm = m;
+                    var row = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
+                    
+                    // Xóa mask
+                    var del = new Button { Content = "✕", Padding = new Thickness(5, 0, 5, 0), FontSize = 10, Margin = new Thickness(4, 0, 0, 0), Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
+                    del.Click += (_, _) => RemoveMask(mm);
+                    DockPanel.SetDock(del, Dock.Right);
+
+                    // Con mắt ẩn/hiện
+                    bool isVisible = mm.Opacity > 0;
+                    var eye = new System.Windows.Controls.Primitives.ToggleButton
+                    {
+                        Content = isVisible ? "👁" : "❌",
+                        Width = 22, Height = 20,
+                        Padding = new Thickness(0),
+                        IsChecked = isVisible,
+                        Background = Brushes.Transparent,
+                        BorderThickness = new Thickness(0),
+                        ToolTip = "Bật/Tắt mask"
+                    };
+                    eye.Click += (_, _) =>
+                    {
+                        if (eye.IsChecked == true)
+                        {
+                            if (_maskOldOpacities.TryGetValue(mm.Id, out var oldOp))
+                            {
+                                mm.Opacity = oldOp > 0 ? oldOp : 1f;
+                            }
+                            else mm.Opacity = 1f;
+                            eye.Content = "👁";
+                        }
+                        else
+                        {
+                            _maskOldOpacities[mm.Id] = mm.Opacity;
+                            mm.Opacity = 0f;
+                            eye.Content = "❌";
+                        }
+                        Commit();
+                    };
+                    DockPanel.SetDock(eye, Dock.Left);
+
+                    // Tên mask & kích hoạt
+                    var sel = new Button
+                    {
+                        Content = $"{m.Name}",
+                        HorizontalContentAlignment = HorizontalAlignment.Left, FontSize = 11,
+                        Padding = new Thickness(6, 2, 6, 2),
+                        Background = mm == _activeMask ? new SolidColorBrush(Color.FromArgb(40, 0x3D, 0x7E, 0xFF)) : Brushes.Transparent,
+                        BorderThickness = new Thickness(0)
+                    };
+                    sel.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+                    sel.Click += (_, _) => { SelectMask(mm); RefreshMaskList(); };
+
+                    row.Children.Add(eye);
+                    row.Children.Add(del);
+                    row.Children.Add(sel);
+                    _externalLayersHost.Children.Add(row);
+                }
+            }
+        }
     }
 
     private void BuildMaskEditor()

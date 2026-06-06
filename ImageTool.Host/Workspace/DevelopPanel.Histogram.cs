@@ -44,7 +44,7 @@ public partial class DevelopPanel
 
         _histCanvas = new Canvas
         {
-            Height = 90,
+            Height = 110,
             Background = new SolidColorBrush(Color.FromRgb(0x0F, 0x0F, 0x0F)),
             ClipToBounds = true,
             Cursor = System.Windows.Input.Cursors.SizeWE,
@@ -138,14 +138,14 @@ public partial class DevelopPanel
             // Luma: 1 đường xám.
             int lmax = 1;
             for (int i = 0; i < 256; i++) if (hist.Luma[i] > lmax) lmax = hist.Luma[i];
-            DrawChannelPath(hist.Luma, lmax, w, h, Color.FromArgb(190, 0xCC, 0xCC, 0xCC));
+            DrawChannelPath(hist.Luma, lmax, w, h, Color.FromArgb(160, 220, 225, 230));
         }
         else
         {
             int max = hist.MaxBin();
-            DrawChannelPath(hist.R, max, w, h, Color.FromArgb(150, 0xE0, 0x50, 0x50));
-            DrawChannelPath(hist.G, max, w, h, Color.FromArgb(150, 0x50, 0xD0, 0x50));
-            DrawChannelPath(hist.B, max, w, h, Color.FromArgb(150, 0x50, 0x90, 0xF0));
+            DrawChannelPath(hist.R, max, w, h, Color.FromArgb(120, 255, 77, 109)); // Neon Pink/Red
+            DrawChannelPath(hist.G, max, w, h, Color.FromArgb(120, 6, 214, 160));  // Neon Mint/Green
+            DrawChannelPath(hist.B, max, w, h, Color.FromArgb(120, 58, 134, 255)); // Neon Blue
         }
 
         // marker clip: tam giác góc trên trái (shadow) / phải (highlight).

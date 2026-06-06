@@ -77,13 +77,20 @@ public partial class MainWindow : Window
         batchPanel.Bind(_batch);
         exportPanel.Bind(_workspace, _batch, _settings);
         stylePanel.Bind(_styles, _workspace, _batch);
+        stylePanel.StyleHoverChanged += StylePanel_StyleHoverChanged;
         developPanel.Bind(_workspace, _history, centerView.Renderer, _developClipboard, _styles,
             serviceProvider.GetRequiredService<LensfunService>());
+        developPanel.BindActiveLayersHost(panelActiveLayers);
+        developPanel.RequestClippingPreview += (s, active) =>
+        {
+            Dispatcher.BeginInvoke(() => centerView.SetTemporaryClipOverlay(active));
+        };
         centerView.BindCropPanel(developPanel);
         centerView.BindBrushPanel(developPanel);
         centerView.BindWhiteBalancePick(developPanel);
         centerView.BindHealingPanel(developPanel);
         centerView.BindLiquifyPanel(developPanel);
+        centerView.BindTat(developPanel);
 
         // AI Subject mask: DevelopPanel yêu cầu -> AiMaskService sinh mask PNG -> AddRasterMask.
         developPanel.SubjectMaskRequested += async (s, path) =>
@@ -307,6 +314,7 @@ public partial class MainWindow : Window
             case System.Windows.Input.Key.D7: ApplyLabelToTargets(ColorLabel.Yellow); e.Handled = true; break;
             case System.Windows.Input.Key.D8: ApplyLabelToTargets(ColorLabel.Green); e.Handled = true; break;
             case System.Windows.Input.Key.D9: ApplyLabelToTargets(ColorLabel.Blue); e.Handled = true; break;
+            case System.Windows.Input.Key.B: if (!typing) { ToggleQuickCollection(); e.Handled = true; } break;
             // (← → điều hướng ảnh đã xử lý sớm phía trên, trước guard ActiveImage.)
         }
     }
@@ -336,6 +344,51 @@ public partial class MainWindow : Window
         => _workspace.Selection.Count > 0
             ? _workspace.Selection.ToList()
             : (_workspace.ActiveImage != null ? new List<string> { _workspace.ActiveImage } : new List<string>());
+
+    private async void ToggleQuickCollection()
+    {
+        var active = _workspace.ActiveImage;
+        if (string.IsNullOrEmpty(active)) return;
+        
+        var catalog = _serviceProvider.GetRequiredService<ICatalogService>();
+        
+        if (!catalog.IsImported(active))
+        {
+            try
+            {
+                txtStatus.Text = "Đang import ảnh vào thư viện...";
+                await catalog.ImportAsync(new[] { active }, new ImportOptions { Mode = ImportMode.AddInPlace });
+                txtStatus.Text = "Đã import ảnh.";
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("MainWindow.QuickCollection", $"Không thể tự động import ảnh {active}: {ex.Message}");
+                ShowToast("Không thể import ảnh này vào thư viện.");
+                return;
+            }
+        }
+
+        var collections = catalog.GetCollections();
+        var quickCol = collections.FirstOrDefault(c => string.Equals(c.Name, "Quick Collection", StringComparison.OrdinalIgnoreCase));
+        if (quickCol == null)
+        {
+            quickCol = catalog.CreateCollection("Quick Collection");
+        }
+
+        var images = catalog.GetCollectionImages(quickCol.Id);
+        bool exists = images.Any(img => string.Equals(img.FilePath, active, StringComparison.OrdinalIgnoreCase));
+
+        if (exists)
+        {
+            catalog.RemoveFromCollection(quickCol.Id, new[] { active });
+            ShowToast("Đã xoá khỏi Quick Collection");
+        }
+        else
+        {
+            catalog.AddToCollection(quickCol.Id, new[] { active });
+            ShowToast("Đã thêm vào Quick Collection");
+        }
+    }
 
     private void ApplyRatingToTargets(int rating)
     {
@@ -392,6 +445,46 @@ public partial class MainWindow : Window
             _toastTimer.Stop();
             _toastTimer.Start();
         });
+    }
+
+    private void StylePanel_StyleHoverChanged(object? sender, StyleHoverEventArgs e)
+    {
+        if (e.StyleId == null)
+        {
+            centerView.SetTemporaryOperations(null);
+        }
+        else
+        {
+            var active = _workspace.ActiveImage;
+            if (string.IsNullOrEmpty(active)) return;
+
+            var style = _styles.Styles.FirstOrDefault(s => s.Id == e.StyleId);
+            if (style == null) return;
+
+            const string developPlugin = "Develop";
+            var styleDev = style.Operations
+                .Where(o => string.Equals(o.PluginId, developPlugin, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var targetDev = _history.GetStack(active)
+                .Take(_history.GetPointer(active))
+                .Where(o => string.Equals(o.PluginId, developPlugin, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var merged = DevelopModules.ApplyStyle(targetDev, styleDev, e.Append)
+                .Select(o => new EditOperation
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    PluginId = o.PluginId,
+                    OpType = o.OpType,
+                    Title = o.Title,
+                    Timestamp = DateTime.UtcNow,
+                    Params = new Dictionary<string, string>(o.Params)
+                })
+                .ToList();
+
+            centerView.SetTemporaryOperations(merged);
+        }
     }
 
     public void CopyDevelopSettings()

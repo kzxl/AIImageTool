@@ -75,4 +75,24 @@ public partial class CenterPreview
         wb.Freeze();
         return wb;
     }
+
+    /// <summary>Bật/tắt tạm thời chế độ clipping preview (phục vụ phím Alt khi kéo slider QoL).</summary>
+    public void SetTemporaryClipOverlay(bool active)
+    {
+        if (imgPreview.Source is not BitmapSource bs) return;
+        if (active)
+        {
+            imgClip.Source = BuildClipMask(bs);
+            SyncClipTransform();
+            imgClip.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            if (!_clipOverlay) // Chỉ ẩn đi nếu người dùng không bật cứng bằng phím J
+            {
+                imgClip.Visibility = Visibility.Collapsed;
+                imgClip.Source = null;
+            }
+        }
+    }
 }

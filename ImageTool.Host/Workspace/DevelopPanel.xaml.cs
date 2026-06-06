@@ -39,6 +39,9 @@ public partial class DevelopPanel : UserControl
     private readonly float[] _hslLum = new float[HslMixerOp.Bands];
     private int _band;
     private ComboBox? _bandCombo;
+    private System.Windows.Controls.Primitives.ToggleButton? btnTat;
+    private ComboBox? cmbTatMode;
+    public event EventHandler<(bool Active, string Mode)>? TatStateChanged;
     private string _lutPath = "";
     private TextBlock? _lutLabel;
 
@@ -109,6 +112,9 @@ public partial class DevelopPanel : UserControl
     /// <summary>Bắn khi crop rectangle thay đổi (load ảnh / reset). CenterPreview overlay lắng nghe để vẽ.</summary>
     public event EventHandler<(float X, float Y, float W, float H)>? CropChanged;
 
+    /// <summary>Yêu cầu bật/tắt clipping preview tạm thời (Alt key dragging QoL)</summary>
+    public event EventHandler<bool>? RequestClippingPreview;
+
     /// <summary>Đặt crop rectangle (chuẩn hoá) từ overlay rồi commit. Clamp về [0..1] và kích thước tối thiểu.</summary>
     public void SetCropRect(float x, float y, float w, float h)
     {
@@ -126,7 +132,7 @@ public partial class DevelopPanel : UserControl
     private void BuildUI()
     {
         // Histogram + cảnh báo clip (live) trên cùng.
-        panelSliders.Children.Add(BuildHistogram());
+        histogramContainer.Content = BuildHistogram();
 
         // Basic / White Balance
         var gWb = AddGroup("White Balance", true);
@@ -294,6 +300,28 @@ public partial class DevelopPanel : UserControl
 
         // HSL
         var gHsl = AddGroup("HSL / Color Mixer", false);
+        var tatRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
+        btnTat = new System.Windows.Controls.Primitives.ToggleButton 
+        { 
+            Content = "🎯 Targeted Adjustment (TAT)", 
+            Padding = new Thickness(8, 3, 8, 3),
+            ToolTip = "Công cụ điều chỉnh trực tiếp trên ảnh: Bật nút này rồi click và kéo lên/xuống trên ảnh."
+        };
+        btnTat.Checked += (s, e) => TatStateChanged?.Invoke(this, (true, GetTatMode()));
+        btnTat.Unchecked += (s, e) => TatStateChanged?.Invoke(this, (false, GetTatMode()));
+        
+        cmbTatMode = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0), Width = 90 };
+        cmbTatMode.Items.Add(new ComboBoxItem { Content = "Saturation", Tag = "sat" });
+        cmbTatMode.Items.Add(new ComboBoxItem { Content = "Luminance", Tag = "lum" });
+        cmbTatMode.Items.Add(new ComboBoxItem { Content = "Hue", Tag = "hue" });
+        cmbTatMode.SelectedIndex = 0;
+        cmbTatMode.SelectionChanged += (s, e) => {
+            if (btnTat != null && btnTat.IsChecked == true) TatStateChanged?.Invoke(this, (true, GetTatMode()));
+        };
+        tatRow.Children.Add(btnTat);
+        tatRow.Children.Add(cmbTatMode);
+        gHsl.Children.Add(tatRow);
+
         var bandRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
         bandRow.Children.Add(new TextBlock { Text = "Dải màu", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         _bandCombo = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
@@ -726,10 +754,29 @@ public partial class DevelopPanel : UserControl
             if (!input.IsKeyboardFocused) input.Text = e.NewValue.ToString(fmt, CultureInfo.InvariantCulture);
             if (_loading) return;
             ScheduleCommit();
+
+            // QoL: Bật clipping preview nếu người dùng đang giữ phím Alt khi kéo slider
+            bool isAlt = (Keyboard.Modifiers & ModifierKeys.Alt) != 0;
+            if (isAlt)
+            {
+                RequestClippingPreview?.Invoke(this, true);
+            }
         };
         // Nhập số trực tiếp -> cập nhật slider khi Enter hoặc rời focus.
         input.KeyDown += (s, e) => { if (e.Key == Key.Enter) CommitInput(slider, input, min, max); };
         input.LostFocus += (s, e) => CommitInput(slider, input, min, max);
+
+        // Đăng ký sự kiện dừng kéo để tắt clipping preview
+        slider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((s, e) =>
+        {
+            RequestClippingPreview?.Invoke(this, false);
+        }));
+
+        slider.LostFocus += (s, e) =>
+        {
+            RequestClippingPreview?.Invoke(this, false);
+        };
+
         // Double-click reset.
         lbl.MouseLeftButtonDown += (s, e) => { if (e.ClickCount == 2) slider.Value = def; };
         slider.MouseDoubleClick += (s, e) => { slider.Value = def; e.Handled = true; };
@@ -796,12 +843,54 @@ public partial class DevelopPanel : UserControl
         => p != null && p.TryGetValue(key, out var s) &&
            double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : identity;
 
+    private static string BuildCaptureSummary(string path)
+    {
+        try
+        {
+            var ci = ImageTool.Shared.ExifReader.ReadMetadata(path);
+            var parts = new List<string>();
+            var camera = string.Join(" ", new[] { ci.CameraMake, ci.CameraModel }
+                .Where(s => !string.IsNullOrWhiteSpace(s))).Trim();
+            if (!string.IsNullOrWhiteSpace(camera)) parts.Add(camera);
+            if (ci.FocalLength is > 0) parts.Add($"{ci.FocalLength:0.#}mm");
+            if (ci.Aperture is > 0) parts.Add($"f/{ci.Aperture:0.#}");
+            if (!string.IsNullOrWhiteSpace(ci.ShutterSpeed)) parts.Add(ci.ShutterSpeed!);
+            if (ci.Iso is > 0) parts.Add($"ISO {ci.Iso}");
+            return string.Join("  ·  ", parts);
+        }
+        catch { return ""; }
+    }
+
     private void LoadFor(string? path)
     {
         _currentPath = path;
         bool ok = !string.IsNullOrEmpty(path) && _history != null;
         SetEnabled(ok);
-        if (!ok) return;
+        if (!ok)
+        {
+            if (txtDevelopExif != null) txtDevelopExif.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (txtDevelopExif != null)
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var summary = BuildCaptureSummary(path!);
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (!string.IsNullOrEmpty(summary))
+                    {
+                        txtDevelopExif.Text = summary;
+                        txtDevelopExif.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        txtDevelopExif.Visibility = Visibility.Collapsed;
+                    }
+                });
+            });
+        }
 
         _loading = true;
         var b = FindOp(path!, DevelopBasicOp.Type) is { } bp ? DevelopBasicOp.FromParams(bp) : null;
@@ -1979,5 +2068,38 @@ public partial class DevelopPanel : UserControl
             LoadFor(_currentPath);
         }
         catch { }
+    }
+
+    public string GetTatMode()
+    {
+        return (cmbTatMode?.SelectedItem as ComboBoxItem)?.Tag as string ?? "sat";
+    }
+
+    public void DisableTat()
+    {
+        if (btnTat != null) btnTat.IsChecked = false;
+    }
+
+    public void GetHslValues(out float[] hue, out float[] sat, out float[] lum)
+    {
+        hue = _hslHue.ToArray();
+        sat = _hslSat.ToArray();
+        lum = _hslLum.ToArray();
+    }
+
+    public void UpdateHslValues(float[] hue, float[] sat, float[] lum, bool schedule = true)
+    {
+        Array.Copy(hue, _hslHue, HslMixerOp.Bands);
+        Array.Copy(sat, _hslSat, HslMixerOp.Bands);
+        Array.Copy(lum, _hslLum, HslMixerOp.Bands);
+        
+        _loading = true;
+        LoadBandIntoSliders();
+        _loading = false;
+
+        if (schedule)
+            ScheduleCommit();
+        else
+            Commit();
     }
 }

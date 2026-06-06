@@ -134,6 +134,32 @@ public partial class StylePanel : UserControl
                 _styles.Delete(id);
         }
     }
+
+    public event EventHandler<StyleHoverEventArgs>? StyleHoverChanged;
+
+    private void Border_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is StyleRow row)
+        {
+            StyleHoverChanged?.Invoke(this, new StyleHoverEventArgs(row.Id, chkAppend?.IsChecked == true));
+        }
+    }
+
+    private void Border_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        StyleHoverChanged?.Invoke(this, new StyleHoverEventArgs(null, false));
+    }
+}
+
+public class StyleHoverEventArgs : EventArgs
+{
+    public string? StyleId { get; }
+    public bool Append { get; }
+    public StyleHoverEventArgs(string? styleId, bool append)
+    {
+        StyleId = styleId;
+        Append = append;
+    }
 }
 
 public class StyleRow

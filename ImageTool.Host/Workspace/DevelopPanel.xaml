@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource BgPanelBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
     <DockPanel>
+        <!-- Title Bar -->
         <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource BgPanelAltBrush}">
             <DockPanel>
                 <TextBlock Text="DEVELOP" FontWeight="SemiBold" FontSize="11"
@@ -18,7 +19,7 @@
             </DockPanel>
         </Border>
 
-        <!-- Preset bar -->
+        <!-- Preset Bar -->
         <Border DockPanel.Dock="Top" Padding="10,4" Background="{DynamicResource BgPanelBrush}"
                 BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
             <DockPanel>
@@ -30,9 +31,18 @@
             </DockPanel>
         </Border>
 
+        <!-- Fixed Header: Histogram & EXIF metadata -->
+        <StackPanel DockPanel.Dock="Top" Margin="8,4" Background="{DynamicResource BgPanelBrush}">
+            <ContentControl x:Name="histogramContainer"/>
+            <TextBlock x:Name="txtDevelopExif" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Left" Margin="4,4,4,4" TextWrapping="Wrap"
+                       Visibility="Collapsed"/>
+        </StackPanel>
+
         <TextBlock x:Name="txtNoImage" DockPanel.Dock="Top" Text="Chọn 1 ảnh để bắt đầu chỉnh"
                    Foreground="{DynamicResource TextDimBrush}" Margin="12,8" Visibility="Collapsed"/>
 
+        <!-- Scrollable sliders -->
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="panelSliders" Margin="8,4"/>
         </ScrollViewer>

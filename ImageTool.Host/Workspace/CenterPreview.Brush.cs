@@ -21,8 +21,16 @@ public partial class CenterPreview
         {
             _brushMask = mask;
             brushOverlay.Visibility = mask != null ? Visibility.Visible : Visibility.Collapsed;
-            if (mask != null) { SetMode(LighttableMode.Single); ResetZoom(); }
-            brushOverlay.Children.Clear();
+            if (mask != null)
+            {
+                SetMode(LighttableMode.Single);
+                ResetZoom();
+                RedrawBrushOverlay(); // Vẽ lại các dots cũ
+            }
+            else
+            {
+                brushOverlay.Children.Clear();
+            }
         };
     }
 
@@ -63,11 +71,40 @@ public partial class CenterPreview
 
         // vẽ chấm phản hồi tức thì.
         double r = 6;
-        var dot = new Ellipse { Width = r * 2, Height = r * 2, Fill = new SolidColorBrush(Color.FromArgb(0x80, 0x3D, 0x7E, 0xFF)) };
+        var dot = new Ellipse { Width = r * 2, Height = r * 2, Fill = new SolidColorBrush(_maskOverlayColor) };
         Canvas.SetLeft(dot, p.X - r);
         Canvas.SetTop(dot, p.Y - r);
         brushOverlay.Children.Add(dot);
-
+ 
         _developPanel?.AppendBrushPoint(nx, ny);
+    }
+
+    private void RedrawBrushOverlay()
+    {
+        brushOverlay.Children.Clear();
+        if (_brushMask == null || _brushMask.MaskType != ImageTool.Imaging.BrushMask.Type) return;
+
+        var img = GetDisplayedImageRect();
+        if (img.IsEmpty || img.Width <= 0 || img.Height <= 0) return;
+
+        if (!_brushMask.MaskParams.TryGetValue("pts", out var ptsStr) || string.IsNullOrEmpty(ptsStr)) return;
+
+        var pts = ptsStr.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        double r = 6;
+        foreach (var pt in pts)
+        {
+            var parts = pt.Split(',');
+            if (parts.Length != 2) continue;
+            if (!double.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double nx) ||
+                !double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double ny)) continue;
+
+            double px = img.Left + nx * img.Width;
+            double py = img.Top + ny * img.Height;
+
+            var dot = new Ellipse { Width = r * 2, Height = r * 2, Fill = new SolidColorBrush(_maskOverlayColor) };
+            Canvas.SetLeft(dot, px - r);
+            Canvas.SetTop(dot, py - r);
+            brushOverlay.Children.Add(dot);
+        }
     }
 }

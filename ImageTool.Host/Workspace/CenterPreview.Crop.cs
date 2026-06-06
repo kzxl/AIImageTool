@@ -75,6 +75,7 @@ public partial class CenterPreview
         _cropMode = !_cropMode;
         if (_cropMode)
         {
+            _developPanel?.DisableTat();
             SetMode(LighttableMode.Single);
             ResetZoom();
             if (_developPanel != null)

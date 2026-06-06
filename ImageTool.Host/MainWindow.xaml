@@ -123,20 +123,24 @@
                 <ColumnDefinition x:Name="colRight" Width="380" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT: Tabs -->
+            <!-- LEFT: Navigation, History, Layers -->
             <Grid Grid.Column="0" Background="{DynamicResource BgPanelBrush}">
-                <TabControl x:Name="leftTabs" Background="Transparent"
-                            BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0">
-                    <TabItem Header="Folder">
-                        <ws:WorkspaceBrowser x:Name="browser"/>
-                    </TabItem>
-                    <TabItem Header="Presets">
-                        <ws:StylePanel x:Name="stylePanel"/>
-                    </TabItem>
-                    <TabItem Header="History">
-                        <ws:HistoryPanel x:Name="historyPanel"/>
-                    </TabItem>
-                </TabControl>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0">
+                        <Expander Header="Folder" IsExpanded="True" Margin="0,0,0,4">
+                            <ws:WorkspaceBrowser x:Name="browser" Height="260"/>
+                        </Expander>
+                        <Expander Header="History" IsExpanded="True" Margin="0,0,0,4">
+                            <ws:HistoryPanel x:Name="historyPanel" MaxHeight="300"/>
+                        </Expander>
+                        <Expander Header="Presets" IsExpanded="True" Margin="0,0,0,4">
+                            <ws:StylePanel x:Name="stylePanel" MaxHeight="300"/>
+                        </Expander>
+                        <Expander Header="Active Layers" IsExpanded="True" Margin="0,0,0,4">
+                            <StackPanel x:Name="panelActiveLayers" Margin="8,4"/>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
 
             <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
