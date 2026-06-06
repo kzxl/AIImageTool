@@ -4,6 +4,52 @@ using ImageTool.Core;
 
 namespace ImageTool.Shared;
 
+public class PluginAssemblyLoadContext : AssemblyLoadContext
+{
+    public string PluginPath { get; }
+    private readonly AssemblyDependencyResolver _resolver;
+
+    public PluginAssemblyLoadContext(string pluginPath) 
+        : base(name: Path.GetFileNameWithoutExtension(pluginPath), isCollectible: true)
+    {
+        PluginPath = pluginPath;
+        _resolver = new AssemblyDependencyResolver(pluginPath);
+    }
+
+    protected override Assembly? Load(AssemblyName assemblyName)
+    {
+        // Tránh tải lại các assembly cốt lõi để tránh conflict và lỗi ép kiểu
+        if (assemblyName.Name == null ||
+            assemblyName.Name == "ImageTool.Core" || 
+            assemblyName.Name == "ImageTool.Shared" ||
+            assemblyName.Name == "ImageTool.Imaging" ||
+            assemblyName.Name.StartsWith("System.") ||
+            assemblyName.Name.StartsWith("Microsoft."))
+        {
+            return null; // Delegate về Default Context
+        }
+
+        string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
+        if (assemblyPath != null)
+        {
+            return LoadFromAssemblyPath(assemblyPath);
+        }
+
+        return null;
+    }
+
+    protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+    {
+        string? libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+        if (libraryPath != null)
+        {
+            return LoadUnmanagedDllFromPath(libraryPath);
+        }
+
+        return IntPtr.Zero;
+    }
+}
+
 public class PluginLoader
 {
     /// <summary>
@@ -12,6 +58,72 @@ public class PluginLoader
     /// </summary>
     public IReadOnlyList<string> LoadErrors => _loadErrors;
     private readonly List<string> _loadErrors = new();
+
+    private static readonly List<PluginAssemblyLoadContext> _activeContexts = new();
+    private static bool _hooksRegistered = false;
+
+    private static void RegisterResolvingHooks(string pluginsPath)
+    {
+        if (_hooksRegistered) return;
+        _hooksRegistered = true;
+
+        AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
+        {
+            if (assemblyName.Name == null) return null;
+            var files = Directory.GetFiles(pluginsPath, $"{assemblyName.Name}.dll", SearchOption.AllDirectories);
+            if (files.Length > 0)
+            {
+                string targetPath = files[0];
+                string? targetDir = Path.GetDirectoryName(targetPath);
+                if (targetDir == null) return null;
+
+                var alc = _activeContexts.FirstOrDefault(c => 
+                {
+                    string? dir = Path.GetDirectoryName(c.PluginPath);
+                    return dir != null && string.Equals(dir, targetDir, StringComparison.OrdinalIgnoreCase);
+                });
+
+                if (alc != null)
+                {
+                    try
+                    {
+                        return alc.LoadFromAssemblyPath(targetPath);
+                    }
+                    catch { }
+                }
+            }
+            return null;
+        };
+
+        AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+        {
+            var assemblyName = new AssemblyName(args.Name);
+            if (assemblyName.Name == null) return null;
+            var files = Directory.GetFiles(pluginsPath, $"{assemblyName.Name}.dll", SearchOption.AllDirectories);
+            if (files.Length > 0)
+            {
+                string targetPath = files[0];
+                string? targetDir = Path.GetDirectoryName(targetPath);
+                if (targetDir == null) return null;
+
+                var alc = _activeContexts.FirstOrDefault(c => 
+                {
+                    string? dir = Path.GetDirectoryName(c.PluginPath);
+                    return dir != null && string.Equals(dir, targetDir, StringComparison.OrdinalIgnoreCase);
+                });
+
+                if (alc != null)
+                {
+                    try
+                    {
+                        return alc.LoadFromAssemblyPath(targetPath);
+                    }
+                    catch { }
+                }
+            }
+            return null;
+        };
+    }
 
     public IEnumerable<IImagePlugin> LoadPlugins(string pluginsPath)
     {
@@ -24,40 +136,18 @@ public class PluginLoader
             return plugins;
         }
 
-        AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
+        // Dọn dẹp các context cũ trước khi load mới (nếu có)
+        foreach (var oldAlc in _activeContexts)
         {
-            var files = Directory.GetFiles(pluginsPath, $"{assemblyName.Name}.dll", SearchOption.AllDirectories);
-            if (files.Length > 0)
+            try
             {
-                return context.LoadFromAssemblyPath(files[0]);
+                oldAlc.Unload();
             }
-            return null;
-        };
-
-        AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
-        {
-            var assemblyName = new AssemblyName(args.Name);
-            var files = Directory.GetFiles(pluginsPath, $"{assemblyName.Name}.dll", SearchOption.AllDirectories);
-            if (files.Length > 0)
-            {
-                return Assembly.LoadFrom(files[0]);
-            }
-            return null;
-        };
-
-        // PRELOAD VÀO BỘ NHỚ LÕI: WPF BAML Loader rất ngu ngốc trong việc tự Resolve qua hook, nên ta bắt buộc phải nạp tất cả Dependencies vào Default Context trước!
-        var allDlls = Directory.GetFiles(pluginsPath, "*.dll", SearchOption.AllDirectories);
-        foreach (var dll in allDlls)
-        {
-            if (!Path.GetFileName(dll).StartsWith("ImageTool.Plugins."))
-            {
-                try
-                {
-                    AssemblyLoadContext.Default.LoadFromAssemblyPath(dll);
-                }
-                catch (Exception) { /* Bỏ qua nếu lỗi như thư viện native C++ */ }
-            }
+            catch { }
         }
+        _activeContexts.Clear();
+
+        RegisterResolvingHooks(pluginsPath);
 
         // Lọc chính xác các DLL là Plugin, không nạp nhầm các file thư viện rác (như SixLabors.ImageSharp.dll)
         var dllFiles = Directory.GetFiles(pluginsPath, "ImageTool.Plugins.*.dll", SearchOption.AllDirectories);
@@ -65,7 +155,10 @@ public class PluginLoader
         {
             try
             {
-                var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(dllFile);
+                var alc = new PluginAssemblyLoadContext(dllFile);
+                _activeContexts.Add(alc);
+
+                var assembly = alc.LoadFromAssemblyPath(dllFile);
                 
                 var pluginTypes = assembly.GetTypes()
                     .Where(t => typeof(IImagePlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
