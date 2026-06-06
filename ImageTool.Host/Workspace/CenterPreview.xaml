@@ -215,7 +215,11 @@
 
             <!-- COMPARE mode (side-by-side before/after) -->
             <Grid x:Name="paneCompare" Visibility="Collapsed" Background="{DynamicResource BgBaseBrush}"
-                  MouseWheel="PaneCompare_MouseWheel">
+                  MouseWheel="PaneCompare_MouseWheel"
+                  MouseLeftButtonDown="PaneCompare_MouseLeftButtonDown"
+                  MouseMove="PaneCompare_MouseMove"
+                  MouseLeftButtonUp="PaneCompare_MouseLeftButtonUp"
+                  MouseLeave="PaneCompare_MouseLeave">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>

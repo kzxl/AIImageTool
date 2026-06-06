@@ -12,6 +12,10 @@ public partial class CenterPreview
 {
     private bool _compareMode;
     private double _cmpZoom = 1.0;
+    private bool _isCmpPanning;
+    private Point _cmpPanStartMouse;
+    private double _cmpPanStartXBefore;
+    private double _cmpPanStartYBefore;
 
     private void BtnCompare_Click(object sender, RoutedEventArgs e) => ToggleCompareMode();
 
@@ -19,11 +23,89 @@ public partial class CenterPreview
     private void PaneCompare_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
         if (!_compareMode) return;
+        double old = _cmpZoom;
         double factor = e.Delta > 0 ? 1.25 : 1 / 1.25;
         _cmpZoom = Math.Clamp(_cmpZoom * factor, 1.0, 8.0);
+        if (Math.Abs(_cmpZoom - old) < 1e-6) return;
+
         cmpScaleBefore.ScaleX = cmpScaleBefore.ScaleY = _cmpZoom;
         cmpScaleAfter.ScaleX = cmpScaleAfter.ScaleY = _cmpZoom;
+
+        // Zoom bám theo vị trí con trỏ chuột
+        var mousePos = e.GetPosition(paneCompare);
+        bool isAfterSide = mousePos.X > paneCompare.ActualWidth / 2;
+        var p = isAfterSide ? e.GetPosition(imgCompareAfter) : e.GetPosition(imgCompareBefore);
+
+        double scaleRatio = _cmpZoom / old;
+        cmpPanBefore.X = (cmpPanBefore.X - p.X) * scaleRatio + p.X;
+        cmpPanBefore.Y = (cmpPanBefore.Y - p.Y) * scaleRatio + p.Y;
+
+        ClampComparePan();
         e.Handled = true;
+    }
+
+    private void PaneCompare_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!_compareMode || _cmpZoom <= 1.01) return;
+        _isCmpPanning = true;
+        _cmpPanStartMouse = e.GetPosition(paneCompare);
+        _cmpPanStartXBefore = cmpPanBefore.X;
+        _cmpPanStartYBefore = cmpPanBefore.Y;
+        paneCompare.CaptureMouse();
+        paneCompare.Cursor = System.Windows.Input.Cursors.ScrollAll;
+        e.Handled = true;
+    }
+
+    private void PaneCompare_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_compareMode || !_isCmpPanning) return;
+        var pos = e.GetPosition(paneCompare);
+        double dx = pos.X - _cmpPanStartMouse.X;
+        double dy = pos.Y - _cmpPanStartMouse.Y;
+
+        cmpPanBefore.X = _cmpPanStartXBefore + dx;
+        cmpPanBefore.Y = _cmpPanStartYBefore + dy;
+
+        ClampComparePan();
+        e.Handled = true;
+    }
+
+    private void PaneCompare_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_isCmpPanning)
+        {
+            _isCmpPanning = false;
+            paneCompare.ReleaseMouseCapture();
+            paneCompare.Cursor = System.Windows.Input.Cursors.Arrow;
+            e.Handled = true;
+        }
+    }
+
+    private void PaneCompare_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_isCmpPanning)
+        {
+            _isCmpPanning = false;
+            paneCompare.ReleaseMouseCapture();
+            paneCompare.Cursor = System.Windows.Input.Cursors.Arrow;
+        }
+    }
+
+    private void ClampComparePan()
+    {
+        double w = imgCompareBefore.ActualWidth;
+        double h = imgCompareBefore.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+
+        double maxX = w * (_cmpZoom - 1);
+        double maxY = h * (_cmpZoom - 1);
+
+        cmpPanBefore.X = Math.Clamp(cmpPanBefore.X, -maxX, 0);
+        cmpPanBefore.Y = Math.Clamp(cmpPanBefore.Y, -maxY, 0);
+
+        // Đồng bộ hoàn toàn sang After
+        cmpPanAfter.X = cmpPanBefore.X;
+        cmpPanAfter.Y = cmpPanBefore.Y;
     }
 
     private void ResetCompareZoom()
