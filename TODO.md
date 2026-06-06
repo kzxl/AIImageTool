@@ -3,7 +3,18 @@
 > File theo dõi tiến độ bền vững. Mục tiêu: đạt feature-parity với Lightroom + Darktable,
 > tối ưu hiệu suất, và cải thiện UX/UI. Cập nhật mỗi khi xong 1 mục (đổi `[ ]` -> `[x]`).
 >
-> Cập nhật lần cuối: 2026-06-01 (d) — RÀ SOÁT & HOÀN THIỆN UI (op có engine nhưng thiếu/cụt UI):
+> Cập nhật lần cuối: 2026-06-06 — HIỆN ĐẠI HÓA GIAO DIỆN & TÍNH NĂNG QoL:
+> (1) **Layout mới**: Ghim Histogram và EXIF ở đầu cột phải, xếp chồng cột trái (Folder, History, Presets, Active Layers).
+> (2) **Active Layers Panel**: Quản lý bật/tắt nhanh lớp mặt nạ bằng con mắt (👁/❌) và xóa mask từ cột trái.
+> (3) **Modern Filmstrip**: Thumbnail bo góc tròn (`CornerRadius="6"`), viền highlight, hiển thị tên file.
+> (4) **QoL - Alt-key Clipping Preview**: Giữ phím `Alt` khi kéo slider để xem trước vùng bị cháy sáng/mất chi tiết tối.
+> (5) **RGB Histogram**: Tăng chiều cao lên 110px và nâng cấp gam màu neon cho biểu đồ rực rỡ và chuyên nghiệp.
+> (6) **QoL - Hover Preset Preview**: Di chuột qua style để xem trước tức thì mà không ảnh hưởng tới history.
+> (7) **QoL - Targeted Adjustment Tool (TAT)**: Click và kéo trực tiếp trên ảnh để điều chỉnh HSL.
+> (8) **QoL - Quick Collection (Phím B)**: Nhấn phím B để toggle ảnh vào danh sách Quick Collection.
+> (9) **QoL - Mask Overlay Color (Phím O)**: Nhấn phím O khi vẽ brush để xoay vòng màu overlay Đỏ/Xanh lá/Xanh dương/Trắng/Đen và tự vẽ lại các dots cũ.
+>
+> 2026-06-01 (d) — RÀ SOÁT & HOÀN THIỆN UI (op có engine nhưng thiếu/cụt UI):
 > (1) **Gradient Map** — thêm color picker hex Shadow/Mid/High tuỳ chỉnh + slider Midpoint (trước chỉ có
 > preset + opacity; engine vốn hỗ trợ màu/midpoint tuỳ ý nhưng UI hardcode); preset giờ chỉ điền sẵn hex.
 > (2) **ChannelMixer (Color Calibration)** — op trước MỒ CÔI (đăng ký nhưng 0 UI), nay có nhóm "Color

@@ -1,5 +1,10 @@
 # 🌟 Aurora Studio
 
+[![Build and Test](https://github.com/kzxl/AIImageTool/actions/workflows/build-test.yml/badge.svg)](https://github.com/kzxl/AIImageTool/actions/workflows/build-test.yml)
+[![License](https://img.shields.io/github/license/kzxl/AIImageTool)](LICENSE)
+![GitHub top language](https://img.shields.io/github/languages/top/kzxl/AIImageTool)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/kzxl/AIImageTool)
+
 > **Aurora Studio** là một ứng dụng Desktop (WPF, .NET 8) hiện đại chuyên dùng để quản lý, xử lý và nâng cấp hình ảnh. Ứng dụng kết hợp sức mạnh của **quy trình chỉnh sửa ảnh phi phá hủy (non-destructive)** chất lượng cao (tương tự Adobe Lightroom, Darktable) với các **công cụ AI tiên tiến** (Upscale siêu phân giải, khôi phục khuôn mặt, tự động gán thẻ thông minh).
 
 ---
@@ -21,7 +26,7 @@ Toàn bộ các bộ lọc và thuật toán chỉnh sửa ảnh được áp d�
     *   Hỗ trợ kéo và điều chỉnh tone trực tiếp trên biểu đồ **Histogram**.
 *   **Màu sắc (Color)**:
     *   **White Balance** (chỉnh nhiệt độ màu Kelvin, **Auto WB**, công cụ chấm màu **eyedropper** và các preset nguồn sáng tiêu chuẩn).
-    *   **HSL 8 dải màu** chi tiết.
+    *   **HSL 8 dải màu** chi tiết + **Targeted Adjustment Tool (TAT)** (click kéo chuột trực tiếp trên ảnh để điều chỉnh HSL nhanh chóng).
     *   **Color Balance RGB 4-way** và vòng tròn màu **Color Grading**.
     *   **Split Toning, Channel Mixer, Selective Color, Color Unify, Velvia, Color Contrast (Lab)**.
     *   Hỗ trợ **3D LUT (.cube)** và profile màu đầu vào (**sRGB, AdobeRGB, Rec2020, Display P3**).
@@ -41,14 +46,17 @@ Toàn bộ các bộ lọc và thuật toán chỉnh sửa ảnh được áp d�
     *   Tạo các vùng chọn bằng mặt nạ: **Gradient, Radial, Brush, Polygon, Luminance & Color Range, Parametric, AI Subject & AI Sky**.
     *   Kết hợp nhiều mặt nạ, điều chỉnh opacity và chế độ hòa trộn (blend modes).
     *   Sao chép/nhân bản mặt nạ dễ dàng; mỗi mặt nạ sở hữu đầy đủ bộ slider chỉnh sửa độc lập.
+    *   Phím tắt `O` chuyển màu overlay nét cọ (**Mask Overlay Color**) xoay vòng Đỏ/Xanh lá/Xanh dương/Trắng/Đen giúp vẽ dễ nhìn.
 *   **Preset & Quản lý Style**:
     *   Lưu các bước chỉnh sửa thành Style để áp dụng hàng loạt (chọn lọc các module cần áp dụng).
+    *   **Hover Preset Preview**: Rê chuột qua Style ở cột trái để xem trước tức thì kết quả trên preview mà không ảnh hưởng tới history.
     *   **Import preset Lightroom (.xmp)**, tự động ghi file XMP sidecar để lưu trữ chỉnh sửa.
     *   **Named Snapshots**: Lưu nhiều phiên bản/mốc chỉnh sửa khác nhau trong cùng một ảnh để so sánh nhanh.
 
 ### 🗂️ 2. Quản lý thư viện ảnh & Catalog thông minh
 *   Duyệt ảnh qua cấu trúc thư mục dạng cây và lưới thumbnail trực quan, thanh filmstrip cuộn nhanh.
-*   Đánh giá ảnh nhanh bằng **Rating (1-5 sao), Flag (Pick/Reject/None), Color Label**. Hỗ trợ gán nhãn hàng loạt cho nhiều ảnh cùng lúc.
+*   **Compare View**: So sánh Before/After song song (Phím Y) hỗ trợ **Link Zoom & Link Pan** đồng bộ thu phóng và dịch chuyển bám sát vị trí con trỏ chuột.
+*   Đánh giá ảnh nhanh bằng **Rating (1-5 sao), Flag (Pick/Reject/None), Color Label**. Phím tắt `B` thêm nhanh vào **Quick Collection**.
 *   **Catalog SQLite** hiệu năng cao:
     *   Tự động lưu trữ thông tin ảnh.
     *   **Smart Collections**: Tự động gom nhóm ảnh dựa trên bộ quy tắc động (ví dụ: tất cả ảnh chụp bằng ống kính 50mm có rating >= 4 sao).
@@ -73,7 +81,8 @@ Toàn bộ các bộ lọc và thuật toán chỉnh sửa ảnh được áp d�
 *   Ngăn chặn ghi đè tệp tin ngầm (tự động thêm hậu tố để tránh mất dữ liệu).
 
 ### 🤖 5. Tiện ích AI tích hợp (AI Plugins)
-Ứng dụng hỗ trợ cơ chế hot-load các plugin AI (`.dll` được tải động từ thư mục `Plugins`) để tăng tốc xử lý bằng phần cứng (DirectML):
+Ứng dụng hỗ trợ cơ chế nạp động và cô lập plugin an toàn:
+*   **AssemblyLoadContext Isolation**: Tải mỗi plugin bằng một `PluginAssemblyLoadContext` riêng biệt và tự động phân giải các dependencies cục bộ bằng `AssemblyDependencyResolver` từ file `.deps.json`. Ngăn chặn hoàn toàn xung đột DLL giữa các plugin và hỗ trợ dọn dẹp bộ nhớ (Unload context) một cách an toàn.
 *   **AI Upscaler**: Sử dụng mô hình **4x-UltraSharpV2 (ONNX)** với kỹ thuật **Tiled Inference** (chia nhỏ vùng xử lý để tiết kiệm VRAM) chạy qua DirectML trên GPU (NVIDIA, AMD, Intel) hoặc CPU fallback.
 *   **Face Restorer**: Tích hợp mô hình **GFPGAN (ONNX)** giúp khôi phục chi tiết khuôn mặt bị mờ, nhòe khi chụp thiếu sáng hoặc phóng to.
 *   **Vision Tagger**: Tự động phân tích nội dung hình ảnh bằng mô hình **WD ViT** để gán nhãn/từ khóa mô tả, lưu trực tiếp vào siêu dữ liệu của ảnh.
