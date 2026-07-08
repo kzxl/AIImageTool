@@ -67,7 +67,7 @@ public partial class DevelopPanel
         };
         host.Children.Add(btnClear);
 
-        _liquifyInfo = new TextBlock { Foreground = Brushes.Gray, FontSize = 10, Margin = new Thickness(0, 2, 0, 0) };
+        _liquifyInfo = new TextBlock { Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, Margin = new Thickness(0, 2, 0, 0) };
         host.Children.Add(_liquifyInfo);
         UpdateLiquifyInfo();
     }

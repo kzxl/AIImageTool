@@ -231,4 +231,84 @@ public class HistoryService : IHistoryService
         public string Folder { get; set; } = "";
         public ConcurrentDictionary<string, ImageHistoryEntry> Items { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
+
+    // ===== Virtual Copies =====
+    public const string VirtualCopySuffix = "#vc";
+
+    public string CreateVirtualCopy(string imagePath)
+    {
+        var entry = GetEntry(imagePath);
+        var copies = GetVirtualCopies(imagePath);
+        int nextNum = copies.Count + 1;
+        string vcPath = $"{imagePath}{VirtualCopySuffix}{nextNum}";
+
+        // Clone current stack
+        var vcEntry = new ImageHistoryEntry
+        {
+            Pointer = entry.Pointer,
+            Stack = entry.Stack.Select(op => new EditOperation
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                PluginId = op.PluginId,
+                OpType = op.OpType,
+                Title = op.Title,
+                Timestamp = op.Timestamp,
+                Params = new Dictionary<string, string>(op.Params)
+            }).ToList(),
+            Snapshots = entry.Snapshots.Select(s => new HistorySnapshot
+            {
+                Name = s.Name,
+                CreatedAt = s.CreatedAt,
+                Ops = s.Ops.Select(op => new EditOperation
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    PluginId = op.PluginId,
+                    OpType = op.OpType,
+                    Title = op.Title,
+                    Timestamp = op.Timestamp,
+                    Params = new Dictionary<string, string>(op.Params)
+                }).ToList()
+            }).ToList()
+        };
+
+        var fh = GetFolderHistory(imagePath);
+        var key = Path.GetFileName(vcPath);
+        fh.Items[key] = vcEntry;
+        SaveFolder(fh);
+        return vcPath;
+    }
+
+    public bool DeleteVirtualCopy(string virtualCopyPath)
+    {
+        if (!IsVirtualCopy(virtualCopyPath)) return false;
+        var fh = GetFolderHistory(virtualCopyPath);
+        var key = Path.GetFileName(virtualCopyPath);
+        if (fh.Items.TryRemove(key, out _))
+        {
+            SaveFolder(fh);
+            return true;
+        }
+        return false;
+    }
+
+    public IReadOnlyList<string> GetVirtualCopies(string imagePath)
+    {
+        var fh = GetFolderHistory(imagePath);
+        var baseName = Path.GetFileName(imagePath);
+        return fh.Items.Keys
+            .Where(k => k.StartsWith(baseName + VirtualCopySuffix, StringComparison.OrdinalIgnoreCase))
+            .Select(k => Path.Combine(Path.GetDirectoryName(imagePath) ?? "", k))
+            .ToList();
+    }
+
+    public bool IsVirtualCopy(string path)
+    {
+        return path.Contains(VirtualCopySuffix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public string GetOriginalPath(string virtualCopyPath)
+    {
+        int idx = virtualCopyPath.IndexOf(VirtualCopySuffix, StringComparison.OrdinalIgnoreCase);
+        return idx >= 0 ? virtualCopyPath[..idx] : virtualCopyPath;
+    }
 }

@@ -4,15 +4,44 @@
         xmlns:ws="clr-namespace:ImageTool.Host.Workspace"
         Title="Aurora Studio" Height="820" Width="1480"
         Background="{DynamicResource BgBaseBrush}"
-        WindowStartupLocation="CenterScreen">
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="CanResizeWithGrip"
+        WindowStartupLocation="CenterScreen" AllowDrop="True"
+        DragOver="Window_DragOver" DragLeave="Window_DragLeave" Drop="Window_Drop">
+    <Border Background="{DynamicResource BgBaseBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="1" CornerRadius="6">
+    <Border.Effect>
+        <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="0" Opacity="0.3"/>
+    </Border.Effect>
     <Grid>
     <DockPanel>
-        <!-- ========== TOP BAR ========== -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource BgPanelBrush}" Height="44"
-                BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
+        <!-- ========== CUSTOM TITLE BAR ========== -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource BgPanelBrush}" Height="36"
+                BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1"
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" MouseLeftButtonUp="TitleBar_MouseLeftButtonUp"
+                MouseMove="TitleBar_MouseMove">
             <DockPanel LastChildFill="True" Margin="10,0">
+                <!-- App title (drag region) -->
+                <TextBlock Text="✦ Aurora Studio" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+                <!-- Window controls (right) -->
+                <Button x:Name="btnClose" DockPanel.Dock="Right" Content="✕" Width="36" Height="28"
+                        Padding="0" Click="BtnClose_Click" ToolTip="Đóng"
+                        Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}"
+                        BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+                <Button x:Name="btnMaximize" DockPanel.Dock="Right" Content="☐" Width="36" Height="28"
+                        Padding="0" Click="BtnMaximize_Click" ToolTip="Phóng to/Thu nhỏ"
+                        Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}"
+                        BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+                <Button x:Name="btnMinimize" DockPanel.Dock="Right" Content="─" Width="36" Height="28"
+                        Padding="0" Click="BtnMinimize_Click" ToolTip="Thu nhỏ"
+                        Background="Transparent" Foreground="{DynamicResource TextSecondaryBrush}"
+                        BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+                <!-- Theme toggle -->
+                <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="◐" Width="30" Height="28"
+                        Padding="6,0" VerticalAlignment="Center" Margin="0,0,8,0" Click="BtnTheme_Click"
+                        ToolTip="Đổi giao diện Sáng/Tối"/>
                 <!-- Left: Open / Recent -->
-                <Button x:Name="btnOpenFolder" DockPanel.Dock="Left" Content="📁  Open" Padding="14,6"
+                <Button x:Name="btnOpenFolder" DockPanel.Dock="Left" Content="📁  Open" Padding="14,4"
                         VerticalAlignment="Center" Click="BtnOpenFolder_Click"
                         ToolTip="Mở thư mục ảnh để duyệt"/>
                 <Button x:Name="btnRecent" DockPanel.Dock="Left" Content="▾" Width="28" Padding="6,6"
@@ -26,9 +55,6 @@
                         ToolTip="Công cụ trên ảnh đang chọn: Merge HDR, Focus Stack, Batch Rename"/>
 
                 <!-- Right: Pop Out + Mode Switcher + Quick Filter -->
-                <Button x:Name="btnTheme" DockPanel.Dock="Right" Content="◐" Width="30" Padding="6,6"
-                        VerticalAlignment="Center" Margin="6,0,0,0" Click="BtnTheme_Click"
-                        ToolTip="Đổi giao diện Sáng/Tối"/>
                 <Button x:Name="btnPopOutTools" DockPanel.Dock="Right" Content="⇱  Pop Out Tools"
                         Padding="10,6" VerticalAlignment="Center" Margin="6,0,0,0"
                         Click="BtnPopOutTools_Click"
@@ -231,7 +257,7 @@
         </Grid>
     </DockPanel>
 
-    <!-- Toast notification (overlay, không chặn) -->
+    <!-- Toast notification (overlay) -->
     <Border x:Name="toastBorder" HorizontalAlignment="Center" VerticalAlignment="Bottom"
             Margin="0,0,0,40" Background="{DynamicResource BgPanelAltBrush}" CornerRadius="6" Padding="16,10"
             BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
@@ -242,7 +268,24 @@
         <TextBlock x:Name="txtToast" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13"/>
     </Border>
 
-    <!-- Bảng phím tắt (F1 hoặc ? để bật/tắt) -->
+    <!-- Drag & Drop overlay -->
+    <Border x:Name="dropOverlay" Background="#99000000" Visibility="Collapsed" Panel.ZIndex="150"
+            AllowDrop="True">
+        <Border Background="{DynamicResource BgPanelBrush}" BorderBrush="{DynamicResource AccentBrush}" 
+                BorderThickness="2" CornerRadius="12" Padding="40"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="⬇" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12"
+                           Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="Thả ảnh hoặc thư mục vào đây" FontSize="16" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Hỗ trợ: JPG, PNG, TIFF, WebP, RAW, PSD..." FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+    </Border>
+
+    <!-- Shortcut overlay (F1) -->
     <Border x:Name="shortcutOverlay" Background="#CC000000" Visibility="Collapsed" Panel.ZIndex="200"
             MouseLeftButtonDown="ShortcutOverlay_Click">
         <Border Background="{DynamicResource BgPanelBrush}" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="1"
@@ -288,4 +331,5 @@
         </Border>
     </Border>
     </Grid>
+    </Border>
 </Window>

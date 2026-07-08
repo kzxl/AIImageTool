@@ -29,6 +29,11 @@ public class AutoSaveServiceTests
         public bool ApplySnapshot(string imagePath, string name) => false;
         public bool DeleteSnapshot(string imagePath, string name) => false;
         public IReadOnlyList<HistorySnapshot> GetSnapshots(string imagePath) => new List<HistorySnapshot>();
+        public string CreateVirtualCopy(string imagePath) => imagePath + "#vc1";
+        public bool DeleteVirtualCopy(string virtualCopyPath) => false;
+        public IReadOnlyList<string> GetVirtualCopies(string imagePath) => new List<string>();
+        public bool IsVirtualCopy(string path) => false;
+        public string GetOriginalPath(string virtualCopyPath) => virtualCopyPath;
     }
 
     [Fact]

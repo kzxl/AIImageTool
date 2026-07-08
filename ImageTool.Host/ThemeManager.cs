@@ -1,15 +1,13 @@
 using System;
 using System.Windows;
+using System.Windows.Media;
 
 namespace ImageTool.Host;
 
 /// <summary>
-/// Quản lý đổi theme runtime (#8). Swap ResourceDictionary trong Application.Resources giữa
-/// Dark/Light. Vì các style + brush trong theme đều dùng StaticResource nội bộ dictionary, đổi cả
-/// dictionary sẽ áp lại toàn bộ control dùng implicit style + DynamicResource.
-///
-/// GIỚI HẠN: các control đặt màu hex hardcode trực tiếp trong XAML (≈113 chỗ) vẫn giữ màu tối —
-/// Light theme là "experimental", cần migrate dần sang DynamicResource để hoàn chỉnh.
+/// Quản lý đổi theme runtime. Swap ResourceDictionary trong Application.Resources giữa
+/// Dark/Light. Các style + brush trong theme đều dùng DynamicResource, đổi dictionary sẽ
+/// áp lại toàn bộ control dùng implicit style.
 /// </summary>
 public static class ThemeManager
 {
@@ -18,6 +16,31 @@ public static class ThemeManager
 
     private static string _current = Dark;
     public static string Current => _current;
+
+    /// <summary>Lấy brush từ theme resource. Fallback về SolidColorBrush nếu không tìm thấy.</summary>
+    public static Brush GetBrush(string key, Brush? fallback = null)
+    {
+        var app = Application.Current;
+        if (app != null)
+        {
+            var resource = app.TryFindResource(key);
+            if (resource is Brush brush) return brush;
+        }
+        return fallback ?? Brushes.Gray;
+    }
+
+    /// <summary>Lấy Color từ theme resource.</summary>
+    public static Color GetColor(string key, Color fallback = default)
+    {
+        var app = Application.Current;
+        if (app != null)
+        {
+            var resource = app.TryFindResource(key);
+            if (resource is Color color) return color;
+            if (resource is SolidColorBrush scb) return scb.Color;
+        }
+        return fallback;
+    }
 
     /// <summary>Áp theme theo tên ("Dark"/"Light"). Bỏ qua nếu không đổi.</summary>
     public static void Apply(string theme)

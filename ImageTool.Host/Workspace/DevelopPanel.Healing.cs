@@ -36,7 +36,7 @@ public partial class DevelopPanel
         host.Children.Add(_chkHealActive);
 
         var modeRow = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-        modeRow.Children.Add(new TextBlock { Text = "Chế độ", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        modeRow.Children.Add(new TextBlock { Text = "Chế độ", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         var cmbMode = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         cmbMode.Items.Add(new ComboBoxItem { Content = "Heal (vá liền)" });
         cmbMode.Items.Add(new ComboBoxItem { Content = "Clone (chép thẳng)" });
@@ -60,7 +60,7 @@ public partial class DevelopPanel
         };
         host.Children.Add(btnUndo);
 
-        _healInfo = new TextBlock { Foreground = Brushes.Gray, FontSize = 10, Margin = new Thickness(0, 2, 0, 0) };
+        _healInfo = new TextBlock { Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, Margin = new Thickness(0, 2, 0, 0) };
         host.Children.Add(_healInfo);
         UpdateHealInfo();
     }

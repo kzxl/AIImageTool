@@ -178,14 +178,14 @@ public class InputDialog : Window
     {
         Title = title;
         Width = 360; Height = 160;
-        Background = System.Windows.Media.Brushes.Black;
-        Foreground = System.Windows.Media.Brushes.White;
+        Background = ThemeManager.GetBrush("BgPanelBrush");
+        Foreground = ThemeManager.GetBrush("TextPrimaryBrush");
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Owner = Application.Current.MainWindow;
         ResizeMode = ResizeMode.NoResize;
 
         var sp = new StackPanel { Margin = new Thickness(15) };
-        sp.Children.Add(new TextBlock { Text = prompt, Foreground = System.Windows.Media.Brushes.LightGray, Margin = new Thickness(0, 0, 0, 6) });
+        sp.Children.Add(new TextBlock { Text = prompt, Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), Margin = new Thickness(0, 0, 0, 6) });
         _tb = new TextBox { Text = defaultText, Padding = new Thickness(4, 2, 4, 2) };
         sp.Children.Add(_tb);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };

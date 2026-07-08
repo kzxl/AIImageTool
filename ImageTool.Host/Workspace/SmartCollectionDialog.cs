@@ -41,7 +41,7 @@ public sealed class SmartCollectionDialog : Window
         Width = 380;
         Height = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
+        Background = ThemeManager.GetBrush("BgPanelBrush");
         ResizeMode = ResizeMode.NoResize;
 
         _name.Text = name;
@@ -124,8 +124,8 @@ public sealed class SmartCollectionDialog : Window
 
     private static TextBox NewBox() => new()
     {
-        Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
-        Foreground = Brushes.Gainsboro, BorderThickness = new Thickness(0),
+        Background = ThemeManager.GetBrush("BgInputBrush"),
+        Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), BorderThickness = new Thickness(0),
         Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 0, 0, 6), FontSize = 12
     };
 
@@ -133,8 +133,8 @@ public sealed class SmartCollectionDialog : Window
     {
         var cb = new ComboBox
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
-            Foreground = Brushes.Gainsboro,
+            Background = ThemeManager.GetBrush("BgInputBrush"),
+            Foreground = ThemeManager.GetBrush("TextSecondaryBrush"),
             Margin = new Thickness(0, 0, 0, 6), FontSize = 12, SelectedIndex = 0
         };
         foreach (var it in items) cb.Items.Add(new ComboBoxItem { Content = it });
@@ -143,7 +143,7 @@ public sealed class SmartCollectionDialog : Window
 
     private static TextBlock Label(string text) => new()
     {
-        Text = text, Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+        Text = text, Foreground = ThemeManager.GetBrush("TextDimBrush"),
         FontSize = 11, Margin = new Thickness(0, 2, 0, 3)
     };
 

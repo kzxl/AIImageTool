@@ -149,7 +149,7 @@ public partial class DevelopPanel : UserControl
         gWb.Children.Add(wbBtnRow);
         // WB preset theo nguồn sáng (đặt Kelvin chuẩn).
         var wbPresetRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        wbPresetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        wbPresetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         var cmbWbPreset = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         foreach (var n in new[] { "—", "Daylight (5500K)", "Cloudy (6500K)", "Shade (7500K)", "Tungsten (3200K)", "Fluorescent (4000K)", "Flash (5500K)" })
             cmbWbPreset.Items.Add(new ComboBoxItem { Content = n });
@@ -200,7 +200,7 @@ public partial class DevelopPanel : UserControl
         // Tone Curve (point editor) — 2.2
         var gCurve = AddGroup("Tone Curve", false);
         var chRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
-        chRow.Children.Add(new TextBlock { Text = "Kênh", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        chRow.Children.Add(new TextBlock { Text = "Kênh", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         _curveChannel = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         foreach (var n in new[] { "RGB", "Red", "Green", "Blue" })
             _curveChannel.Items.Add(new ComboBoxItem { Content = n });
@@ -213,7 +213,7 @@ public partial class DevelopPanel : UserControl
         gCurve.Children.Add(_curveEditor);
         // Preset đường cong tương phản (áp cho kênh RGB master).
         var presetRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        presetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        presetRow.Children.Add(new TextBlock { Text = "Preset", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         var cmbCurvePreset = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         foreach (var n in new[] { "Linear", "Medium Contrast", "Strong Contrast", "Faded (lifted blacks)" })
             cmbCurvePreset.Items.Add(new ComboBoxItem { Content = n });
@@ -225,13 +225,13 @@ public partial class DevelopPanel : UserControl
         var curveHint = new TextBlock
         {
             Text = "Kéo điểm • double-click thêm/xoá • phải-chuột xoá",
-            Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+            Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap
         };
         gCurve.Children.Add(curveHint);
 
         _chkCurvePreserveHue = new CheckBox
         {
-            Content = "Preserve hue (master theo luminance)", Foreground = Brushes.Gainsboro, FontSize = 11,
+            Content = "Preserve hue (master theo luminance)", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 11,
             Margin = new Thickness(0, 4, 0, 2),
             ToolTip = "Đường master áp lên độ sáng và scale RGB giữ hue — tránh dịch màu ở vùng rực."
         };
@@ -259,7 +259,7 @@ public partial class DevelopPanel : UserControl
         btnAutoColor.Click += BtnAutoColor_Click;
         gLevels.Children.Add(btnAutoColor);
         // Per-channel (D2.5): black/white/gamma riêng cho R/G/B (color grading kiểu film).
-        var expLvlCh = new Expander { Header = "Per-channel R/G/B", Foreground = Brushes.Gainsboro, FontSize = 11, Margin = new Thickness(0, 2, 0, 2) };
+        var expLvlCh = new Expander { Header = "Per-channel R/G/B", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 11, Margin = new Thickness(0, 2, 0, 2) };
         var gLvlCh = new StackPanel();
         AddSlider(gLvlCh, "lvl_blackR", "R Black", 0, 0.5, 0, "0.00");
         AddSlider(gLvlCh, "lvl_whiteR", "R White", 0.5, 1, 1, "0.00");
@@ -323,7 +323,7 @@ public partial class DevelopPanel : UserControl
         gHsl.Children.Add(tatRow);
 
         var bandRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
-        bandRow.Children.Add(new TextBlock { Text = "Dải màu", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        bandRow.Children.Add(new TextBlock { Text = "Dải màu", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         _bandCombo = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         foreach (var n in new[] { "Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Purple", "Magenta" })
             _bandCombo.Items.Add(new ComboBoxItem { Content = n });
@@ -351,7 +351,7 @@ public partial class DevelopPanel : UserControl
         {
             int zi = z;
             var cell = new StackPanel { Margin = new Thickness(2) };
-            cell.Children.Add(new TextBlock { Text = zoneNames[z], Foreground = Brushes.Gainsboro, FontSize = 10, HorizontalAlignment = HorizontalAlignment.Center });
+            cell.Children.Add(new TextBlock { Text = zoneNames[z], Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 10, HorizontalAlignment = HorizontalAlignment.Center });
             var wheel = new ColorWheel { HorizontalAlignment = HorizontalAlignment.Center };
             wheel.ColorChanged += (_, hs) => { _gradeHue[zi] = hs.hue; _gradeSat[zi] = hs.sat; if (!_loading) ScheduleCommit(); };
             _gradeWheels[z] = wheel;
@@ -380,7 +380,7 @@ public partial class DevelopPanel : UserControl
         // Color Match (#8): mượn tông màu từ ảnh tham chiếu (Reinhard Lab transfer).
         var gMatch = AddGroup("Color Match", false);
         var matchRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        _colorMatchInfo = new TextBlock { Text = "(chưa chọn ảnh tham chiếu)", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        _colorMatchInfo = new TextBlock { Text = "(chưa chọn ảnh tham chiếu)", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         var btnMatch = new Button { Content = "Chọn ảnh...", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(6, 0, 0, 0) };
         var btnMatchClear = new Button { Content = "✕", Padding = new Thickness(6, 3, 6, 3), Margin = new Thickness(4, 0, 0, 0), ToolTip = "Bỏ color match" };
         DockPanel.SetDock(btnMatch, Dock.Right);
@@ -392,12 +392,12 @@ public partial class DevelopPanel : UserControl
         matchRow.Children.Add(_colorMatchInfo);
         gMatch.Children.Add(matchRow);
         AddSlider(gMatch, "match_strength", "Match Strength", 0, 1, 0.8, "0.00");
-        gMatch.Children.Add(new TextBlock { Text = "Mượn tông màu từ 1 ảnh khác (grading đồng bộ).", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        gMatch.Children.Add(new TextBlock { Text = "Mượn tông màu từ 1 ảnh khác (grading đồng bộ).", FontSize = 10, Foreground = ThemeManager.GetBrush("TextDimBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
 
         // 3D LUT (.cube)
         var gLut = AddGroup("3D LUT (.cube)", false);
         var lutRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
-        _lutLabel = new TextBlock { Text = "(chưa chọn LUT)", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        _lutLabel = new TextBlock { Text = "(chưa chọn LUT)", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         var btnLut = new Button { Content = "Chọn...", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(6, 0, 0, 0) };
         var btnLutClear = new Button { Content = "✕", Padding = new Thickness(6, 3, 6, 3), Margin = new Thickness(4, 0, 0, 0) };
         DockPanel.SetDock(btnLut, Dock.Right);
@@ -432,7 +432,7 @@ public partial class DevelopPanel : UserControl
         btnAutoCa.Click += BtnAutoCa_Click;
         gDetail.Children.Add(btnAutoCa);
         AddSlider(gDetail, "aiDenoise", "AI Denoise", 0, 1, 0);
-        _chkAiUpscale = new CheckBox { Content = "AI Upscale 4x (khi export)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2), ToolTip = "Phóng to 4x bằng AI lúc export (cần model Upscaler)" };
+        _chkAiUpscale = new CheckBox { Content = "AI Upscale 4x (khi export)", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, Margin = new Thickness(0, 4, 0, 2), ToolTip = "Phóng to 4x bằng AI lúc export (cần model Upscaler)" };
         _chkAiUpscale.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkAiUpscale.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gDetail.Children.Add(_chkAiUpscale);
@@ -449,14 +449,14 @@ public partial class DevelopPanel : UserControl
         AddSlider(gFx, "grain_rough", "Grain Roughness", 0, 1, 0.5, "0.00");
         AddSlider(gFx, "grain_color", "Grain Color", 0, 1, 0, "0.00");
         AddSlider(gFx, "glow", "Glow / Soften", 0, 1, 0);
-        _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
+        _chkInvert = new CheckBox { Content = "Negative / Invert", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, Margin = new Thickness(0, 4, 0, 2) };
         _chkInvert.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkInvert.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gFx.Children.Add(_chkInvert);
 
         // Gradient Map (#5): preset dải màu + opacity. Map luminance -> gradient (grading/duotone).
         var gradRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
-        gradRow.Children.Add(new TextBlock { Text = "Gradient Map", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 86 });
+        gradRow.Children.Add(new TextBlock { Text = "Gradient Map", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 86 });
         _cmbGradientMap = new ComboBox { Height = 22 };
         foreach (var preset in GradientMapPresets.All)
             _cmbGradientMap.Items.Add(new ComboBoxItem { Content = preset.Name });
@@ -481,7 +481,7 @@ public partial class DevelopPanel : UserControl
         gmColorRow.Children.Add(_gmMid);
         gmColorRow.Children.Add(_gmHigh);
         gFx.Children.Add(gmColorRow);
-        gFx.Children.Add(new TextBlock { Text = "Shadow · Mid · Highlight (hex)", FontSize = 9, Foreground = Brushes.Gray, Margin = new Thickness(0, 0, 0, 4) });
+        gFx.Children.Add(new TextBlock { Text = "Shadow · Mid · Highlight (hex)", FontSize = 9, Foreground = ThemeManager.GetBrush("TextDimBrush"), Margin = new Thickness(0, 0, 0, 4) });
 
         // Chọn preset -> điền hex 3 chặng (None giữ nguyên hex hiện có).
         _cmbGradientMap.SelectionChanged += (_, _) =>
@@ -498,7 +498,7 @@ public partial class DevelopPanel : UserControl
 
         // Film Negative (negadoctor) — chuyển scan phim âm bản thành dương bản.
         var gFilm = AddGroup("Film Negative", false);
-        _chkFilmNeg = new CheckBox { Content = "Bật Film Negative (scan phim âm bản)", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
+        _chkFilmNeg = new CheckBox { Content = "Bật Film Negative (scan phim âm bản)", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
         _chkFilmNeg.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkFilmNeg.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gFilm.Children.Add(_chkFilmNeg);
@@ -510,11 +510,11 @@ public partial class DevelopPanel : UserControl
         var btnPickBase = new Button { Content = "Pick film base (click mép phim)", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 2, 0, 2), HorizontalAlignment = HorizontalAlignment.Left };
         btnPickBase.Click += BtnPickFilmBase_Click;
         gFilm.Children.Add(btnPickBase);
-        gFilm.Children.Add(new TextBlock { Text = "Mẹo: chọn Base bằng vùng mép phim trống (sáng nhất).", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        gFilm.Children.Add(new TextBlock { Text = "Mẹo: chọn Base bằng vùng mép phim trống (sáng nhất).", FontSize = 10, Foreground = ThemeManager.GetBrush("TextDimBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
 
         // Black & White
         var gBw = AddGroup("Black & White", false);
-        _chkBw = new CheckBox { Content = "Chuyển đen trắng", Foreground = Brushes.Gainsboro, FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
+        _chkBw = new CheckBox { Content = "Chuyển đen trắng", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, Margin = new Thickness(0, 2, 0, 4) };
         _chkBw.Checked += (_, _) => { if (!_loading) ScheduleCommit(); };
         _chkBw.Unchecked += (_, _) => { if (!_loading) ScheduleCommit(); };
         gBw.Children.Add(_chkBw);
@@ -523,7 +523,7 @@ public partial class DevelopPanel : UserControl
         AddSlider(gBw, "bw_b", "Blue mix", 0, 1, 0.114, "0.00");
         // Preset filter màu cổ điển (mô phỏng kính lọc khi chụp phim B&W).
         var bwFilterRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        bwFilterRow.Children.Add(new TextBlock { Text = "Filter", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        bwFilterRow.Children.Add(new TextBlock { Text = "Filter", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
         var cmbBwFilter = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
         foreach (var n in new[] { "Neutral", "Red", "Orange", "Yellow", "Green", "Blue" })
             cmbBwFilter.Items.Add(new ComboBoxItem { Content = n });
@@ -574,7 +574,7 @@ public partial class DevelopPanel : UserControl
         // Color Management (D2.2): input/working color space.
         var gCm = AddGroup("Color Management", false);
         var cmRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        cmRow.Children.Add(new TextBlock { Text = "Input Profile", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        cmRow.Children.Add(new TextBlock { Text = "Input Profile", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
         _cmbInputProfile = new ComboBox { Height = 22 };
         foreach (var n in new[] { "sRGB", "AdobeRGB", "Rec2020", "DisplayP3", "Embedded ICC" })
             _cmbInputProfile.Items.Add(new ComboBoxItem { Content = n });
@@ -589,7 +589,7 @@ public partial class DevelopPanel : UserControl
 
         // Soft Proof / Gamut (#1): mô phỏng giới hạn màu thiết bị đích + cảnh báo ngoài gamut.
         var spRow = new DockPanel { Margin = new Thickness(0, 4, 0, 2) };
-        spRow.Children.Add(new TextBlock { Text = "Soft Proof", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        spRow.Children.Add(new TextBlock { Text = "Soft Proof", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
         _cmbSoftProof = new ComboBox { Height = 22 };
         foreach (var n in new[] { "Off", "sRGB", "AdobeRGB", "Rec2020", "DisplayP3" })
             _cmbSoftProof.Items.Add(new ComboBoxItem { Content = n });
@@ -600,7 +600,7 @@ public partial class DevelopPanel : UserControl
         gCm.Children.Add(spRow);
 
         var spModeRow = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-        spModeRow.Children.Add(new TextBlock { Text = "Proof Mode", Foreground = Brushes.Gainsboro, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
+        spModeRow.Children.Add(new TextBlock { Text = "Proof Mode", Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 90 });
         _cmbSoftProofMode = new ComboBox { Height = 22 };
         foreach (var n in new[] { "Clip", "Desaturate" })
             _cmbSoftProofMode.Items.Add(new ComboBoxItem { Content = n });
@@ -685,6 +685,19 @@ public partial class DevelopPanel : UserControl
             Content = content
         };
         exp.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+        // Solo Mode: Alt+click header -> collapse all other groups, expand only this one
+        exp.PreviewMouseLeftButtonDown += (s, e) =>
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Alt) != 0)
+            {
+                e.Handled = true;
+                foreach (var child in panelSliders.Children)
+                {
+                    if (child is Expander other)
+                        other.IsExpanded = (other == exp);
+                }
+            }
+        };
         panelSliders.Children.Add(exp);
         return content;
     }
@@ -719,15 +732,15 @@ public partial class DevelopPanel : UserControl
     private void AddSlider(Panel host, string key, string label, double min, double max, double def, string fmt = "0.00")
     {
         _defaults[key] = def;
-        var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
+        var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(46) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
 
         string? tip = SliderTips.TryGetValue(key, out var t) ? t : null;
 
-        var lbl = new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimaryBrush");
+        var lbl = new TextBlock { Text = label, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
         if (tip != null) lbl.ToolTip = tip;
         Grid.SetColumn(lbl, 0);
 
@@ -743,7 +756,7 @@ public partial class DevelopPanel : UserControl
         var input = new TextBox
         {
             Text = def.ToString(fmt, CultureInfo.InvariantCulture),
-            FontSize = 11, TextAlignment = TextAlignment.Right,
+            FontSize = 10, TextAlignment = TextAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0),
             Tag = fmt, BorderThickness = new Thickness(0)
         };

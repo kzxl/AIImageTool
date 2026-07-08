@@ -9,7 +9,7 @@ using ImageTool.Core;
 
 namespace ImageTool.Host.Workspace;
 
-public enum LighttableMode { Single, Grid, Cull, Full }
+public enum LighttableMode { Single, Grid, Cull, Full, Reference }
 
 public partial class CenterPreview : UserControl, IImageToolHost
 {
@@ -25,6 +25,9 @@ public partial class CenterPreview : UserControl, IImageToolHost
     private bool _isDraggingSplit;
     private double _splitPercent = 0.5;
     private bool _externalAfterActive; // true khi plugin (Upscaler...) đẩy ảnh "after"
+
+    // Reference view state
+    private string? _referenceImagePath;
 
     // Zoom/pan loupe state
     private double _zoom = 1.0;
@@ -101,7 +104,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             {
                 _stacked = false;
                 _allGridBackup = null;
-                btnStack.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
+                btnStack.Background = ThemeManager.GetBrush("BgHoverBrush");
                 GridItems = new ObservableCollection<ThumbItem>(list);
                 icGrid.ItemsSource = GridItems;
             });
@@ -255,13 +258,15 @@ public partial class CenterPreview : UserControl, IImageToolHost
             paneCompare.Visibility = Visibility.Collapsed;
             imgCompareBefore.Source = null;
             imgCompareAfter.Source = null;
-            btnCompare.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
+            btnCompare.Background = ThemeManager.GetBrush("BgHoverBrush");
         }
         paneSingle.Visibility = m == LighttableMode.Single ? Visibility.Visible : Visibility.Collapsed;
         paneGrid.Visibility = m == LighttableMode.Grid ? Visibility.Visible : Visibility.Collapsed;
         paneCull.Visibility = m == LighttableMode.Cull ? Visibility.Visible : Visibility.Collapsed;
         paneFull.Visibility = m == LighttableMode.Full ? Visibility.Visible : Visibility.Collapsed;
+        paneReference.Visibility = m == LighttableMode.Reference ? Visibility.Visible : Visibility.Collapsed;
         if (m == LighttableMode.Cull) RebuildCullView();
+        if (m == LighttableMode.Reference) UpdateReferenceView();
         ModeChanged?.Invoke(this, m);
     }
 
@@ -296,7 +301,7 @@ public partial class CenterPreview : UserControl, IImageToolHost
             catch { }
             var border = new Border
             {
-                BorderBrush = System.Windows.Media.Brushes.DimGray,
+                BorderBrush = ThemeManager.GetBrush("BorderHoverBrush"),
                 BorderThickness = new Thickness(1),
                 Margin = new Thickness(2),
                 Child = img
@@ -627,8 +632,141 @@ public partial class CenterPreview : UserControl, IImageToolHost
         {
             txtZoom.Text = $"{_zoom * 100:0}%";
             zoomBadge.Visibility = Visibility.Visible;
+            UpdateNavigator();
         }
-        else zoomBadge.Visibility = Visibility.Collapsed;
+        else
+        {
+            zoomBadge.Visibility = Visibility.Collapsed;
+            navigatorOverlay.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    // ===== Navigator mini-map =====
+    private bool _navigatorDragging;
+
+    private void UpdateNavigator()
+    {
+        if (imgPreview.Source == null || _zoom <= 1.001)
+        {
+            navigatorOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        navigatorOverlay.Visibility = Visibility.Visible;
+        navigatorThumb.Source = imgPreview.Source;
+
+        // Tính viewport rectangle
+        double paneW = paneSingle.ActualWidth;
+        double paneH = paneSingle.ActualHeight;
+        if (paneW <= 0 || paneH <= 0) return;
+
+        double imgW = imgPreview.ActualWidth;
+        double imgH = imgPreview.ActualHeight;
+        if (imgW <= 0 || imgH <= 0) return;
+
+        // Navigator size
+        double navW = 160;
+        double navH = 100;
+
+        // Tỷ lệ ảnh trong navigator
+        double imgAspect = imgW / imgH;
+        double navAspect = navW / navH;
+        double scale, offsetX = 0, offsetY = 0;
+        if (imgAspect > navAspect)
+        {
+            scale = navW / imgW;
+            offsetY = (navH - imgH * scale) / 2;
+        }
+        else
+        {
+            scale = navH / imgH;
+            offsetX = (navW - imgW * scale) / 2;
+        }
+
+        // Viewport rectangle trong toạ độ navigator
+        double vpW = (paneW / _zoom) * scale;
+        double vpH = (paneH / _zoom) * scale;
+        double vpX = offsetX + (-zoomPan.X / _zoom) * scale;
+        double vpY = offsetY + (-zoomPan.Y / _zoom) * scale;
+
+        // Clamp viewport trong navigator bounds
+        vpX = Math.Max(0, Math.Min(vpX, navW - vpW));
+        vpY = Math.Max(0, Math.Min(vpY, navH - vpH));
+
+        navigatorViewport.Children.Clear();
+        var rect = new System.Windows.Shapes.Rectangle
+        {
+            Width = Math.Max(4, vpW),
+            Height = Math.Max(4, vpH),
+            Stroke = new SolidColorBrush(Color.FromArgb(0xCC, 0x4F, 0xC3, 0xF7)),
+            StrokeThickness = 1.5,
+            Fill = new SolidColorBrush(Color.FromArgb(0x30, 0x4F, 0xC3, 0xF7))
+        };
+        System.Windows.Controls.Canvas.SetLeft(rect, vpX);
+        System.Windows.Controls.Canvas.SetTop(rect, vpY);
+        navigatorViewport.Children.Add(rect);
+    }
+
+    private void Navigator_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            _navigatorDragging = true;
+            NavigateFromNavigator(e.GetPosition(navigatorContent));
+            navigatorOverlay.CaptureMouse();
+        }
+    }
+
+    private void Navigator_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_navigatorDragging && e.LeftButton == MouseButtonState.Pressed)
+        {
+            NavigateFromNavigator(e.GetPosition(navigatorContent));
+        }
+    }
+
+    private void Navigator_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        _navigatorDragging = false;
+        navigatorOverlay.ReleaseMouseCapture();
+    }
+
+    private void NavigateFromNavigator(Point navPoint)
+    {
+        if (imgPreview.Source == null || _zoom <= 1.0) return;
+
+        double navW = 160;
+        double navH = 100;
+        double imgW = imgPreview.ActualWidth;
+        double imgH = imgPreview.ActualHeight;
+        if (imgW <= 0 || imgH <= 0) return;
+
+        double imgAspect = imgW / imgH;
+        double navAspect = navW / navH;
+        double scale, offsetX = 0, offsetY = 0;
+        if (imgAspect > navAspect)
+        {
+            scale = navW / imgW;
+            offsetY = (navH - imgH * scale) / 2;
+        }
+        else
+        {
+            scale = navH / imgH;
+            offsetX = (navW - imgW * scale) / 2;
+        }
+
+        // Chuyển click point trên navigator về toạ độ ảnh gốc
+        double imgX = (navPoint.X - offsetX) / scale;
+        double imgY = (navPoint.Y - offsetY) / scale;
+
+        // Tính pan để đưa điểm click vào tâm viewport
+        double paneW = paneSingle.ActualWidth;
+        double paneH = paneSingle.ActualHeight;
+        zoomPan.X = -(imgX * _zoom - paneW / 2);
+        zoomPan.Y = -(imgY * _zoom - paneH / 2);
+
+        SyncAfterTransform();
+        UpdateNavigator();
     }
 
     private void UpdateSplitFromPoint(Point p)
@@ -663,6 +801,54 @@ public partial class CenterPreview : UserControl, IImageToolHost
     }
 
     private void BtnClearAfter_Click(object sender, RoutedEventArgs e) => ClearResult();
+
+    // ===== Reference View =====
+    private void BtnSetReference_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh tham chiếu",
+            Filter = "Image Files|*.jpg;*.jpeg;*.png;*.tiff;*.tif;*.bmp;*.webp|All Files|*.*"
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            _referenceImagePath = dlg.FileName;
+            UpdateReferenceView();
+        }
+    }
+
+    public void SetReferenceImage(string? path)
+    {
+        _referenceImagePath = path;
+        if (_mode == LighttableMode.Reference) UpdateReferenceView();
+    }
+
+    private async void UpdateReferenceView()
+    {
+        if (_referenceImagePath == null || !File.Exists(_referenceImagePath))
+        {
+            imgReference.Source = null;
+            return;
+        }
+
+        // Load reference image
+        try
+        {
+            var bmp = await _renderer.RenderPreviewAsync(_referenceImagePath,
+                Array.Empty<EditOperation>(), 0);
+            imgReference.Source = bmp;
+        }
+        catch { }
+
+        // Update current image
+        var active = _workspace?.ActiveImage;
+        if (active != null)
+        {
+            var ops = _history?.GetStack(active) ?? Array.Empty<EditOperation>();
+            var currentBmp = await _renderer.RenderPreviewAsync(active, ops, _history?.GetPointer(active) ?? 0);
+            imgRefCurrent.Source = currentBmp;
+        }
+    }
 
     // ===== IImageToolHost =====
     public string? ActiveImagePath => _workspace?.ActiveImage;

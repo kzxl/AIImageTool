@@ -85,7 +85,7 @@ public sealed class ColorWheel : Canvas
         _ring = new Ellipse
         {
             Width = _radius * 2, Height = _radius * 2,
-            Stroke = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)), StrokeThickness = 1
+            Stroke = ThemeManager.GetBrush("BorderHoverBrush"), StrokeThickness = 1
         };
         SetLeft(_ring, _center.X - _radius);
         SetTop(_ring, _center.Y - _radius);

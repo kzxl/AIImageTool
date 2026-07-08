@@ -64,7 +64,7 @@ public partial class DevelopPanel
         _maskHint = new TextBlock
         {
             Text = "Thêm mask để chỉnh cục bộ. Brush: chọn mask rồi vẽ trên ảnh.",
-            Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 4)
+            Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 4)
         };
         host.Children.Add(_maskHint);
 
@@ -164,7 +164,7 @@ public partial class DevelopPanel
                     Content = $"{m.Name}",
                     HorizontalContentAlignment = HorizontalAlignment.Left, FontSize = 11,
                     Padding = new Thickness(6, 2, 6, 2),
-                    Background = m == _activeMask ? new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF)) : Brushes.Transparent,
+                    Background = m == _activeMask ? ThemeManager.GetBrush("AccentBrush") : Brushes.Transparent,
                     BorderThickness = new Thickness(0)
                 };
                 sel.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
@@ -186,7 +186,7 @@ public partial class DevelopPanel
                 _externalLayersHost.Children.Add(new TextBlock
                 {
                     Text = "(Không có mask hoạt động)",
-                    Foreground = Brushes.Gray,
+                    Foreground = ThemeManager.GetBrush("TextDimBrush"),
                     FontSize = 10,
                     FontStyle = FontStyles.Italic,
                     HorizontalAlignment = HorizontalAlignment.Center,
@@ -269,7 +269,7 @@ public partial class DevelopPanel
 
         _maskEditPanel.Children.Add(new TextBlock
         {
-            Text = $"— {m.Name} —", Foreground = Brushes.Gray, FontSize = 10,
+            Text = $"— {m.Name} —", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10,
             HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 2)
         });
 
@@ -282,7 +282,7 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Vẽ trực tiếp trên ảnh (giữ chuột kéo). Chuột phải = xoá nét.",
-                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+                    Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap
                 });
                 break;
             case PolygonMask.Type:
@@ -291,7 +291,7 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Click trên ảnh để đặt các đỉnh đa giác (≥3 điểm). Vùng trong đa giác được chọn.",
-                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+                    Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap
                 });
                 break;
             case PathMask.Type:
@@ -300,7 +300,7 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Click trên ảnh để đặt node (≥3). Mỗi node ghi giá trị Feather hiện tại — đổi slider giữa các lần click để mép mềm/cứng khác nhau theo từng node (path).",
-                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap
+                    Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap
                 });
                 break;
             case RadialMask.Type:
@@ -331,7 +331,7 @@ public partial class DevelopPanel
                 _maskEditPanel.Children.Add(new TextBlock
                 {
                     Text = "Chọn vùng theo nhiều kênh (giao điều kiện). Để Min=0, Max=1 nếu không dùng kênh.",
-                    Foreground = Brushes.Gray, FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 2)
+                    Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 2)
                 });
                 AddParamChannel(m, "l", "Lightness");
                 AddParamChannel(m, "c", "Chroma");
@@ -359,7 +359,7 @@ public partial class DevelopPanel
 
         // Blend mode + opacity (D4.5).
         var blendRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
-        blendRow.Children.Add(new TextBlock { Text = "Blend", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
+        blendRow.Children.Add(new TextBlock { Text = "Blend", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
         var cmbBlend = new ComboBox { Height = 22 };
         string[] modes = { "normal", "multiply", "screen", "overlay", "softlight", "hardlight", "lighten", "darken", "addition", "subtract", "difference", "linearlight" };
         foreach (var mode in modes) cmbBlend.Items.Add(new ComboBoxItem { Content = mode });
@@ -377,7 +377,7 @@ public partial class DevelopPanel
 
         // Refine theo luminance range (D4.2): kết hợp mask phụ.
         var combineRow = new DockPanel { Margin = new Thickness(0, 6, 0, 2) };
-        combineRow.Children.Add(new TextBlock { Text = "Refine", Foreground = Brushes.Gray, FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
+        combineRow.Children.Add(new TextBlock { Text = "Refine", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Width = 80 });
         var cmbCombine = new ComboBox { Height = 22 };
         string[] combineModes = { "none", "intersect", "union", "subtract" };
         foreach (var cm in combineModes) cmbCombine.Items.Add(new ComboBoxItem { Content = cm });
@@ -465,7 +465,7 @@ public partial class DevelopPanel
         Grid.SetColumn(lbl, 0);
         slider = new Slider { Minimum = min, Maximum = max, Value = Math.Clamp(cur, min, max), VerticalAlignment = VerticalAlignment.Center, IsMoveToPointEnabled = true };
         Grid.SetColumn(slider, 1);
-        var val = new TextBlock { Foreground = Brushes.Gray, FontSize = 10, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
+        var val = new TextBlock { Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
         val.Text = cur.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture);
         Grid.SetColumn(val, 2);
         var capturedSlider = slider;

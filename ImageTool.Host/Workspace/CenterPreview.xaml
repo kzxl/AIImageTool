@@ -144,6 +144,19 @@
                         MouseLeftButtonDown="LiquifyOverlay_MouseDown"
                         MouseMove="LiquifyOverlay_MouseMove"
                         MouseLeftButtonUp="LiquifyOverlay_MouseUp"/>
+
+                <!-- Navigator mini-map: hiện khi zoom > 100% -->
+                <Border x:Name="navigatorOverlay" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,16,16" Visibility="Collapsed" IsHitTestVisible="True" Cursor="Hand"
+                        Background="#CC111111" BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="1"
+                        CornerRadius="4" Padding="2"
+                        MouseLeftButtonDown="Navigator_MouseDown" MouseMove="Navigator_MouseMove"
+                        MouseLeftButtonUp="Navigator_MouseUp">
+                    <Grid x:Name="navigatorContent" Width="160" Height="100">
+                        <Image x:Name="navigatorThumb" Stretch="Uniform"/>
+                        <Canvas x:Name="navigatorViewport" IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
             </Grid>
 
             <!-- GRID mode -->
@@ -253,6 +266,32 @@
                     </Border>
                 </Grid>
                 <Border Width="1" Background="{DynamicResource BorderBrush_}" HorizontalAlignment="Center"/>
+            </Grid>
+
+            <!-- REFERENCE mode (reference image vs current) -->
+            <Grid x:Name="paneReference" Visibility="Collapsed" Background="{DynamicResource BgBaseBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0" Margin="8" ClipToBounds="True">
+                    <Image x:Name="imgReference" Stretch="Uniform"/>
+                    <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
+                            Background="#CC888888" CornerRadius="2" Padding="6,2">
+                        <TextBlock Text="REFERENCE" Foreground="#FFF" FontSize="10" FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+                <Grid Grid.Column="1" Margin="8" ClipToBounds="True">
+                    <Image x:Name="imgRefCurrent" Stretch="Uniform"/>
+                    <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="6"
+                            Background="#CC55C1E7" CornerRadius="2" Padding="6,2">
+                        <TextBlock Text="CURRENT" Foreground="#000" FontSize="10" FontWeight="SemiBold"/>
+                    </Border>
+                </Grid>
+                <Border Width="1" Background="{DynamicResource BorderBrush_}" HorizontalAlignment="Center"/>
+                <Button x:Name="btnSetReference" Content="📷 Set Reference" HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom" Margin="0,0,0,16" Padding="12,6"
+                        Click="BtnSetReference_Click" ToolTip="Chọn ảnh tham chiếu để so sánh"/>
             </Grid>
         </Grid>
 

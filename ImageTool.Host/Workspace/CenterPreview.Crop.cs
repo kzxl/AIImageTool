@@ -84,7 +84,7 @@ public partial class CenterPreview
                 _cropX = c.X; _cropY = c.Y; _cropW = c.W; _cropH = c.H;
             }
             cropOverlay.Visibility = Visibility.Visible;
-            btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF));
+            btnCrop.Background = ThemeManager.GetBrush("AccentBrush");
             cmbCropRatio.Visibility = Visibility.Visible;
             btnSmartCrop.Visibility = Visibility.Visible;
             // render ảnh chưa cắt rồi vẽ overlay (DrawCropOverlay được gọi cuối RenderDevelopAsync).
@@ -96,7 +96,7 @@ public partial class CenterPreview
             cropOverlay.Children.Clear();
             cmbCropRatio.Visibility = Visibility.Collapsed;
             btnSmartCrop.Visibility = Visibility.Collapsed;
-            btnCrop.Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30));
+            btnCrop.Background = ThemeManager.GetBrush("BgHoverBrush");
             // render lại có áp crop.
             _ = RenderDevelopAsync(path);
         }

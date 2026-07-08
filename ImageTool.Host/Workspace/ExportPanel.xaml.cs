@@ -222,11 +222,11 @@ public partial class ExportPanel : UserControl
         {
             Title = "Export Preset", Width = 320, Height = 140,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = System.Windows.Media.Brushes.Black, ResizeMode = ResizeMode.NoResize,
+            Background = ThemeManager.GetBrush("BgPanelBrush"), ResizeMode = ResizeMode.NoResize,
             Owner = Application.Current.MainWindow
         };
         var sp = new StackPanel { Margin = new Thickness(14) };
-        sp.Children.Add(new TextBlock { Text = "Tên preset:", Foreground = System.Windows.Media.Brushes.White, Margin = new Thickness(0, 0, 0, 6) });
+        sp.Children.Add(new TextBlock { Text = "Tên preset:", Foreground = ThemeManager.GetBrush("TextPrimaryBrush"), Margin = new Thickness(0, 0, 0, 6) });
         var txt = new TextBox { Padding = new Thickness(4), FontSize = 13 };
         sp.Children.Add(txt);
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
@@ -294,6 +294,12 @@ public partial class ExportPanel : UserControl
         }
 
         _batch.EnqueueRange(jobs);
+    }
+
+    /// <summary>Xuất nhanh với thiết lập hiện tại (dùng cho Ctrl+Shift+E).</summary>
+    public void QuickExport()
+    {
+        BtnExportSelection_Click(this, new RoutedEventArgs());
     }
 
     /// <summary>Thu thập tham số nén nâng cao (Squoosh-style) theo định dạng đang chọn.</summary>

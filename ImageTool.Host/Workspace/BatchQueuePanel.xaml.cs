@@ -80,7 +80,7 @@ public class JobRow : System.ComponentModel.INotifyPropertyChanged
     public int Progress { get; private set; }
     public string StatusText { get; private set; } = "";
     public string StatusGlyph { get; private set; } = "·";
-    public Brush StatusBrush { get; private set; } = Brushes.Gray;
+    public Brush StatusBrush { get; private set; } = ThemeManager.GetBrush("TextDimBrush");
 
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
@@ -104,9 +104,9 @@ public class JobRow : System.ComponentModel.INotifyPropertyChanged
             BatchJobStatus.Running => ("●", Brushes.DodgerBlue),
             BatchJobStatus.Completed => ("✓", Brushes.LimeGreen),
             BatchJobStatus.Failed => ("✗", Brushes.IndianRed),
-            BatchJobStatus.Canceled => ("✕", Brushes.Gray),
-            BatchJobStatus.Pending => ("○", Brushes.DimGray),
-            _ => ("·", Brushes.DimGray)
+            BatchJobStatus.Canceled => ("✕", ThemeManager.GetBrush("TextDimBrush")),
+            BatchJobStatus.Pending => ("○", ThemeManager.GetBrush("TextDimBrush")),
+            _ => ("·", ThemeManager.GetBrush("TextDimBrush"))
         };
         var h = PropertyChanged;
         if (h != null)

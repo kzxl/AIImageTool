@@ -29,7 +29,7 @@ public partial class CenterPreview
                 _allGridBackup = null;
             }
             _stacked = false;
-            btnStack.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
+            btnStack.Background = ThemeManager.GetBrush("BgHoverBrush");
             return;
         }
 
@@ -59,7 +59,7 @@ public partial class CenterPreview
         GridItems = new ObservableCollection<ThumbItem>(covers);
         icGrid.ItemsSource = GridItems;
         _stacked = true;
-        btnStack.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x7E, 0xFF));
+        btnStack.Background = ThemeManager.GetBrush("AccentBrush");
         SetMode(LighttableMode.Grid);
     }
 }

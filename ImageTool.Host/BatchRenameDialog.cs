@@ -28,7 +28,7 @@ public sealed class BatchRenameDialog : Window
         Title = $"Batch Rename — {paths.Count} ảnh";
         Width = 460; Height = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
+        Background = ThemeManager.GetBrush("BgPanelBrush");
         ResizeMode = ResizeMode.CanResize;
 
         var root = new DockPanel { Margin = new Thickness(14) };
@@ -57,8 +57,8 @@ public sealed class BatchRenameDialog : Window
 
         _preview = new ListBox
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14)),
-            Foreground = Brushes.Gainsboro, BorderThickness = new Thickness(0), FontSize = 11, Margin = new Thickness(0, 4, 0, 0)
+            Background = ThemeManager.GetBrush("BgBaseBrush"),
+            Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), BorderThickness = new Thickness(0), FontSize = 11, Margin = new Thickness(0, 4, 0, 0)
         };
         root.Children.Add(_preview);
 
@@ -100,14 +100,14 @@ public sealed class BatchRenameDialog : Window
     private static TextBox NewBox(string text) => new()
     {
         Text = text,
-        Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
-        Foreground = Brushes.Gainsboro, BorderThickness = new Thickness(0),
+        Background = ThemeManager.GetBrush("BgInputBrush"),
+        Foreground = ThemeManager.GetBrush("TextSecondaryBrush"), BorderThickness = new Thickness(0),
         Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 0, 0, 6), FontSize = 12
     };
 
     private static TextBlock Label(string text) => new()
     {
-        Text = text, Foreground = new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)),
+        Text = text, Foreground = ThemeManager.GetBrush("TextDimBrush"),
         FontSize = 11, Margin = new Thickness(0, 2, 0, 3)
     };
 }

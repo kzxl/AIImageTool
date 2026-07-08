@@ -117,13 +117,13 @@ public partial class CollectionsPanel : UserControl
             Width = 340,
             Height = 150,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = System.Windows.Media.Brushes.Black,
+            Background = ThemeManager.GetBrush("BgPanelBrush"),
             ResizeMode = ResizeMode.NoResize
         };
 
         var sp = new StackPanel { Margin = new Thickness(16) };
-        var lbl = new TextBlock { Text = prompt, Foreground = System.Windows.Media.Brushes.White, Margin = new Thickness(0, 0, 0, 8) };
-        var txt = new TextBox { Text = defaultValue, Background = System.Windows.Media.Brushes.DarkGray, Padding = new Thickness(4), FontSize = 13 };
+        var lbl = new TextBlock { Text = prompt, Foreground = ThemeManager.GetBrush("TextPrimaryBrush"), Margin = new Thickness(0, 0, 0, 8) };
+        var txt = new TextBox { Text = defaultValue, Background = ThemeManager.GetBrush("BgInputBrush"), Padding = new Thickness(4), FontSize = 13 };
         var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         var btnOk = new Button { Content = "OK", Width = 70, Height = 28, IsDefault = true };
         var btnCancel = new Button { Content = "Cancel", Width = 70, Height = 28, Margin = new Thickness(8, 0, 0, 0), IsCancel = true };

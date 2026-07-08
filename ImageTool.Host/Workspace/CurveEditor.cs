@@ -34,7 +34,7 @@ public sealed class CurveEditor : Canvas
 
     public CurveEditor()
     {
-        Background = new SolidColorBrush(Color.FromRgb(0x1E, 0x1E, 0x1E));
+        Background = ThemeManager.GetBrush("BgPanelBrush");
         Height = 180;
         ClipToBounds = true;
         MinWidth = 120;
@@ -102,7 +102,7 @@ public sealed class CurveEditor : Canvas
         geo.Figures.Add(fig);
         _curvePath = new Path
         {
-            Stroke = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+            Stroke = ThemeManager.GetBrush("TextSecondaryBrush"),
             StrokeThickness = 1.6,
             Data = geo
         };
@@ -115,8 +115,8 @@ public sealed class CurveEditor : Canvas
             var e = new Ellipse
             {
                 Width = ThumbSize, Height = ThumbSize,
-                Fill = new SolidColorBrush(Color.FromRgb(0x3D, 0x7E, 0xFF)),
-                Stroke = Brushes.White, StrokeThickness = 1, Tag = i
+                Fill = ThemeManager.GetBrush("AccentBrush"),
+                Stroke = ThemeManager.GetBrush("TextPrimaryBrush"), StrokeThickness = 1, Tag = i
             };
             SetLeft(e, px.X - ThumbSize / 2);
             SetTop(e, px.Y - ThumbSize / 2);
@@ -127,7 +127,7 @@ public sealed class CurveEditor : Canvas
 
     private void DrawGrid()
     {
-        var grid = new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3A));
+        var grid = ThemeManager.GetBrush("BorderBrush_");
         for (int i = 1; i < 4; i++)
         {
             double fx = i / 4.0 * ActualWidth;
@@ -139,7 +139,7 @@ public sealed class CurveEditor : Canvas
         Children.Add(new Line
         {
             X1 = 0, Y1 = ActualHeight, X2 = ActualWidth, Y2 = 0,
-            Stroke = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x2D)), StrokeThickness = 0.5
+            Stroke = ThemeManager.GetBrush("SeparatorBrush"), StrokeThickness = 0.5
         });
     }
 

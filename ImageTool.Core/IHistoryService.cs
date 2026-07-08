@@ -70,6 +70,26 @@ public interface IHistoryService
     /// <summary>Xoá 1 snapshot theo tên. Trả false nếu không có.</summary>
     bool DeleteSnapshot(string imagePath, string name);
 
+    /// <summary>
+    /// Tạo Virtual Copy: clone stack hiện tại sang path mới (suffix #vcN).
+    /// Trả path của virtual copy mới.
+    /// </summary>
+    string CreateVirtualCopy(string imagePath);
+
+    /// <summary>Xoá virtual copy. Trả false nếu không phải virtual copy.</summary>
+    bool DeleteVirtualCopy(string virtualCopyPath);
+
+    /// <summary>
+    /// Liệt kê tất cả virtual copies của 1 ảnh gốc (không bao gồm bản gốc).
+    /// </summary>
+    IReadOnlyList<string> GetVirtualCopies(string imagePath);
+
+    /// <summary>Kiểm tra 1 path có phải virtual copy không.</summary>
+    bool IsVirtualCopy(string path);
+
+    /// <summary>Lấy path ảnh gốc từ virtual copy path.</summary>
+    string GetOriginalPath(string virtualCopyPath);
+
     event EventHandler<HistoryChangedEventArgs>? HistoryChanged;
 }
 

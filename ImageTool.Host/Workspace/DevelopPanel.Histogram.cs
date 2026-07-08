@@ -45,7 +45,7 @@ public partial class DevelopPanel
         _histCanvas = new Canvas
         {
             Height = 110,
-            Background = new SolidColorBrush(Color.FromRgb(0x0F, 0x0F, 0x0F)),
+            Background = ThemeManager.GetBrush("BgBaseBrush"),
             ClipToBounds = true,
             Cursor = System.Windows.Input.Cursors.SizeWE,
             ToolTip = "Kéo ngang trên histogram để chỉnh tone: trái→phải = Blacks · Shadows · Exposure · Highlights · Whites"
@@ -56,12 +56,12 @@ public partial class DevelopPanel
         _histCanvas.MouseLeftButtonUp += HistCanvas_MouseUp;
         _histHost = new Border
         {
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)),
+            BorderBrush = ThemeManager.GetBrush("BorderBrush_"),
             BorderThickness = new Thickness(1),
             Child = _histCanvas
         };
         outer.Children.Add(_histHost);
-        _histClipLabel = new TextBlock { Foreground = Brushes.Gray, FontSize = 10, Margin = new Thickness(2, 2, 0, 0) };
+        _histClipLabel = new TextBlock { Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 10, Margin = new Thickness(2, 2, 0, 0) };
         outer.Children.Add(_histClipLabel);
         return outer;
     }
@@ -160,7 +160,7 @@ public partial class DevelopPanel
             if (hist.ShadowClipWarning) parts.Add($"▼ tối {hist.ShadowClipPercent:0.0}%");
             if (hist.HighlightClipWarning) parts.Add($"▲ sáng {hist.HighlightClipPercent:0.0}%");
             _histClipLabel.Text = parts.Count > 0 ? string.Join("   ", parts) : "Không clip";
-            _histClipLabel.Foreground = parts.Count > 0 ? Brushes.Orange : Brushes.Gray;
+            _histClipLabel.Foreground = parts.Count > 0 ? Brushes.Orange : ThemeManager.GetBrush("TextDimBrush");
         }
     }
 
@@ -241,7 +241,7 @@ public partial class DevelopPanel
         if (_histClipLabel != null)
         {
             _histClipLabel.Text = luma ? "Waveform (Luma)" : "RGB Parade";
-            _histClipLabel.Foreground = Brushes.Gray;
+            _histClipLabel.Foreground = ThemeManager.GetBrush("TextDimBrush");
         }
     }
 

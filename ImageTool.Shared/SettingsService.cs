@@ -48,6 +48,16 @@ public class SettingsService : ISettingsService
         Save();
     }
 
+    public void AddRecentImage(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        _current.RecentImages.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        _current.RecentImages.Insert(0, path);
+        if (_current.RecentImages.Count > 20)
+            _current.RecentImages.RemoveRange(20, _current.RecentImages.Count - 20);
+        Save();
+    }
+
     private const int MaxRecentTags = 30;
 
     public void AddRecentTags(IEnumerable<string> tags)

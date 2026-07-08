@@ -55,6 +55,9 @@ public class AppSettings
     /// <summary>Tag dùng gần đây nhất (mới nhất đứng đầu), giới hạn số lượng.</summary>
     public List<string> RecentTags { get; set; } = new();
 
+    /// <summary>Ảnh chỉnh sửa gần đây (mới nhất đứng đầu), giới hạn 20 mục.</summary>
+    public List<string> RecentImages { get; set; } = new();
+
     /// <summary>Bề rộng cột panel trái (Workspace Browser), px. 0 = dùng mặc định.</summary>
     public double LeftPanelWidth { get; set; }
     /// <summary>Bề rộng cột panel phải (Tools), px. 0 = dùng mặc định.</summary>
@@ -68,5 +71,7 @@ public interface ISettingsService
     void AddRecentFolder(string path);
     /// <summary>Ghi nhận các tag vừa dùng (chuẩn hoá, đưa lên đầu RecentTags, gộp vào TagDictionary).</summary>
     void AddRecentTags(IEnumerable<string> tags);
+    /// <summary>Ghi nhận ảnh vừa chỉnh sửa (đưa lên đầu RecentImages, giới hạn 20).</summary>
+    void AddRecentImage(string path);
     event EventHandler? Changed;
 }

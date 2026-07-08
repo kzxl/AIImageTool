@@ -16,10 +16,10 @@ public class PresetNameDialog : Window
         Height = 140;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
-        Background = System.Windows.Media.Brushes.DimGray;
+        Background = ThemeManager.GetBrush("BgPanelBrush");
 
         var root = new StackPanel { Margin = new Thickness(16) };
-        root.Children.Add(new TextBlock { Text = "Tên preset:", Foreground = System.Windows.Media.Brushes.White, Margin = new Thickness(0, 0, 0, 6) });
+        root.Children.Add(new TextBlock { Text = "Tên preset:", Foreground = ThemeManager.GetBrush("TextPrimaryBrush"), Margin = new Thickness(0, 0, 0, 6) });
         _input = new TextBox { Height = 26, FontSize = 13 };
         root.Children.Add(_input);
 

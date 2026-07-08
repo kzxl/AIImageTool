@@ -146,7 +146,15 @@ public partial class MainWindow : Window
         PreviewKeyDown += MainWindow_PreviewKeyDown;
 
         // Toast: tự ẩn sau timer.
-        _toastTimer.Tick += (s, e) => { _toastTimer.Stop(); toastBorder.Visibility = Visibility.Collapsed; };
+        _toastTimer.Tick += (s, e) =>
+        {
+            _toastTimer.Stop();
+            // Fade-out animation
+            var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1, 0,
+                new Duration(TimeSpan.FromMilliseconds(300)));
+            fadeOut.Completed += (_, _) => toastBorder.Visibility = Visibility.Collapsed;
+            toastBorder.BeginAnimation(OpacityProperty, fadeOut);
+        };
         // Báo khi job batch xong (export/style/upscale...).
         _batch.JobUpdated += (s, job) =>
         {
@@ -154,6 +162,13 @@ public partial class MainWindow : Window
                 Dispatcher.BeginInvoke(() => ShowToast($"Xong: {job.DisplayName}"));
             else if (job.Status == BatchJobStatus.Failed)
                 Dispatcher.BeginInvoke(() => ShowToast($"Lỗi: {job.DisplayName}"));
+        };
+
+        // Track recent images when user makes edits
+        _history.HistoryChanged += (s, e) =>
+        {
+            if (!string.IsNullOrEmpty(e.ImagePath) && _history.GetPointer(e.ImagePath) > 0)
+                _settings.AddRecentImage(e.ImagePath);
         };
 
         LoadPlugins();
@@ -268,6 +283,7 @@ public partial class MainWindow : Window
             {
                 case System.Windows.Input.Key.C: CopyDevelopSettings(); e.Handled = true; return;
                 case System.Windows.Input.Key.V: PasteDevelopSettings(); e.Handled = true; return;
+                case System.Windows.Input.Key.E: exportPanel.QuickExport(); e.Handled = true; return;
             }
         }
 
@@ -441,7 +457,12 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(() =>
         {
             txtToast.Text = message;
+            toastBorder.Opacity = 0;
             toastBorder.Visibility = Visibility.Visible;
+            // Fade-in animation
+            var fadeIn = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
+                new Duration(TimeSpan.FromMilliseconds(200)));
+            toastBorder.BeginAnimation(OpacityProperty, fadeIn);
             _toastTimer.Stop();
             _toastTimer.Start();
         });
@@ -750,12 +771,44 @@ public partial class MainWindow : Window
     private void BtnRecent_Click(object sender, RoutedEventArgs e)
     {
         var menu = new System.Windows.Controls.ContextMenu();
+
+        // Recent Images section
+        if (_settings.Current.RecentImages.Count > 0)
+        {
+            var header = new System.Windows.Controls.MenuItem { Header = "Recent Images", IsEnabled = false };
+            menu.Items.Add(header);
+            foreach (var path in _settings.Current.RecentImages.Take(10))
+            {
+                var mi = new System.Windows.Controls.MenuItem
+                {
+                    Header = System.IO.Path.GetFileName(path),
+                    ToolTip = path
+                };
+                var captured = path;
+                mi.Click += (s, ee) =>
+                {
+                    if (System.IO.File.Exists(captured))
+                    {
+                        var dir = System.IO.Path.GetDirectoryName(captured);
+                        if (dir != null) _workspace.OpenFolder(dir);
+                        Dispatcher.BeginInvoke(() => _workspace.SetActiveImage(captured),
+                            System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                };
+                menu.Items.Add(mi);
+            }
+            menu.Items.Add(new System.Windows.Controls.Separator());
+        }
+
+        // Recent Folders section
         if (_settings.Current.RecentFolders.Count == 0)
         {
             menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "(empty)", IsEnabled = false });
         }
         else
         {
+            var header = new System.Windows.Controls.MenuItem { Header = "Recent Folders", IsEnabled = false };
+            menu.Items.Add(header);
             foreach (var path in _settings.Current.RecentFolders)
             {
                 var mi = new System.Windows.Controls.MenuItem { Header = path };
@@ -781,6 +834,103 @@ public partial class MainWindow : Window
         _settings.Current.Theme = applied;
         _settings.Save();
         txtStatus.Text = $"Giao diện: {applied}";
+    }
+
+    // ===== Custom Window Chrome handlers =====
+    private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void BtnMaximize_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            BtnMaximize_Click(sender, e);
+            return;
+        }
+        DragMove();
+    }
+
+    private void TitleBar_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+    }
+
+    private void TitleBar_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        // No-op needed; DragMove() handles it in MouseLeftButtonDown
+    }
+
+    // ===== Drag & Drop =====
+    private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".gif", ".webp", ".ico",
+        ".psd", ".dng", ".cr2", ".cr3", ".nef", ".arw", ".raf", ".rw2", ".orf", ".pef", ".srw"
+    };
+
+    private void Window_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effects = DragDropEffects.Copy;
+            dropOverlay.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void Window_DragLeave(object sender, DragEventArgs e)
+    {
+        dropOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void Window_Drop(object sender, DragEventArgs e)
+    {
+        dropOverlay.Visibility = Visibility.Collapsed;
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+
+        var files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
+        if (files == null || files.Length == 0) return;
+
+        // Nếu thả 1 thư mục -> mở trong workspace
+        if (files.Length == 1 && Directory.Exists(files[0]))
+        {
+            _workspace.OpenFolder(files[0]);
+            return;
+        }
+
+        // Lọc file ảnh được hỗ trợ
+        var imageFiles = files.Where(f =>
+            File.Exists(f) && SupportedImageExtensions.Contains(Path.GetExtension(f)))
+            .ToList();
+
+        if (imageFiles.Count == 0)
+        {
+            ShowToast("Không tìm thấy file ảnh được hỗ trợ.");
+            return;
+        }
+
+        // Nếu chỉ có 1 ảnh -> mở thư mục chứa nó và set active
+        if (imageFiles.Count == 1)
+        {
+            var dir = Path.GetDirectoryName(imageFiles[0]);
+            if (dir != null)
+            {
+                _workspace.OpenFolder(dir);
+                // Delay nhỏ để folder load xong rồi set active
+                Dispatcher.BeginInvoke(() => _workspace.SetActiveImage(imageFiles[0]),
+                    System.Windows.Threading.DispatcherPriority.Background);
+            }
+            return;
+        }
+
+        // Nhiều ảnh -> mở thư mục chứa ảnh đầu tiên
+        var firstDir = Path.GetDirectoryName(imageFiles[0]);
+        if (firstDir != null) _workspace.OpenFolder(firstDir);
+        ShowToast($"Đã nhận {imageFiles.Count} ảnh.");
     }
 
     private void BtnPopOutTools_Click(object sender, RoutedEventArgs e)
@@ -916,7 +1066,7 @@ public partial class MainWindow : Window
     private void SyncPickFilterButtons()
     {
         if (_workspace == null) return;
-        var on = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x7E, 0xFF));
+        var on = ThemeManager.GetBrush("AccentBrush");
         var off = System.Windows.Media.Brushes.Transparent;
         if (btnFilterPick != null)
             btnFilterPick.Background = _workspace.Filter.RequiredPick == PickFlag.Pick ? on : off;

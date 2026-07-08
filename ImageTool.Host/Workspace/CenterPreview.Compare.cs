@@ -132,7 +132,7 @@ public partial class CenterPreview
             paneCull.Visibility = Visibility.Collapsed;
             paneFull.Visibility = Visibility.Collapsed;
             paneCompare.Visibility = Visibility.Visible;
-            btnCompare.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x3D, 0x7E, 0xFF));
+            btnCompare.Background = ThemeManager.GetBrush("AccentBrush");
             ResetCompareZoom();
             _ = LoadCompareAsync(path);
         }
@@ -141,7 +141,7 @@ public partial class CenterPreview
             paneCompare.Visibility = Visibility.Collapsed;
             imgCompareBefore.Source = null;
             imgCompareAfter.Source = null;
-            btnCompare.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2D, 0x2D, 0x30));
+            btnCompare.Background = ThemeManager.GetBrush("BgHoverBrush");
             SwitchMode(LighttableMode.Single);
         }
     }

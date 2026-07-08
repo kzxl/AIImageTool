@@ -142,6 +142,28 @@ public static class ImageContextMenu
         };
         menu.Items.Add(miCopyPath);
 
+        // --- Virtual Copy ---
+        var miVc = new MenuItem { Header = "Create Virtual Copy" };
+        miVc.Click += (_, _) =>
+        {
+            string vcPath = history.CreateVirtualCopy(imagePath);
+            MessageBox.Show($"Đã tạo Virtual Copy:\n{System.IO.Path.GetFileName(vcPath)}", "Virtual Copy",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        };
+        menu.Items.Add(miVc);
+
+        if (history.IsVirtualCopy(imagePath))
+        {
+            var miDelVc = new MenuItem { Header = "Delete Virtual Copy" };
+            miDelVc.Click += (_, _) =>
+            {
+                if (MessageBox.Show("Xoá Virtual Copy này?", "Virtual Copy",
+                    MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
+                    history.DeleteVirtualCopy(imagePath);
+            };
+            menu.Items.Add(miDelVc);
+        }
+
         // --- Batch Rename (13.7) ---
         var miRename = new MenuItem { Header = "Batch Rename..." };
         miRename.Click += (_, _) => RunBatchRename(Targets());

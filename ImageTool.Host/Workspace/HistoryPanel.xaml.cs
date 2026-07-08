@@ -167,8 +167,8 @@ public class HistoryRow : INotifyPropertyChanged
     public string TimeShort { get; set; } = "";
     public bool IsActive { get; set; }
     public bool IsFuture { get; set; }
-    public Brush TextBrush => IsFuture ? Brushes.DimGray : (IsActive ? Brushes.White : (Brush)new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)));
-    public Brush MarkerBrush => IsFuture ? Brushes.DimGray : (IsActive ? Brushes.Gold : (Brush)new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)));
+    public Brush TextBrush => IsFuture ? ThemeManager.GetBrush("TextDimBrush") : (IsActive ? ThemeManager.GetBrush("TextPrimaryBrush") : ThemeManager.GetBrush("TextSecondaryBrush"));
+    public Brush MarkerBrush => IsFuture ? ThemeManager.GetBrush("TextDimBrush") : (IsActive ? ThemeManager.GetBrush("AccentWarmBrush") : ThemeManager.GetBrush("TextDimBrush"));
 
     private BitmapSource? _thumb;
     public BitmapSource? Thumb
