@@ -19,4 +19,10 @@
     <ProjectReference Include="..\ImageTool.Shared\ImageTool.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Scripts\**\*.lua">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

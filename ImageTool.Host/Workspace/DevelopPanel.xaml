@@ -14,6 +14,8 @@
                             Click="BtnCopy_Click" ToolTip="Copy settings (Ctrl+Shift+C)"/>
                     <Button x:Name="btnPaste" Content="Paste" Padding="8,3" Margin="0,0,4,0"
                             Click="BtnPaste_Click" ToolTip="Paste settings (Ctrl+Shift+V)"/>
+                    <Button x:Name="btnSync" Content="Sync" Padding="8,3" Margin="0,0,4,0"
+                            Click="BtnSync_Click" ToolTip="Đồng bộ chỉnh ảnh (Ctrl+Shift+S)"/>
                     <Button x:Name="btnAuto" Content="Auto" Padding="8,3" Margin="0,0,4,0"
                             Click="BtnAuto_Click" ToolTip="Tự động cân chỉnh tông"/>
                     <Button x:Name="btnReset" Content="Reset" Padding="8,3"
@@ -44,6 +46,32 @@
 
         <TextBlock x:Name="txtNoImage" DockPanel.Dock="Top" Text="Chọn 1 ảnh để bắt đầu chỉnh"
                    Foreground="{DynamicResource TextDimBrush}" Margin="12,8" Visibility="Collapsed"/>
+
+        <!-- Tab Filter Bar & Solo Mode Toggle -->
+        <Border DockPanel.Dock="Top" Padding="6,4" Background="{DynamicResource BgPanelAltBrush}"
+                BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Filter Tabs (sử dụng RadioButton phẳng dạng ToggleButton) -->
+                <UniformGrid Grid.Column="0" Rows="1" x:Name="tabFilterBar">
+                    <RadioButton Content="All" IsChecked="True" Style="{DynamicResource {x:Type ToggleButton}}" Click="FilterTab_Click" Tag="All" Height="22" FontSize="10" Padding="1,0"/>
+                    <RadioButton Content="Basic" Style="{DynamicResource {x:Type ToggleButton}}" Click="FilterTab_Click" Tag="Basic" Height="22" FontSize="10" Padding="1,0"/>
+                    <RadioButton Content="Color" Style="{DynamicResource {x:Type ToggleButton}}" Click="FilterTab_Click" Tag="Color" Height="22" FontSize="10" Padding="1,0"/>
+                    <RadioButton Content="Detail" Style="{DynamicResource {x:Type ToggleButton}}" Click="FilterTab_Click" Tag="Detail" Height="22" FontSize="10" Padding="1,0"/>
+                    <RadioButton Content="Advanced" Style="{DynamicResource {x:Type ToggleButton}}" Click="FilterTab_Click" Tag="Advanced" Height="22" FontSize="10" Padding="1,0"/>
+                </UniformGrid>
+                
+                <!-- Solo Mode Checkbox -->
+                <CheckBox x:Name="chkSoloMode" Grid.Column="1" Content="Solo" IsChecked="True"
+                          VerticalAlignment="Center" Margin="8,0,0,0" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                          Checked="ChkSoloMode_Changed" Unchecked="ChkSoloMode_Changed"
+                          ToolTip="Solo Mode: Chỉ mở một bảng điều khiển tại một thời điểm"/>
+            </Grid>
+        </Border>
 
         <!-- Scrollable sliders -->
         <ScrollViewer VerticalScrollBarVisibility="Auto">

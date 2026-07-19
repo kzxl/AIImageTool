@@ -8,6 +8,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.IO;
+using System.Text.RegularExpressions;
 using ImageTool.Core;
 using ImageTool.Imaging;
 using ImageTool.Shared;
@@ -82,6 +84,17 @@ public partial class DevelopPanel : UserControl
     // Auto WB gains (áp qua ChannelGainOp). 1,1,1 = không.
     private float _wbGainR = 1f, _wbGainG = 1f, _wbGainB = 1f;
 
+    // Lua Scripting UI fields
+    private ComboBox? _cmbLuaScript;
+    private StackPanel? _panelLuaSliders;
+    private readonly Dictionary<string, double> _luaSliderVals = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Slider> _luaSliders = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TextBox> _luaInputs = new(StringComparer.OrdinalIgnoreCase);
+
+    // Solo Mode & Tab Filter
+    private bool _soloMode = true;
+    private string _currentTab = "All";
+
     private readonly DispatcherTimer _debounce;
     private bool _pendingCommit;
 
@@ -105,8 +118,10 @@ public partial class DevelopPanel : UserControl
         _styles = styles;
         _lensfun = lensfun;
         _workspace.ActiveImageChanged += (s, e) => Dispatcher.BeginInvoke(() => LoadFor(e.CurrentPath));
+        _workspace.SelectionChanged += (s, e) => Dispatcher.BeginInvoke(() => UpdateSyncButtonState());
         RefreshPresetList();
         LoadFor(_workspace.ActiveImage);
+        UpdateSyncButtonState();
     }
 
     /// <summary>Bắn khi crop rectangle thay đổi (load ảnh / reset). CenterPreview overlay lắng nghe để vẽ.</summary>
@@ -627,6 +642,26 @@ public partial class DevelopPanel : UserControl
         var gLiquify = AddGroup("Liquify / Warp", false);
         BuildLiquifyUI(gLiquify);
 
+        // Lua Scripting (UX tối ưu hóa)
+        var gLua = AddGroup("Lua Scripting", false);
+        var scriptRow = new DockPanel { Margin = new Thickness(0, 2, 0, 4) };
+        scriptRow.Children.Add(new TextBlock { Text = "Script", Foreground = ThemeManager.GetBrush("TextDimBrush"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+
+        var btnRefreshLua = new Button { Content = "↻", Padding = new Thickness(4, 1, 4, 1), Margin = new Thickness(4, 0, 0, 0), ToolTip = "Quét lại thư mục Scripts/" };
+        btnRefreshLua.Click += (s, e) => RefreshLuaScripts();
+        DockPanel.SetDock(btnRefreshLua, Dock.Right);
+        scriptRow.Children.Add(btnRefreshLua);
+
+        _cmbLuaScript = new ComboBox { Height = 22, Margin = new Thickness(6, 0, 0, 0) };
+        _cmbLuaScript.SelectionChanged += CmbLuaScript_SelectionChanged;
+        scriptRow.Children.Add(_cmbLuaScript);
+        gLua.Children.Add(scriptRow);
+
+        _panelLuaSliders = new StackPanel { Margin = new Thickness(4, 2, 4, 2) };
+        gLua.Children.Add(_panelLuaSliders);
+
+        RefreshLuaScripts();
+
         // Quét cây 1 lần: chuyển các foreground literal Gainsboro/Gray (đặt inline lúc dựng) sang
         // theme brush để hiển thị đúng trong cả Light theme (Gainsboro near-white -> vô hình trên nền sáng).
         ThemeizeLiteralForegrounds(panelSliders);
@@ -682,9 +717,26 @@ public partial class DevelopPanel : UserControl
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 2, 0, 2),
-            Content = content
+            Content = content,
+            Tag = header
         };
         exp.SetResourceReference(Control.ForegroundProperty, "TextPrimaryBrush");
+
+        // Solo Mode tự động khi mở rộng expander
+        exp.Expanded += (s, e) =>
+        {
+            if (_soloMode)
+            {
+                foreach (var child in panelSliders.Children)
+                {
+                    if (child is Expander other && other != exp)
+                    {
+                        other.IsExpanded = false;
+                    }
+                }
+            }
+        };
+
         // Solo Mode: Alt+click header -> collapse all other groups, expand only this one
         exp.PreviewMouseLeftButtonDown += (s, e) =>
         {
@@ -1117,6 +1169,55 @@ public partial class DevelopPanel : UserControl
             _lutLabel.Text = string.IsNullOrEmpty(_lutPath) ? "(chưa chọn LUT)" : System.IO.Path.GetFileName(_lutPath);
         var lutInt = Param(path!, LutCubeOp.Type, "intensity");
         SetVal("lut_intensity", lutP != null ? lutInt : 1);
+
+        // Lua Script
+        if (_cmbLuaScript != null)
+        {
+            var luaOpP = FindOp(path!, LuaScriptOp.Type);
+            if (luaOpP != null)
+            {
+                string scriptName = luaOpP.TryGetValue("script_name", out var sn) ? sn : "";
+                
+                int selectIdx = 0;
+                for (int i = 0; i < _cmbLuaScript.Items.Count; i++)
+                {
+                    if (_cmbLuaScript.Items[i] is ComboBoxItem item && string.Equals(item.Tag as string, scriptName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        selectIdx = i;
+                        break;
+                    }
+                }
+                
+                _loading = true; // Block ScheduleCommit
+                _cmbLuaScript.SelectedIndex = selectIdx;
+                
+                // Khôi phục giá trị của các slider động
+                foreach (var kvp in luaOpP)
+                {
+                    if (kvp.Key is "script" or "script_name") continue;
+                    
+                    if (double.TryParse(kvp.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
+                    {
+                        _luaSliderVals[kvp.Key] = val;
+                        if (_luaSliders.TryGetValue(kvp.Key, out var slider))
+                        {
+                            slider.Value = val;
+                        }
+                        if (_luaInputs.TryGetValue(kvp.Key, out var input))
+                        {
+                            input.Text = val.ToString("0.00", CultureInfo.InvariantCulture);
+                        }
+                    }
+                }
+                _loading = false;
+            }
+            else
+            {
+                _loading = true;
+                _cmbLuaScript.SelectedIndex = 0; // Off
+                _loading = false;
+            }
+        }
 
         var hsl = FindOp(path!, HslMixerOp.Type) is { } hp ? HslMixerOp.FromParams(hp) : null;
         for (int i = 0; i < HslMixerOp.Bands; i++)
@@ -1642,6 +1743,17 @@ public partial class DevelopPanel : UserControl
         var glow = new GlowOp { Amount = (float)GetVal("glow") };
         if (!glow.IsIdentity) ops.Add(Op(GlowOp.Type, "Glow / Soften", glow.ToParams()));
 
+        // Lua Scripting
+        if (_cmbLuaScript?.SelectedItem is ComboBoxItem luaItem && luaItem.Tag is string luaScriptName && !string.IsNullOrEmpty(luaScriptName))
+        {
+            var luaParams = new Dictionary<string, string>();
+            foreach (var kv in _luaSliderVals)
+            {
+                luaParams[kv.Key] = kv.Value.ToString(CultureInfo.InvariantCulture);
+            }
+            ops.Add(Op(LuaScriptOp.Type, $"Lua Script: {luaItem.Content}", new LuaScriptOp("", luaParams, luaScriptName).ToParams()));
+        }
+
         // 8a) Gradient Map (#5): màu 3 chặng tuỳ chỉnh (preset điền sẵn) + midpoint + opacity.
         double gmOpacity = GetVal("gradmap_opacity");
         if (gmOpacity > 0)
@@ -2026,6 +2138,113 @@ public partial class DevelopPanel : UserControl
         LoadFor(_currentPath);
     }
 
+    private void UpdateSyncButtonState()
+    {
+        if (btnSync != null && _workspace != null)
+        {
+            btnSync.IsEnabled = _workspace.Selection.Count > 1;
+        }
+    }
+
+    private void BtnSync_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workspace == null || _history == null || _currentPath == null) return;
+        
+        var targets = _workspace.Selection
+            .Where(p => !string.Equals(p, _currentPath, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+            
+        if (targets.Count == 0)
+        {
+            MessageBox.Show("Hãy chọn từ 2 ảnh trở lên để đồng bộ.", "Sync Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dlg = new SyncSettingsDialog { Owner = Window.GetWindow(this) };
+        if (dlg.ShowDialog() == true)
+        {
+            var selectedCategories = dlg.SelectedCategories;
+            if (selectedCategories.Count == 0) return;
+
+            int activePointer = _history.GetPointer(_currentPath);
+            var activeStack = _history.GetStack(_currentPath).Take(activePointer).ToList();
+            var opsToSync = activeStack.Where(op => IsOpInCategories(op, selectedCategories)).ToList();
+
+            foreach (var target in targets)
+            {
+                int targetPointer = _history.GetPointer(target);
+                var targetStack = _history.GetStack(target).Take(targetPointer).ToList();
+                var mergedOps = targetStack.Where(op => !IsOpInCategories(op, selectedCategories)).ToList();
+                
+                foreach (var op in opsToSync)
+                {
+                    var cloned = new EditOperation
+                    {
+                        PluginId = op.PluginId,
+                        OpType = op.OpType,
+                        Title = op.Title,
+                        Params = new Dictionary<string, string>(op.Params)
+                    };
+                    mergedOps.Add(cloned);
+                }
+
+                _history.UpsertGroup(target, "Develop", mergedOps);
+            }
+
+            MessageBox.Show($"Đã đồng bộ thông số thành công sang {targets.Count} ảnh.", "Sync Settings", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private bool IsOpInCategories(EditOperation op, HashSet<string> categories)
+    {
+        string type = op.OpType;
+        if (categories.Contains("Basic"))
+        {
+            if (type == "InputProfile" || type == "FilmNegative" || type == "WhiteBalanceKelvin" || 
+                type == "ChannelGain" || type == "DevelopBasic" || type == "ParametricCurve" || 
+                type == "ToneCurve" || type == "Dehaze" || type == "Filmic" || 
+                type == "ToneEqualizer" || type == "Sigmoid" || type == "FilmicRgb" || 
+                type == "RgbLevels" || type == "HighlightReconstruction" || type == "LocalToneMap")
+            {
+                return true;
+            }
+        }
+        if (categories.Contains("HSL"))
+        {
+            if (type == "HslMixer" || type == "ColorBalanceRgb" || type == "ColorContrast" || 
+                type == "ChannelMixer" || type == "Velvia" || type == "SplitToning" || 
+                type == "ColorGrading" || type == "SelectiveColor" || type == "ColorUnify" || 
+                type == "ColorMatch")
+            {
+                return true;
+            }
+        }
+        if (categories.Contains("Detail"))
+        {
+            if (type == "ColorNoiseReduction" || type == "LumaNoiseReduction" || type == "DenoiseNlMeans" || 
+                type == "Sharpen" || type == "Diffuse" || type == "Glow" || 
+                type == "Vignette" || type == "Grain")
+            {
+                return true;
+            }
+        }
+        if (categories.Contains("LUT"))
+        {
+            if (type == "LutCube")
+            {
+                return true;
+            }
+        }
+        if (categories.Contains("Lua"))
+        {
+            if (type == "LuaScript")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ===== Develop Presets (dùng IStyleService) =====
     private void RefreshPresetList()
     {
@@ -2114,5 +2333,216 @@ public partial class DevelopPanel : UserControl
             ScheduleCommit();
         else
             Commit();
+    }
+
+    // ===== Lua Scripting UX methods =====
+    private void RefreshLuaScripts()
+    {
+        if (_cmbLuaScript == null) return;
+        _cmbLuaScript.Items.Clear();
+        _cmbLuaScript.Items.Add(new ComboBoxItem { Content = "Off", Tag = "" });
+        _cmbLuaScript.SelectedIndex = 0;
+
+        string scriptsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts");
+        if (!Directory.Exists(scriptsDir))
+        {
+            scriptsDir = Path.Combine(Environment.CurrentDirectory, "Scripts");
+        }
+
+        if (Directory.Exists(scriptsDir))
+        {
+            var files = Directory.GetFiles(scriptsDir, "*.lua");
+            foreach (var file in files)
+            {
+                string name = Path.GetFileNameWithoutExtension(file);
+                _cmbLuaScript.Items.Add(new ComboBoxItem
+                {
+                    Content = name,
+                    Tag = Path.GetFileName(file)
+                });
+            }
+        }
+    }
+
+    private void CmbLuaScript_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_panelLuaSliders == null) return;
+        _panelLuaSliders.Children.Clear();
+        _luaSliders.Clear();
+        _luaInputs.Clear();
+        _luaSliderVals.Clear();
+
+        if (_cmbLuaScript?.SelectedItem is not ComboBoxItem item || string.IsNullOrEmpty(item.Tag as string))
+        {
+            if (!_loading) ScheduleCommit();
+            return;
+        }
+
+        string scriptName = (string)item.Tag;
+        string name = scriptName;
+        if (!name.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)) name += ".lua";
+
+        string scriptsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts");
+        if (!Directory.Exists(scriptsDir))
+        {
+            scriptsDir = Path.Combine(Environment.CurrentDirectory, "Scripts");
+        }
+        string fullPath = Path.Combine(scriptsDir, name);
+
+        if (File.Exists(fullPath))
+        {
+            string content = File.ReadAllText(fullPath);
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var regex = new Regex(
+                @"^--\s*@slider\s+(\w+)\s*\(\s*(-?\d+(?:\.\d+)?)\s*\.\.\s*(-?\d+(?:\.\d+)?)\s*,\s*def:\s*(-?\d+(?:\.\d+)?)\s*,\s*""([^""]+)""\s*\)"
+            );
+
+            foreach (var line in lines)
+            {
+                var match = regex.Match(line.Trim());
+                if (match.Success)
+                {
+                    string key = match.Groups[1].Value;
+                    double min = double.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+                    double max = double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+                    double def = double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture);
+                    string label = match.Groups[5].Value;
+
+                    AddLuaSlider(_panelLuaSliders, key, label, min, max, def);
+                }
+            }
+        }
+
+        if (!_loading) ScheduleCommit();
+    }
+
+    private void AddLuaSlider(Panel host, string key, string label, double min, double max, double def, string fmt = "0.00")
+    {
+        _luaSliderVals[key] = def;
+        var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
+
+        var lbl = new TextBlock { Text = label, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        lbl.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        Grid.SetColumn(lbl, 0);
+
+        var slider = new Slider
+        {
+            Minimum = min, Maximum = max, Value = def,
+            SmallChange = (max - min) / 100.0, LargeChange = (max - min) / 10.0,
+            VerticalAlignment = VerticalAlignment.Center, IsMoveToPointEnabled = true, Tag = key
+        };
+        Grid.SetColumn(slider, 1);
+
+        var input = new TextBox
+        {
+            Text = def.ToString(fmt, CultureInfo.InvariantCulture),
+            FontSize = 10, TextAlignment = TextAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0),
+            Tag = fmt, BorderThickness = new Thickness(0)
+        };
+        Grid.SetColumn(input, 2);
+
+        slider.ValueChanged += (s, e) =>
+        {
+            if (!input.IsKeyboardFocused) input.Text = e.NewValue.ToString(fmt, CultureInfo.InvariantCulture);
+            _luaSliderVals[key] = e.NewValue;
+            if (_loading) return;
+            ScheduleCommit();
+        };
+
+        input.KeyDown += (s, e) => { if (e.Key == Key.Enter) CommitLuaInput(slider, input, min, max, key); };
+        input.LostFocus += (s, e) => CommitLuaInput(slider, input, min, max, key);
+
+        lbl.MouseLeftButtonDown += (s, e) => { if (e.ClickCount == 2) slider.Value = def; };
+        slider.MouseDoubleClick += (s, e) => { slider.Value = def; e.Handled = true; };
+
+        grid.Children.Add(lbl);
+        grid.Children.Add(slider);
+        grid.Children.Add(input);
+        host.Children.Add(grid);
+
+        _luaSliders[key] = slider;
+        _luaInputs[key] = input;
+    }
+
+    private void CommitLuaInput(Slider slider, TextBox input, double min, double max, string key)
+    {
+        if (double.TryParse(input.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+        {
+            double val = Math.Clamp(v, min, max);
+            slider.Value = val;
+            _luaSliderVals[key] = val;
+        }
+        else
+        {
+            input.Text = slider.Value.ToString(input.Tag as string ?? "0.00", CultureInfo.InvariantCulture);
+        }
+    }
+
+    // ===== Tab Filter & Solo Mode Event Handlers =====
+    private void ChkSoloMode_Changed(object sender, RoutedEventArgs e)
+    {
+        if (chkSoloMode != null)
+        {
+            _soloMode = chkSoloMode.IsChecked == true;
+            
+            // Nếu bật Solo Mode, tự động đóng toàn bộ trừ cái đầu tiên đang mở
+            if (_soloMode)
+            {
+                bool foundFirst = false;
+                foreach (var child in panelSliders.Children)
+                {
+                    if (child is Expander exp)
+                    {
+                        if (exp.IsExpanded && !foundFirst)
+                        {
+                            foundFirst = true;
+                        }
+                        else
+                        {
+                            exp.IsExpanded = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void FilterTab_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton rb || rb.Tag is not string tabName) return;
+        _currentTab = tabName;
+
+        foreach (var child in panelSliders.Children)
+        {
+            if (child is Expander exp)
+            {
+                string header = exp.Tag as string ?? "";
+                bool isVisible = IsExpanderInTab(header, _currentTab);
+                exp.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+    }
+
+    private bool IsExpanderInTab(string header, string tab)
+    {
+        if (tab == "All") return true;
+
+        switch (tab)
+        {
+            case "Basic":
+                return header is "White Balance" or "Tone" or "Presence" or "Parametric Curve" or "Tone Curve" or "Levels" or "Film Negative" or "Black & White";
+            case "Color":
+                return header is "Color Balance RGB" or "Color Contrast (Lab)" or "Color Calibration" or "HSL / Color Mixer" or "Split Toning" or "Color Grading" or "Selective Color" or "Color Unify" or "Color Match" or "3D LUT";
+            case "Detail":
+                return header is "Detail" or "Effects";
+            case "Advanced":
+                return header is "Geometry" or "Color Management" or "Local Adjustments" or "Healing / Clone" or "Liquify / Warp" or "Lua Scripting";
+            default:
+                return false;
+        }
     }
 }

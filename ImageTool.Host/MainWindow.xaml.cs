@@ -63,6 +63,10 @@ public partial class MainWindow : Window
         // Load saved batch parallel
         _batch.MaxParallel = Math.Max(1, _settings.Current.BatchParallel);
 
+        // Lắng nghe sự kiện để cập nhật tiến trình Batch Export/Rename
+        _batch.QueueChanged += (s, e) => UpdateBatchStatusOnUI();
+        _batch.JobUpdated += (s, job) => UpdateBatchStatusOnUI();
+
         browser.Bind(_workspace, _thumbs, _meta);
         browser.BindCollections(_serviceProvider.GetRequiredService<ICatalogService>(), _workspace);
         browser.BindContext(_history, _developClipboard);
@@ -1095,6 +1099,37 @@ public partial class MainWindow : Window
             w.Left = Left + 80;
             w.Top = Top + 80;
         }
+    }
+
+    private void UpdateBatchStatusOnUI()
+    {
+        if (barBatchProgress == null || txtBatchInfo == null) return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            var jobs = _batch.Jobs;
+            var runningJobs = jobs.Where(j => j.Status == BatchJobStatus.Running).ToList();
+            var pendingJobs = jobs.Where(j => j.Status == BatchJobStatus.Pending).ToList();
+
+            if (runningJobs.Count > 0 || pendingJobs.Count > 0)
+            {
+                barBatchProgress.Visibility = Visibility.Visible;
+                txtBatchInfo.Visibility = Visibility.Visible;
+
+                int totalCount = runningJobs.Count + pendingJobs.Count;
+                int totalProgress = runningJobs.Sum(j => j.Progress);
+                
+                double avgProgress = totalCount > 0 ? (double)totalProgress / totalCount : 0;
+                
+                barBatchProgress.Value = avgProgress;
+                txtBatchInfo.Text = $"Exporting {totalCount} images ({avgProgress:F0}%)";
+            }
+            else
+            {
+                barBatchProgress.Visibility = Visibility.Collapsed;
+                txtBatchInfo.Visibility = Visibility.Collapsed;
+            }
+        });
     }
 }
 

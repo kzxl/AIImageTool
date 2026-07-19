@@ -130,9 +130,14 @@
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource BgPanelBrush}" Height="22"
                 BorderBrush="{DynamicResource BorderBrush_}" BorderThickness="0,1,0,0">
             <DockPanel Margin="10,0">
-                <TextBlock x:Name="txtStatus" Text="Ready"
-                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
-                           VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock x:Name="txtStatus" Text="Ready"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" VerticalAlignment="Center"/>
+                    <ProgressBar x:Name="barBatchProgress" Width="100" Height="8" Margin="12,0,0,0" 
+                                 Visibility="Collapsed" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="txtBatchInfo" Text="" Margin="6,0,0,0"
+                               Foreground="{DynamicResource AccentBrush}" FontSize="11" VerticalAlignment="Center" Visibility="Collapsed"/>
+                </StackPanel>
                 <TextBlock x:Name="txtSelInfo" Text=""
                            Foreground="{DynamicResource TextDimBrush}" FontSize="11"
                            VerticalAlignment="Center" DockPanel.Dock="Right"/>
